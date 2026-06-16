@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "id": "liora",
+  "name": "Liora, the Far Sight",
+  "archetype": "Zoner / Spellcaster",
+  "baseHP": 24,
+  "passive": {
+    "name": "Ward Step",
+    "rawText": "The first time you would lose a Clash each turn, you may discard a card from your hand to make it a standoff instead.",
+    "effects": [
+      {
+        "type": "forceClashResult",
+        "result": "standoff",
+        "overrides": "loss",
+        "optional": true,
+        "cost": { "type": "discardFromHand", "amount": 1 },
+        "trigger": "onWouldLoseClash",
+        "condition": { "type": "firstTimePerTurn" }
+      }
+    ]
+  },
+  "signatureCards": [
+    {
+      "name": "Arc Bolt", "type": "strike", "priority": 2, "damage": 1, "combo": "linker", "copies": 1,
+      "rawText": "Neutral: Deal 1 damage to your opponent.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "dealDamage", "amount": 1, "target": "opponent" } ],
+      "art": null
+    },
+    {
+      "name": "Unravel", "type": "strike", "priority": 2, "damage": 1, "combo": "linker", "copies": 1,
+      "rawText": "Neutral: Deal 1 damage; deal 2 instead if your opponent is at half their starting HP or lower.",
+      "clashEffects": [],
+      "neutralEffects": [
+        {
+          "type": "dealDamage", "amount": 1, "target": "opponent",
+          "overrideAmount": { "amount": 2, "condition": { "type": "opponentAtOrBelowHalfHP" } }
+        }
+      ],
+      "art": null
+    },
+    {
+      "name": "Meteor", "type": "crush", "priority": 2, "damage": 3, "combo": "ender", "copies": 1,
+      "rawText": "Neutral: Deal 2 damage to your opponent.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "dealDamage", "amount": 2, "target": "opponent" } ],
+      "art": null
+    },
+    {
+      "name": "Ensnare", "type": "crush", "priority": 1, "damage": 1, "combo": "starter", "copies": 1,
+      "rawText": "Neutral: Trap: the next time your opponent declares a Clash, they take 1 damage.",
+      "clashEffects": [],
+      "neutralEffects": [
+        {
+          "type": "setTrap", "trigger": "opponentDeclaresClash", "window": "untilTriggered",
+          "effect": { "type": "dealDamage", "amount": 1, "target": "opponent" }
+        }
+      ],
+      "art": null
+    },
+    {
+      "name": "Disrupt", "type": "strike", "priority": 2, "damage": 1, "combo": "linker", "copies": 1,
+      "rawText": "Neutral: Your opponent discards a card.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "opponentDiscards", "amount": 1, "chooser": "opponent" } ],
+      "art": null
+    },
+    {
+      "name": "Repel", "type": "guard", "priority": 3, "damage": 2, "combo": "ender", "copies": 1,
+      "rawText": "",
+      "clashEffects": [], "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Warding Glyph", "type": "guard", "priority": "X", "damage": 0, "combo": "starter", "copies": 1,
+      "rawText": "Neutral: Until your next turn, reduce the next damage you take by 2.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "reduceNextDamage", "amount": 2, "target": "self", "duration": "untilYourNextTurn" } ],
+      "art": null
+    },
+    {
+      "name": "Phase", "type": "strike", "priority": "X", "damage": 0, "combo": "starter", "copies": 1,
+      "rawText": "Neutral: Draw a card.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "draw", "amount": 1, "target": "self" } ],
+      "art": null
+    }
+  ],
+  "superCard": {
+    "name": "Cataclysm", "type": "crush", "priority": 3, "damage": 6, "combo": "ender", "copies": 1,
+    "rawText": "Neutral: Deal 3 damage to your opponent.",
+    "clashEffects": [],
+    "neutralEffects": [ { "type": "dealDamage", "amount": 3, "target": "opponent" } ],
+    "art": null
+  }
+}

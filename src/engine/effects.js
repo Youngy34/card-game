@@ -1,7 +1,33 @@
 import { drawCards } from './loader.js'
 
-// Returns { stateUpdates, fallbackNeeded, logEntries }
-// stateUpdates is a partial state patch; merge it onto state in the reducer.
+// ─── Unified condition checker ────────────────────────────────────────────────
+
+export function checkCondition(condition, ownerIdx, state, extra = {}) {
+  if (!condition) return true
+  const opp = state.players[1 - ownerIdx]
+  switch (condition.type) {
+    case 'firstTimePerTurn':
+      return state.players[ownerIdx].unflinchingAvailable === true
+    case 'isCounter':
+      return state.isCounterCombo === true
+    case 'previousTurnWasNeutral':
+      return state.players[ownerIdx].lastTurnWasNeutral === true
+    case 'opponentHandSizeAtMost':
+      return opp.hand.length <= condition.amount
+    case 'opponentAtOrBelowHalfHP':
+      return opp.hp <= opp.maxHP / 2
+    case 'opponentForeseen':
+      return (opp.statuses || []).some(s => s.type === 'foreseen')
+    case 'damageDealtAtLeast':
+      return (extra.damageDealt || 0) >= condition.amount
+    case 'allOf':
+      return (condition.conditions || []).every(c => checkCondition(c, ownerIdx, state, extra))
+    default:
+      return true
+  }
+}
+
+// ─── Effect executors ─────────────────────────────────────────────────────────
 
 export function executeNeutralEffects(card, ownerIdx, state) {
   const updates = {}
@@ -21,14 +47,15 @@ export function executeNeutralEffects(card, ownerIdx, state) {
   return { updates, logs, fallbacks }
 }
 
-export function executeClashEffects(card, ownerIdx, clashResult, state, chainIndex = 0) {
+export function executeClashEffects(card, ownerIdx, clashResult, state) {
   const updates = {}
   const logs = []
   const fallbacks = []
 
   for (const effect of card.clashEffects || []) {
-    if (!conditionMet(effect, ownerIdx, clashResult, state, chainIndex)) continue
-    const result = executeEffect(effect, ownerIdx, state, { card, context: 'clash', clashResult, chainIndex })
+    if (!triggerMet(effect, ownerIdx, clashResult)) continue
+    if (!checkCondition(effect.condition, ownerIdx, state, { isCounter: state.isCounterCombo })) continue
+    const result = executeEffect(effect, ownerIdx, state, { card, context: 'clash', clashResult })
     if (result.fallback) {
       fallbacks.push({ card, effect, context: `${card.name} clash effect` })
     } else {
@@ -47,7 +74,7 @@ export function executePassiveEffects(passive, ownerIdx, trigger, state, extra =
 
   for (const effect of passive.effects || []) {
     if (effect.trigger !== trigger) continue
-    if (!passiveConditionMet(effect, ownerIdx, state, extra)) continue
+    if (!checkCondition(effect.condition, ownerIdx, state, extra)) continue
     const result = executeEffect(effect, ownerIdx, state, { passive, context: 'passive', trigger, ...extra })
     if (result.fallback) {
       fallbacks.push({ card: passive, effect, context: `${passive.name} passive` })
@@ -60,19 +87,10 @@ export function executePassiveEffects(passive, ownerIdx, trigger, state, extra =
   return { updates, logs, fallbacks }
 }
 
-function conditionMet(effect, ownerIdx, clashResult, _state, _chainIndex) {
+function triggerMet(effect, ownerIdx, clashResult) {
   if (!effect.trigger) return true
   if (effect.trigger === 'onWin') return clashResult.winner === ownerIdx
   if (effect.trigger === 'onLoss') return clashResult.winner !== ownerIdx && clashResult.winner !== 'standoff'
-  return true
-}
-
-function passiveConditionMet(effect, ownerIdx, state, extra) {
-  if (!effect.condition) return true
-  const cond = effect.condition
-  if (cond.type === 'firstTimePerTurn') {
-    return state.players[ownerIdx].unflinchingAvailable === true
-  }
   return true
 }
 
@@ -80,9 +98,8 @@ function executeEffect(effect, ownerIdx, state, _ctx) {
   const oppIdx = 1 - ownerIdx
 
   switch (effect.type) {
-    case 'chargeSuper': {
+    case 'chargeSuper':
       return chargeSuper(ownerIdx, effect.amount, state)
-    }
 
     case 'draw': {
       const target = effect.target === 'self' ? ownerIdx : oppIdx
@@ -91,26 +108,29 @@ function executeEffect(effect, ownerIdx, state, _ctx) {
 
     case 'dealDamage': {
       const target = effect.target === 'opponent' ? oppIdx : ownerIdx
-      return dealDamageEffect(target, effect.amount)
+      let amount = effect.amount
+      if (effect.overrideAmount) {
+        const condOk = checkCondition(effect.overrideAmount.condition, ownerIdx, state, {})
+        if (condOk) amount = effect.overrideAmount.amount
+      }
+      return dealDamageEffect(target, amount)
     }
 
-    case 'opponentDiscards': {
+    case 'opponentDiscards':
       return opponentDiscardsEffect(oppIdx, effect.amount, state)
-    }
 
     case 'reduceNextDamage': {
       const target = effect.target === 'self' ? ownerIdx : oppIdx
       return reduceNextDamageEffect(target, effect.amount, state)
     }
 
-    case 'setTrap': {
+    case 'setTrap':
       return setTrapEffect(ownerIdx, effect, state)
-    }
 
     case 'modifyDamage':
     case 'damageEvenOnLoss':
     case 'forceClashResult':
-      // Handled inline in combat resolution, not here
+      // Handled in combat resolution / computeComboDamage
       return { updates: {}, logs: [] }
 
     default:
@@ -118,17 +138,17 @@ function executeEffect(effect, ownerIdx, state, _ctx) {
   }
 }
 
+// ─── Effect primitives ────────────────────────────────────────────────────────
+
 function chargeSuper(ownerIdx, amount, state) {
   const player = state.players[ownerIdx]
   const newGauge = player.superGauge + amount
   const threshold = state.globals.superGaugeThreshold
   const logs = [`${player.name} charges Super (+${amount}) → ${Math.min(newGauge, threshold)}/${threshold}`]
-
-  const updates = {}
-  // Just update the gauge; handleSuperUnlock in the reducer hands out the card
-  updates[`players.${ownerIdx}.superGauge`] = Math.min(newGauge, threshold)
-
-  return { updates, logs }
+  return {
+    updates: { [`players.${ownerIdx}.superGauge`]: Math.min(newGauge, threshold) },
+    logs
+  }
 }
 
 function drawEffect(targetIdx, amount, state) {
@@ -146,15 +166,11 @@ function drawEffect(targetIdx, amount, state) {
 }
 
 function dealDamageEffect(targetIdx, amount) {
-  return {
-    updates: { [`_pendingDamage.${targetIdx}`]: amount },
-    logs: []
-  }
+  return { updates: { [`_pendingDamage.${targetIdx}`]: amount }, logs: [] }
 }
 
 function opponentDiscardsEffect(oppIdx, amount, state) {
   const opp = state.players[oppIdx]
-  // For MVP: discard from top of hand (first card)
   const toDiscard = opp.hand.slice(0, amount)
   const remaining = opp.hand.slice(amount)
   const logs = toDiscard.length > 0
@@ -185,61 +201,93 @@ function setTrapEffect(ownerIdx, effect, state) {
     effect: effect.effect,
     setOnTurn: state.turnNumber
   }
-  const logs = [`${state.players[ownerIdx].name} sets a trap!`]
   return {
     updates: { traps: [...state.traps, trap] },
-    logs
+    logs: [`${state.players[ownerIdx].name} sets a trap (fires on: ${effect.trigger})`]
   }
 }
 
-// Compute total combo damage, applying all modifiers in order
+// ─── Combo damage calculation ─────────────────────────────────────────────────
+
 export function computeComboDamage(chain, executorIdx, loserIdx, state) {
   let total = 0
   const logs = []
+  const oppHand = state.players[loserIdx].hand
 
   for (let i = 0; i < chain.length; i++) {
     const card = chain[i]
     let cardDmg = card.damage
 
-    // modifyDamage effects (e.g. Hundred Fang: +1 per other card in chain before it)
     for (const effect of card.clashEffects || []) {
-      if (effect.type === 'modifyDamage' && effect.per === 'otherCardInCombo') {
-        cardDmg += effect.amount * i // i cards came before this one
-        logs.push(`${card.name}: +${effect.amount * i} (${i} prior chain cards)`)
+      if (effect.type !== 'modifyDamage') continue
+
+      if (effect.per === 'otherCardInCombo') {
+        const bonus = effect.amount * i
+        if (bonus !== 0) {
+          cardDmg += bonus
+          logs.push(`${card.name}: +${bonus} (${i} prior chain card${i !== 1 ? 's' : ''})`)
+        }
+        continue
+      }
+
+      if (effect.per === 'opponentCardBelow4') {
+        const below4 = Math.max(0, 4 - oppHand.length)
+        const bonus = effect.amount * below4
+        if (bonus !== 0) {
+          cardDmg += bonus
+          logs.push(`${card.name}: +${bonus} (opponent ${oppHand.length} card${oppHand.length !== 1 ? 's' : ''}, ${below4} below 4)`)
+        }
+        continue
+      }
+
+      // Conditional flat modifier (Knee Bash isCounter, Outthink opponentForeseen, etc.)
+      const condOk = checkCondition(effect.condition, executorIdx, state, { isCounter: state.isCounterCombo })
+      if (condOk) {
+        cardDmg += effect.amount
+        logs.push(`${card.name}: ${effect.amount > 0 ? '+' : ''}${effect.amount} (${conditionLabel(effect.condition)})`)
       }
     }
 
     total += cardDmg
   }
 
-  // Loser's passive: Unflinching (modifyDamage on first loss per turn)
-  const loser = state.players[loserIdx]
-  if (loser.unflinchingAvailable) {
-    const passive = loser.passive
-    for (const effect of passive?.effects || []) {
-      if (
-        effect.type === 'modifyDamage' &&
-        effect.trigger === 'onLoseClash' &&
-        effect.appliesTo === 'incomingCombo' &&
-        effect.condition?.type === 'firstTimePerTurn'
-      ) {
-        total = Math.max(0, total + effect.amount)
-        logs.push(`${loser.name} Unflinching: ${effect.amount} damage`)
-      }
+  // Executor's passive: modifyDamage on clash win (e.g. Bastion's Charge)
+  const execPassive = state.players[executorIdx].passive
+  for (const eff of execPassive?.effects || []) {
+    if (eff.type !== 'modifyDamage') continue
+    if (eff.trigger && eff.trigger !== 'onWinClash') continue
+    const condOk = checkCondition(eff.condition, executorIdx, state, { isCounter: state.isCounterCombo })
+    if (condOk) {
+      total = Math.max(0, total + eff.amount)
+      logs.push(`${state.players[executorIdx].name} ${execPassive.name}: ${eff.amount > 0 ? '+' : ''}${eff.amount} damage`)
     }
   }
 
-  // Brace / damageReduction status
-  const reduction = loser.damageReduction || 0
+  // Loser's passive: reduce incoming combo damage (e.g. Atlas's Unflinching)
+  const loserPassive = state.players[loserIdx].passive
+  for (const eff of loserPassive?.effects || []) {
+    if (eff.type !== 'modifyDamage') continue
+    if (eff.trigger !== 'onLoseClash') continue
+    if (eff.appliesTo !== 'incomingCombo') continue
+    const condOk = checkCondition(eff.condition, loserIdx, state, {})
+    if (condOk) {
+      total = Math.max(0, total + eff.amount) // amount is negative
+      logs.push(`${state.players[loserIdx].name} ${loserPassive.name}: ${eff.amount} damage`)
+    }
+  }
+
+  // Brace / reduceNextDamage status
+  const reduction = state.players[loserIdx].damageReduction || 0
   if (reduction > 0) {
     total = Math.max(0, total - reduction)
-    logs.push(`${loser.name} damage reduction: -${reduction}`)
+    logs.push(`${state.players[loserIdx].name} damage reduction: -${reduction}`)
   }
 
   return { total, logs }
 }
 
-// Check and fire traps when opponent takes a neutral turn
+// ─── Trap system ──────────────────────────────────────────────────────────────
+
 export function checkTrapsTrigger(trigger, actorIdx, state) {
   const updates = {}
   const logs = []
@@ -255,25 +303,38 @@ export function checkTrapsTrigger(trigger, actorIdx, state) {
       updates[`_pendingDamage.${targetIdx}`] = (updates[`_pendingDamage.${targetIdx}`] || 0) + trap.effect.amount
       logs.push(`Trap fires! ${state.players[actorIdx].name} takes ${trap.effect.amount} damage`)
     }
-    // Trap consumed; don't push to remaining
+    // Trap is always consumed on firing regardless of window
   }
 
   updates.traps = remainingTraps
   return { updates, logs }
 }
 
-// Expire traps at start of ownerIdx's turn
 export function expireTraps(ownerIdx, state) {
-  const remaining = state.traps.filter(trap => {
+  // Remove traps owned by ownerIdx whose window expires at the owner's next turn
+  return state.traps.filter(trap => {
     if (trap.owner !== ownerIdx) return true
     if (trap.window === 'untilYourNextTurn') return false
-    return true
+    return true // 'untilTriggered' traps persist until fired
   })
-  return remaining
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function mergeUpdates(target, source) {
   for (const [k, v] of Object.entries(source)) {
     target[k] = v
+  }
+}
+
+function conditionLabel(condition) {
+  if (!condition) return 'unconditional'
+  switch (condition.type) {
+    case 'isCounter': return 'counter combo'
+    case 'opponentForeseen': return 'opponent Foreseen'
+    case 'opponentHandSizeAtMost': return `opp ≤${condition.amount} cards`
+    case 'previousTurnWasNeutral': return 'prev turn neutral'
+    case 'opponentAtOrBelowHalfHP': return 'opp at half HP'
+    default: return condition.type
   }
 }

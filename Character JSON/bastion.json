@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "id": "bastion",
+  "name": "Bastion, the Sentinel",
+  "archetype": "Turtle / Counter-Puncher",
+  "baseHP": 28,
+  "passive": {
+    "name": "Charge",
+    "rawText": "If your previous turn was a Neutral turn, the next Clash you win deals +2 damage.",
+    "effects": [
+      {
+        "type": "modifyDamage", "amount": 2, "target": "opponent",
+        "trigger": "onWinClash", "oncePerTrigger": true,
+        "condition": { "type": "previousTurnWasNeutral" }
+      }
+    ]
+  },
+  "signatureCards": [
+    {
+      "name": "Flash Counter", "type": "guard", "priority": 3, "damage": 2, "combo": "starter", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Shield Bash", "type": "guard", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Riot Guard", "type": "guard", "priority": 3, "damage": 4, "combo": "ender", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Vigilance", "type": "guard", "priority": "X", "damage": 0, "combo": "starter", "copies": 1,
+      "rawText": "If this wins, draw a card.",
+      "clashEffects": [ { "type": "draw", "amount": 1, "target": "self", "trigger": "onWin" } ],
+      "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Sonic Cutter", "type": "strike", "priority": 2, "damage": 1, "combo": "linker", "copies": 1,
+      "rawText": "Neutral: Deal 1 damage.",
+      "clashEffects": [],
+      "neutralEffects": [ { "type": "dealDamage", "amount": 1, "target": "opponent" } ],
+      "art": null
+    },
+    {
+      "name": "Knee Bash", "type": "strike", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "If part of a combo you started on your opponent's turn (a counter), +1 damage.",
+      "clashEffects": [
+        { "type": "modifyDamage", "amount": 1, "target": "opponent", "condition": { "type": "isCounter" } }
+      ],
+      "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Shoulder Ram", "type": "crush", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null
+    },
+    {
+      "name": "Lockdown", "type": "crush", "priority": 1, "damage": 1, "combo": "starter", "copies": 1,
+      "rawText": "Neutral: Trap: next time your opponent declares a Clash, they take 1.",
+      "clashEffects": [],
+      "neutralEffects": [
+        {
+          "type": "setTrap", "trigger": "opponentDeclaresClash", "window": "untilTriggered",
+          "effect": { "type": "dealDamage", "amount": 1, "target": "opponent" }
+        }
+      ],
+      "art": null
+    }
+  ],
+  "superCard": {
+    "name": "Final Bastion", "type": "guard", "priority": 3, "damage": 6, "combo": "ender", "copies": 1,
+    "rawText": "+3 damage if you won this Clash on your opponent's turn (i.e. as a counter).",
+    "clashEffects": [
+      { "type": "modifyDamage", "amount": 3, "target": "opponent", "trigger": "onWin", "condition": { "type": "isCounter" } }
+    ],
+    "neutralEffects": [], "art": null
+  }
+}

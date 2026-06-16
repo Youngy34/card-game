@@ -11,7 +11,7 @@ export const initialState = {
   gameData: null,
   loadError: null,
   phase: 'loading',
-  passDevice: null,       // { to: 0|1, message: string, nextPhase: string }
+  passDevice: null,
   deviceHolder: null,
   players: [null, null],
   selectedCharacters: [null, null],
@@ -19,6 +19,7 @@ export const initialState = {
   clashZone: { declarer: null, cards: [null, null], revealed: false, result: null },
   comboExecutor: null,
   comboChain: [],
+  isCounterCombo: false,
   fallbackQueue: [],
   afterFallback: null,
   traps: [],
@@ -110,6 +111,8 @@ function makePlayer(char, basics, globals) {
     passive: char.passive,
     unflinchingAvailable: true,
     damageReduction: 0,
+    lastTurnWasNeutral: false,
+    statuses: [],
   }
 }
 
@@ -117,13 +120,13 @@ function passTo(state, to, message, nextPhase) {
   return { ...state, phase: 'passDevice', passDevice: { to, message, nextPhase }, deviceHolder: null }
 }
 
-function endTurn(state, drawnBy) {
+function endTurn(state, drawnBy, { wasNeutral = false } = {}) {
   // Clear the clash zone between turns
   let s = { ...state, clashZone: { declarer: null, cards: [null, null], revealed: false, result: null } }
   const player = s.players[drawnBy]
   const { deck, discard, drawn } = drawCards(player.deck, player.discard, s.globals.drawPerTurn)
   const newPlayers = [...s.players]
-  newPlayers[drawnBy] = { ...player, hand: [...player.hand, ...drawn], deck, discard }
+  newPlayers[drawnBy] = { ...player, hand: [...player.hand, ...drawn], deck, discard, lastTurnWasNeutral: wasNeutral }
   s = { ...s, players: newPlayers }
   if (drawn.length > 0) s = addLog(s, `${player.name} draws ${drawn.length} card${drawn.length !== 1 ? 's' : ''}`)
 
@@ -188,7 +191,7 @@ export function gameReducer(state, action) {
         players: [p0, p1],
         activePlayer: first,
         clashZone: { declarer: null, cards: [null, null], revealed: false, result: null },
-        comboExecutor: null, comboChain: [],
+        comboExecutor: null, comboChain: [], isCounterCombo: false,
         fallbackQueue: [], afterFallback: null,
         traps: [], turnNumber: 0, playerTurns: [0, 0],
         log: [], winner: null, winReason: null,
@@ -258,7 +261,7 @@ export function gameReducer(state, action) {
         return { ...s, phase: 'awaitingFallback', fallbackQueue: fallbacks, afterFallback: { type: 'END_NEUTRAL', drawnBy: activePlayer } }
       }
 
-      return endTurn(s, activePlayer)
+      return endTurn(s, activePlayer, { wasNeutral: true })
     }
 
     case 'DECLARE_CLASH': {
@@ -277,6 +280,18 @@ export function gameReducer(state, action) {
         clashZone: { declarer: activePlayer, cards: newCards, revealed: false, result: null },
       }
       s = addLog(s, `${player.name} declares a Clash`)
+
+      // Fire traps that trigger when a Clash is declared (e.g. Ensnare, Lockdown)
+      const { updates: trapUp, logs: trapLogs } = checkTrapsTrigger('opponentDeclaresClash', activePlayer, s)
+      s = applyPatch(s, trapUp)
+      if (trapLogs.length) s = addLog(s, trapLogs)
+      const trapDmg = extractDamage(trapUp)
+      if (Object.keys(trapDmg).length > 0) {
+        const { state: s2, logs: dmgLogs } = applyDamage(s, trapDmg)
+        s = s2; s = addLog(s, dmgLogs)
+        const over = checkGameOver(s)
+        if (over) return over
+      }
 
       const responder = 1 - activePlayer
       return passTo(s, responder, `Pass to ${s.players[responder].name} — respond to Clash`, 'awaitingClashResponse')
@@ -462,7 +477,7 @@ export function gameReducer(state, action) {
 
     case 'SKIP_TURN': {
       let s = addLog(state, `${state.players[state.activePlayer].name} passes their turn`)
-      return endTurn(s, state.activePlayer)
+      return endTurn(s, state.activePlayer, { wasNeutral: true })
     }
 
     case 'RESTART_GAME': {
@@ -496,17 +511,18 @@ function handleSuperUnlock(state, playerIdx) {
 function startCombo(state, executor) {
   const winnerCard = state.clashZone.cards[executor]
   const chain = winnerCard ? [winnerCard] : []
-  const np = [...state.players]
-  // Clear clash zone card for executor (it's now in the chain)
   const newClashCards = [...state.clashZone.cards]
   newClashCards[executor] = null
+
+  // isCounter: the winner is the responder, not the declarer
+  const isCounterCombo = executor !== state.activePlayer
 
   let s = {
     ...state,
     comboExecutor: executor,
     comboChain: chain,
+    isCounterCombo,
     clashZone: { ...state.clashZone, cards: newClashCards },
-    players: np,
   }
 
   if (winnerCard) s = addLog(s, `${s.players[executor].name} begins combo with ${winnerCard.name} (${winnerCard.damage} dmg)`)
