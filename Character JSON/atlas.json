@@ -8,137 +8,39 @@
     "name": "Unflinching",
     "rawText": "The first time you lose a Clash each turn, the punishing combo deals 2 less damage to you.",
     "effects": [
-      {
-        "type": "modifyDamage",
-        "amount": -2,
-        "target": "self",
-        "appliesTo": "incomingCombo",
-        "trigger": "onLoseClash",
-        "condition": { "type": "firstTimePerTurn" }
-      }
+      { "type": "modifyDamage", "amount": -2, "target": "self", "appliesTo": "incomingCombo", "trigger": "onLoseClash", "condition": { "type": "firstTimePerTurn" } }
     ]
   },
   "signatureCards": [
-    {
-      "name": "Body Splash",
-      "type": "crush",
-      "priority": 2,
-      "damage": 3,
-      "combo": "starter",
-      "copies": 1,
+    { "name": "Body Splash", "type": "crush", "priority": 2, "damage": 3, "combo": "starter", "copies": 1,
       "rawText": "If this wins, your opponent discards a card.",
-      "clashEffects": [
-        { "type": "opponentDiscards", "amount": 1, "trigger": "onWin" }
-      ],
-      "neutralEffects": [],
-      "art": null
-    },
-    {
-      "name": "Suplex",
-      "type": "crush",
-      "priority": 3,
-      "damage": 4,
-      "combo": "ender",
-      "copies": 1,
-      "rawText": "",
-      "clashEffects": [],
-      "neutralEffects": [],
-      "art": null
-    },
-    {
-      "name": "Backbreaker",
-      "type": "crush",
-      "priority": 2,
-      "damage": 5,
-      "combo": "ender",
-      "copies": 1,
-      "rawText": "",
-      "clashEffects": [],
-      "neutralEffects": [],
-      "art": null
-    },
-    {
-      "name": "Taunt",
-      "type": "crush",
-      "priority": "X",
-      "damage": 0,
-      "combo": "starter",
-      "copies": 1,
+      "clashEffects": [ { "type": "opponentDiscards", "amount": 1, "chooser": "opponent", "trigger": "onWin" } ],
+      "neutralEffects": [], "art": null },
+    { "name": "Suplex", "type": "crush", "priority": 3, "damage": 4, "combo": "ender", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Backbreaker", "type": "crush", "priority": 2, "damage": 5, "combo": "ender", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Taunt", "type": "crush", "priority": "X", "damage": 0, "combo": "starter", "copies": 1,
       "rawText": "Neutral: If your opponent takes a Neutral turn before your next turn, deal 2 damage to them.",
       "clashEffects": [],
-      "neutralEffects": [
-        {
-          "type": "setTrap",
-          "trigger": "opponentTakesNeutralTurn",
-          "window": "untilYourNextTurn",
-          "effect": { "type": "dealDamage", "amount": 2, "target": "opponent" }
-        }
-      ],
-      "art": null
-    },
-    {
-      "name": "Lariat",
-      "type": "guard",
-      "priority": 2,
-      "damage": 2,
-      "combo": "ender",
-      "copies": 1,
-      "rawText": "",
-      "clashEffects": [],
-      "neutralEffects": [],
-      "art": null
-    },
-    {
-      "name": "Read Counter",
-      "type": "guard",
-      "priority": 3,
-      "damage": 3,
-      "combo": "ender",
-      "copies": 1,
-      "rawText": "",
-      "clashEffects": [],
-      "neutralEffects": [],
-      "art": null
-    },
-    {
-      "name": "Brace",
-      "type": "guard",
-      "priority": "X",
-      "damage": 0,
-      "combo": "starter",
-      "copies": 1,
+      "neutralEffects": [ { "type": "setTrap", "trigger": "opponentTakesNeutralTurn", "window": "untilYourNextTurn", "effect": { "type": "dealDamage", "amount": 2, "target": "opponent" } } ],
+      "art": null },
+    { "name": "Lariat", "type": "guard", "priority": 2, "damage": 2, "combo": "ender", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Read Counter", "type": "guard", "priority": 3, "damage": 3, "combo": "ender", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Brace", "type": "guard", "priority": "X", "damage": 0, "combo": "starter", "copies": 1,
       "rawText": "Neutral: Reduce the next damage you take by 2.",
       "clashEffects": [],
-      "neutralEffects": [
-        { "type": "reduceNextDamage", "amount": 2, "target": "self", "duration": "nextInstance" }
-      ],
-      "art": null
-    },
-    {
-      "name": "Knee Strike",
-      "type": "strike",
-      "priority": 2,
-      "damage": 2,
-      "combo": "linker",
-      "copies": 1,
-      "rawText": "",
-      "clashEffects": [],
-      "neutralEffects": [],
-      "art": null
-    }
+      "neutralEffects": [ { "type": "reduceNextDamage", "amount": 2, "target": "self", "duration": "nextInstance" } ],
+      "art": null },
+    { "name": "Knee Strike", "type": "strike", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null }
   ],
   "superCard": {
-    "name": "Final Atomic Buster",
-    "type": "crush",
-    "priority": 3,
-    "damage": 8,
-    "combo": "ender",
-    "copies": 1,
-    "rawText": "This Clash cannot become a standoff: if it otherwise would (a Priority tie, an X card, or an effect like Ward Step), Atlas wins instead.",
-    "clashEffects": [
-      { "type": "forceClashResult", "result": "win", "overrides": "standoff" }
-    ],
-    "neutralEffects": [],
-    "art": null
+    "name": "Final Atomic Buster", "type": "crush", "priority": 3, "damage": 8, "combo": "ender", "copies": 1,
+    "rawText": "Deals its damage even if the Clash is a standoff - it cannot be neutralised by an X card, a Priority tie, or Ward Step.",
+    "clashEffects": [ { "type": "damageEvenOnStandoff" } ],
+    "neutralEffects": [], "art": null
   }
 }

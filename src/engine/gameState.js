@@ -22,6 +22,8 @@ export const initialState = {
   isCounterCombo: false,
   fallbackQueue: [],
   afterFallback: null,
+  specialQueue: [],
+  afterSpecial: null,
   traps: [],
   turnNumber: 0,
   playerTurns: [0, 0],
@@ -111,6 +113,7 @@ function makePlayer(char, basics, globals) {
     passive: char.passive,
     unflinchingAvailable: true,
     damageReduction: 0,
+    playAreaCards: [],
     lastTurnWasNeutral: false,
     statuses: [],
   }
@@ -134,9 +137,16 @@ function endTurn(state, drawnBy, { wasNeutral = false } = {}) {
   const nextActive = 1 - drawnBy
   s = { ...s, traps: expireTraps(nextActive, s) }
 
-  // Reset turn-scoped state for next active player
+  // Reset turn-scoped state for next active player; expire their one-turn play area cards
   const np2 = [...s.players]
-  np2[nextActive] = { ...np2[nextActive], unflinchingAvailable: true }
+  const expiringBuffs = (np2[nextActive].playAreaCards || []).filter(c => c.expiresWhen === 'untilYourNextTurn')
+  np2[nextActive] = {
+    ...np2[nextActive],
+    unflinchingAvailable: true,
+    playAreaCards: (np2[nextActive].playAreaCards || []).filter(c => c.expiresWhen !== 'untilYourNextTurn'),
+    damageReduction: expiringBuffs.some(c => c.effectType === 'reduceNextDamage')
+      ? 0 : np2[nextActive].damageReduction,
+  }
   s = { ...s, players: np2 }
 
   // Advance turn
@@ -193,6 +203,7 @@ export function gameReducer(state, action) {
         clashZone: { declarer: null, cards: [null, null], revealed: false, result: null },
         comboExecutor: null, comboChain: [], isCounterCombo: false,
         fallbackQueue: [], afterFallback: null,
+        specialQueue: [], afterSpecial: null,
         traps: [], turnNumber: 0, playerTurns: [0, 0],
         log: [], winner: null, winReason: null,
       }
@@ -235,7 +246,7 @@ export function gameReducer(state, action) {
       }
 
       // Execute neutral effects
-      const { updates, logs: effLogs, fallbacks } = executeNeutralEffects(card, activePlayer, s)
+      const { updates, logs: effLogs, fallbacks, specials } = executeNeutralEffects(card, activePlayer, s)
       s = applyPatch(s, updates)
       if (effLogs.length) s = addLog(s, effLogs)
 
@@ -255,6 +266,11 @@ export function gameReducer(state, action) {
       const pp = [...s.players]
       pp[activePlayer] = { ...pp[activePlayer], discard: [...pp[activePlayer].discard, card] }
       s = { ...s, players: pp }
+
+      // Specials (revealHand, discardPicker) pause the flow before ending turn
+      if (specials.length > 0) {
+        return processNextSpecial({ ...s, specialQueue: specials, afterSpecial: { type: 'END_NEUTRAL', drawnBy: activePlayer, wasNeutral: true } })
+      }
 
       // Fallback for unresolved effects
       if (fallbacks.length > 0) {
@@ -349,12 +365,26 @@ export function gameReducer(state, action) {
       s = { ...s, clashZone: { ...s.clashZone, result } }
 
       if (result.winner === 'standoff') {
+        // damageEvenOnStandoff fires before discarding
+        for (const [playerIdx, card] of [[declarer, cardD], [responder, cardR]]) {
+          if (!card) continue
+          for (const eff of card.clashEffects || []) {
+            if (eff.type === 'damageEvenOnStandoff') {
+              const targetIdx = 1 - playerIdx
+              const { state: sd, logs: sdLogs } = applyDamage(s, { [targetIdx]: card.damage })
+              s = sd
+              s = addLog(s, [`${card.name} (${s.players[playerIdx].name}) deals ${card.damage} damage on standoff`, ...sdLogs])
+              const over = checkGameOver(s)
+              if (over) return over
+            }
+          }
+        }
         // Discard both cards
         const np = [...s.players]
         np[declarer] = { ...np[declarer], discard: [...np[declarer].discard, cardD] }
         np[responder] = { ...np[responder], discard: [...np[responder].discard, cardR] }
         s = { ...s, players: np }
-        s = addLog(s, 'Standoff — both cards discarded, no replay')
+        s = addLog(s, 'Standoff — both cards discarded')
         return endTurn(s, s.activePlayer)
       }
 
@@ -385,7 +415,7 @@ export function gameReducer(state, action) {
       // onWin clash effects for winner's card
       const winnerCard = s.clashZone.cards[winner]
       if (winnerCard) {
-        const { updates, logs: effLogs, fallbacks } = executeClashEffects(winnerCard, winner, result, s)
+        const { updates, logs: effLogs, fallbacks, specials: clashSpecials } = executeClashEffects(winnerCard, winner, result, s)
         s = applyPatch(s, updates)
         if (effLogs.length) s = addLog(s, effLogs)
         const pending = extractDamage(updates)
@@ -395,6 +425,9 @@ export function gameReducer(state, action) {
           const over = checkGameOver(s)
           if (over) return over
         }
+        if (clashSpecials.length > 0) {
+          return processNextSpecial({ ...s, specialQueue: clashSpecials, afterSpecial: { type: 'START_COMBO', executor: winner } })
+        }
         if (fallbacks.length > 0) {
           return { ...s, phase: 'awaitingFallback', fallbackQueue: fallbacks, afterFallback: { type: 'START_COMBO', executor: winner } }
         }
@@ -403,9 +436,12 @@ export function gameReducer(state, action) {
       // Passive: onWinClash (Bloodthirst)
       const winnerPassive = s.players[winner].passive
       if (winnerPassive) {
-        const { updates, logs: passLogs, fallbacks } = executePassiveEffects(winnerPassive, winner, 'onWinClash', s)
+        const { updates, logs: passLogs, fallbacks, specials: winPassiveSpecials } = executePassiveEffects(winnerPassive, winner, 'onWinClash', s)
         s = applyPatch(s, updates)
         if (passLogs.length) s = addLog(s, passLogs)
+        if (winPassiveSpecials.length > 0) {
+          return processNextSpecial({ ...s, specialQueue: winPassiveSpecials, afterSpecial: { type: 'START_COMBO', executor: winner } })
+        }
         if (fallbacks.length > 0) {
           return { ...s, phase: 'awaitingFallback', fallbackQueue: fallbacks, afterFallback: { type: 'START_COMBO', executor: winner } }
         }
@@ -480,6 +516,31 @@ export function gameReducer(state, action) {
       return endTurn(s, state.activePlayer, { wasNeutral: true })
     }
 
+    case 'CONFIRM_DISCARD': {
+      // chooser picks a card from targetIdx's hand to discard
+      const { pendingDiscard } = state
+      if (!pendingDiscard) return state
+      const { targetIdx } = pendingDiscard
+      const target = state.players[targetIdx]
+      const cardToDiscard = target.hand[action.cardIndex]
+      if (!cardToDiscard) return state
+
+      const newHand = target.hand.filter((_, i) => i !== action.cardIndex)
+      let s = {
+        ...state,
+        players: state.players.map((p, i) =>
+          i === targetIdx ? { ...p, hand: newHand, discard: [...p.discard, cardToDiscard] } : p
+        ),
+        pendingDiscard: null,
+      }
+      s = addLog(s, `${s.players[targetIdx].name} discards ${cardToDiscard.name}`)
+      return resumeAfterSpecial(s)
+    }
+
+    case 'DISMISS_HAND_REVEAL': {
+      return resumeAfterSpecial({ ...state, revealHandState: null })
+    }
+
     case 'RESTART_GAME': {
       return { ...initialState, gameData: state.gameData, globals: state.gameData?.globals, phase: 'setup' }
     }
@@ -546,9 +607,12 @@ function resolveCombo(state) {
 
   const { total, logs: dmgLogs } = computeComboDamage(comboChain, comboExecutor, loser, state)
 
-  // Mark Unflinching as used and consume damage reduction
+  // Mark Unflinching as used, consume damage reduction, remove spent buff cards
   const np = [...state.players]
-  const loserUpdates = { damageReduction: 0 }
+  const loserUpdates = {
+    damageReduction: 0,
+    playAreaCards: (np[loser].playAreaCards || []).filter(c => c.effectType !== 'reduceNextDamage'),
+  }
   if (np[loser].unflinchingAvailable) loserUpdates.unflinchingAvailable = false
   np[loser] = { ...np[loser], ...loserUpdates }
 
@@ -571,14 +635,60 @@ function resolveCombo(state) {
   }
   s = { ...s, players: np2, comboChain: [], comboExecutor: null }
 
-  // Draw for the active player (the turn declarer), then pass to opponent
+  // Passive: onDealDamage (e.g. Sibyl's Disorient)
+  if (total > 0) {
+    const execPassive = s.players[comboExecutor].passive
+    if (execPassive) {
+      const { updates: passUp, logs: passLogs, specials: dealSpecials } = executePassiveEffects(
+        execPassive, comboExecutor, 'onDealDamage', s, { damageDealt: total }
+      )
+      s = applyPatch(s, passUp)
+      if (passLogs.length) s = addLog(s, passLogs)
+      if (dealSpecials.length > 0) {
+        return processNextSpecial({ ...s, specialQueue: dealSpecials, afterSpecial: { type: 'END_TURN', drawnBy: s.activePlayer } })
+      }
+    }
+  }
+
   return endTurn(s, s.activePlayer)
 }
 
 function resumeAfterFallback(state) {
   const { afterFallback } = state
   if (!afterFallback) return { ...state, phase: 'awaitingAction' }
-  if (afterFallback.type === 'END_NEUTRAL') return endTurn(state, afterFallback.drawnBy)
+  if (afterFallback.type === 'END_NEUTRAL') return endTurn(state, afterFallback.drawnBy, { wasNeutral: true })
   if (afterFallback.type === 'START_COMBO') return startCombo(state, afterFallback.executor)
   return state
+}
+
+function processNextSpecial(state) {
+  const [current, ...rest] = state.specialQueue || []
+  if (!current) return resumeAfterSpecial(state)
+
+  if (current.type === 'revealHand') {
+    return { ...state, phase: 'revealingHand', revealHandState: current, specialQueue: rest }
+  }
+
+  if (current.type === 'discardPicker') {
+    return passTo(
+      { ...state, pendingDiscard: current, specialQueue: rest },
+      current.chooserIdx,
+      `Pass to ${state.players[current.chooserIdx].name} — choose a card to discard`,
+      'awaitingDiscard'
+    )
+  }
+
+  // Unknown special type — skip it
+  return processNextSpecial({ ...state, specialQueue: rest })
+}
+
+function resumeAfterSpecial(state) {
+  if ((state.specialQueue || []).length > 0) return processNextSpecial(state)
+  const { afterSpecial } = state
+  const s = { ...state, afterSpecial: null }
+  if (!afterSpecial) return { ...s, phase: 'awaitingAction' }
+  if (afterSpecial.type === 'END_NEUTRAL') return endTurn(s, afterSpecial.drawnBy, { wasNeutral: afterSpecial.wasNeutral ?? true })
+  if (afterSpecial.type === 'START_COMBO') return startCombo(s, afterSpecial.executor)
+  if (afterSpecial.type === 'END_TURN') return endTurn(s, afterSpecial.drawnBy)
+  return { ...s, phase: 'awaitingAction' }
 }

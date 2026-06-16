@@ -1,4 +1,5 @@
 import Hand from './Hand.jsx'
+import PlayArea from './PlayArea.jsx'
 
 const GAUGE_COLOR = ['#4299e1', '#68d391', '#f6ad55']
 
@@ -9,6 +10,7 @@ export default function PlayerBoard({
   children,
   showHand = true,
   handProps = {},
+  playAreaTraps = [],
 }) {
   if (!player) return null
 
@@ -86,6 +88,15 @@ export default function PlayerBoard({
           }}>🛡 -{player.damageReduction} next dmg</span>
         )}
       </div>
+
+      {/* Play area — face-up lingering cards (traps, one-turn buffs) */}
+      {(playAreaTraps.length > 0 || (player.playAreaCards || []).length > 0) && (
+        <PlayArea
+          traps={playAreaTraps}
+          buffCards={player.playAreaCards || []}
+          label={isOpponent ? `${player.name}'s Play Area` : 'Your Play Area'}
+        />
+      )}
 
       {/* Hand */}
       {showHand && (

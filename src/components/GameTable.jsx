@@ -3,10 +3,11 @@ import PlayerBoard from './PlayerBoard.jsx'
 import ClashZone from './ClashZone.jsx'
 import ComboBuilder from './ComboBuilder.jsx'
 import MatchLog from './MatchLog.jsx'
-import Hand from './Hand.jsx'
+import RevealHandModal from './RevealHandModal.jsx'
+import Card from './Card.jsx'
 
 export default function GameTable({ state, dispatch }) {
-  const { phase, activePlayer, players, clashZone, deviceHolder, comboExecutor } = state
+  const { phase, activePlayer, players, clashZone, deviceHolder, comboExecutor, traps } = state
   const [selectedCard, setSelectedCard] = useState(null)
   const [actionMode, setActionMode] = useState(null) // 'neutral' | 'clash' | null
 
@@ -19,9 +20,13 @@ export default function GameTable({ state, dispatch }) {
   const isActionPhase = phase === 'awaitingAction'
   const isRevealPhase = phase === 'revealingClash'
   const isComboPhase = phase === 'buildingCombo'
+  const isDiscardPhase = phase === 'awaitingDiscard'
 
   const player = players[viewingPlayer]
   const opponent = players[1 - viewingPlayer]
+
+  const playerTraps = traps.filter(t => t.owner === viewingPlayer)
+  const opponentTraps = traps.filter(t => t.owner === (1 - viewingPlayer))
 
   // Which cards in hand are valid for current action
   function getSelectableIndices() {
@@ -69,6 +74,7 @@ export default function GameTable({ state, dispatch }) {
   }
 
   return (
+    <>
     <div style={{ display: 'flex', gap: 16, height: '100%' }}>
 
       {/* Main table */}
@@ -82,13 +88,8 @@ export default function GameTable({ state, dispatch }) {
           <span style={{ color: '#a0aec0', fontSize: 12 }}>Turn {state.turnNumber}</span>
           <span style={{ color: '#4a5568' }}>|</span>
           <span style={{ color: '#f6e05e', fontSize: 12, fontWeight: 700 }}>
-            {phaseLabel(phase, viewingPlayer, players, clashZone, comboExecutor)}
+            {phaseLabel(phase, viewingPlayer, players, comboExecutor)}
           </span>
-          {state.traps.length > 0 && (
-            <span style={{ color: '#fc8181', fontSize: 11, marginLeft: 'auto' }}>
-              ⚠ {state.traps.length} active trap{state.traps.length !== 1 ? 's' : ''}
-            </span>
-          )}
         </div>
 
         {/* Opponent board (hand hidden) */}
@@ -97,6 +98,7 @@ export default function GameTable({ state, dispatch }) {
           isActive={activePlayer === 1 - viewingPlayer}
           isOpponent={true}
           showHand={true}
+          playAreaTraps={opponentTraps}
         />
 
         {/* Clash zone */}
@@ -107,6 +109,32 @@ export default function GameTable({ state, dispatch }) {
         {/* Combo builder */}
         {isComboPhase && comboExecutor === viewingPlayer && (
           <ComboBuilder state={state} dispatch={dispatch} />
+        )}
+
+        {/* Discard picker — chooser selects a card from target's hand */}
+        {isDiscardPhase && state.pendingDiscard && (
+          <div style={{
+            background: '#1a202c', borderRadius: 10, padding: '14px 16px',
+            border: '2px solid #553c9a',
+          }}>
+            <div style={{ color: '#d6bcfa', fontWeight: 700, fontSize: 13, marginBottom: 10 }}>
+              {players[state.pendingDiscard.chooserIdx]?.name} — choose a card for{' '}
+              {players[state.pendingDiscard.targetIdx]?.name} to discard
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {(players[state.pendingDiscard.targetIdx]?.hand || []).map((card, i) => (
+                <Card
+                  key={card._id ?? i}
+                  card={card}
+                  selectable={true}
+                  onClick={() => dispatch({ type: 'CONFIRM_DISCARD', cardIndex: i })}
+                />
+              ))}
+            </div>
+            {(players[state.pendingDiscard.targetIdx]?.hand || []).length === 0 && (
+              <div style={{ color: '#4a5568', fontSize: 13 }}>No cards to discard.</div>
+            )}
+          </div>
         )}
 
         {/* Reveal button */}
@@ -131,6 +159,7 @@ export default function GameTable({ state, dispatch }) {
           isActive={activePlayer === viewingPlayer}
           isOpponent={false}
           showHand={!isComboPhase || comboExecutor !== viewingPlayer}
+          playAreaTraps={playerTraps}
           handProps={{
             selectedIndex: selectedCard,
             selectableIndices: getSelectableIndices(),
@@ -205,16 +234,24 @@ export default function GameTable({ state, dispatch }) {
       </div>
 
     </div>
+
+    {/* Reveal hand overlay */}
+    {phase === 'revealingHand' && (
+      <RevealHandModal state={state} dispatch={dispatch} />
+    )}
+    </>
   )
 }
 
-function phaseLabel(phase, viewingPlayer, players, clashZone, comboExecutor) {
+function phaseLabel(phase, viewingPlayer, players, comboExecutor) {
   const vname = players[viewingPlayer]?.name
   switch (phase) {
     case 'awaitingAction': return `${vname}'s turn — choose an action`
     case 'awaitingClashResponse': return `${vname} — respond to the Clash`
     case 'revealingClash': return 'Clash declared — ready to reveal'
     case 'buildingCombo': return `${players[comboExecutor]?.name} builds combo`
+    case 'awaitingDiscard': return 'Choose a card to discard'
+    case 'revealingHand': return 'Reveal — look at opponent\'s hand'
     default: return phase
   }
 }

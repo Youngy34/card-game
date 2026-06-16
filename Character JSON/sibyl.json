@@ -8,83 +8,42 @@
     "name": "Disorient",
     "rawText": "The first time each turn you deal 4 or more damage to your opponent, they discard a card of their choice.",
     "effects": [
-      {
-        "type": "opponentDiscards", "amount": 1, "chooser": "opponent",
-        "trigger": "onDealDamage",
-        "condition": {
-          "type": "allOf",
-          "conditions": [
-            { "type": "damageDealtAtLeast", "amount": 4 },
-            { "type": "firstTimePerTurn" }
-          ]
-        }
-      }
+      { "type": "opponentDiscards", "amount": 1, "chooser": "opponent", "trigger": "onDealDamage",
+        "condition": { "type": "allOf", "conditions": [ { "type": "damageDealtAtLeast", "amount": 4 }, { "type": "firstTimePerTurn" } ] } }
     ]
   },
   "signatureCards": [
-    {
-      "name": "Premonition", "type": "guard", "priority": 2, "damage": 1, "combo": "starter", "copies": 2,
-      "rawText": "Neutral: Look at your opponent's hand. They are Foreseen until the end of your next turn.",
+    { "name": "Premonition", "type": "guard", "priority": 2, "damage": 1, "combo": "starter", "copies": 2,
+      "rawText": "Neutral: Look at your opponent's hand.",
       "clashEffects": [],
-      "neutralEffects": [
-        { "type": "revealHand", "target": "opponent" },
-        { "type": "applyStatus", "status": "foreseen", "target": "opponent", "duration": "untilEndOfYourNextTurn" }
-      ],
-      "art": null
-    },
-    {
-      "name": "Echoing Vision", "type": "strike", "priority": 1, "damage": 1, "combo": "linker", "copies": 1,
+      "neutralEffects": [ { "type": "revealHand", "target": "opponent" } ],
+      "art": null },
+    { "name": "Echoing Vision", "type": "strike", "priority": 1, "damage": 1, "combo": "linker", "copies": 1,
       "rawText": "Neutral: Return a card with a \"look at your opponent's hand\" ability from your discard to your hand.",
       "clashEffects": [],
-      "neutralEffects": [
-        { "type": "returnFromDiscard", "amount": 1, "to": "hand", "filter": { "hasEffectType": "revealHand" } }
-      ],
-      "art": null
-    },
-    {
-      "name": "Cold Calculation", "type": "strike", "priority": 3, "damage": 2, "combo": "linker", "copies": 1,
-      "rawText": "",
-      "clashEffects": [], "neutralEffects": [], "art": null
-    },
-    {
-      "name": "Outthink", "type": "crush", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
-      "rawText": "If this wins and your opponent is Foreseen, +1 damage.",
-      "clashEffects": [
-        { "type": "modifyDamage", "amount": 1, "target": "opponent", "trigger": "onWin", "condition": { "type": "opponentForeseen" } }
-      ],
-      "neutralEffects": [], "art": null
-    },
-    {
-      "name": "Anticipate", "type": "guard", "priority": 3, "damage": 2, "combo": "ender", "copies": 1,
-      "rawText": "If your opponent is Foreseen, +2 damage.",
-      "clashEffects": [
-        { "type": "modifyDamage", "amount": 2, "target": "opponent", "trigger": "onWin", "condition": { "type": "opponentForeseen" } }
-      ],
-      "neutralEffects": [], "art": null
-    },
-    {
-      "name": "Mind's Eye", "type": "crush", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "neutralEffects": [ { "type": "returnFromDiscard", "amount": 1, "to": "hand", "filter": { "hasEffectType": "revealHand" } } ],
+      "art": null },
+    { "name": "Cold Calculation", "type": "strike", "priority": 3, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Outthink", "type": "crush", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
+      "rawText": "", "clashEffects": [], "neutralEffects": [], "art": null },
+    { "name": "Pre-empt", "type": "guard", "priority": 3, "damage": 2, "combo": "ender", "copies": 1,
+      "rawText": "If this wins, your opponent discards a card of your choice.",
+      "clashEffects": [ { "type": "opponentDiscards", "amount": 1, "chooser": "self", "trigger": "onWin" } ],
+      "neutralEffects": [], "art": null },
+    { "name": "Mind's Eye", "type": "crush", "priority": 2, "damage": 2, "combo": "linker", "copies": 1,
       "rawText": "If this wins and the opponent has 3 or fewer cards, draw a card.",
-      "clashEffects": [
-        { "type": "draw", "amount": 1, "target": "self", "trigger": "onWin", "condition": { "type": "opponentHandSizeAtMost", "amount": 3 } }
-      ],
-      "neutralEffects": [], "art": null
-    },
-    {
-      "name": "Checkmate", "type": "strike", "priority": 2, "damage": 2, "combo": "ender", "copies": 1,
-      "rawText": "If the opponent has 3 or fewer cards in hand, +3 damage.",
-      "clashEffects": [
-        { "type": "modifyDamage", "amount": 3, "target": "opponent", "trigger": "onWin", "condition": { "type": "opponentHandSizeAtMost", "amount": 3 } }
-      ],
-      "neutralEffects": [], "art": null
-    }
+      "clashEffects": [ { "type": "draw", "amount": 1, "target": "self", "trigger": "onWin", "condition": { "type": "opponentHandSizeAtMost", "amount": 3 } } ],
+      "neutralEffects": [], "art": null },
+    { "name": "Checkmate", "type": "strike", "priority": 2, "damage": 2, "combo": "ender", "copies": 1,
+      "rawText": "If the opponent has 2 or fewer cards in hand, +3 damage.",
+      "clashEffects": [ { "type": "modifyDamage", "amount": 3, "target": "opponent", "trigger": "onWin", "condition": { "type": "opponentHandSizeAtMost", "amount": 2 } } ],
+      "neutralEffects": [], "art": null }
   ],
   "superCard": {
     "name": "Inevitability", "type": "guard", "priority": 3, "damage": 5, "combo": "ender", "copies": 1,
     "rawText": "Deal +1 damage for each card fewer than 4 in your opponent's hand (so 1 card held = +3).",
-    "clashEffects": [
-      { "type": "modifyDamage", "amount": 1, "per": "opponentCardBelow4", "target": "opponent", "trigger": "onWin" }
-    ],
+    "clashEffects": [ { "type": "modifyDamage", "amount": 1, "per": "opponentCardBelow4", "target": "opponent", "trigger": "onWin" } ],
     "neutralEffects": [], "art": null
   }
 }

@@ -60,20 +60,12 @@ export default function Card({
   }
 
   // Data mode card
-  const clashText = (card.clashEffects || [])
-    .filter(e => e.type !== 'damageEvenOnLoss' || true)
-    .map(effectToText).filter(Boolean).join(' ')
-  const clashDisplay = clashText || card.rawText?.match(/^(?!Neutral:)(.+)/)?.[1]?.trim() || ''
-  const neutralText = (card.neutralEffects || []).map(effectToText).filter(Boolean).join(' ')
-  const neutralDisplay = neutralText || card.rawText?.match(/Neutral:\s*(.+)/)?.[1]?.trim() || ''
-
   return (
     <div
       onClick={selectable ? onClick : undefined}
-      title={card.rawText || ''}
       style={{
         width: small ? 70 : 100,
-        height: small ? 98 : 140,
+        minHeight: small ? 98 : 140,
         borderRadius: 8,
         background: '#1a202c',
         border: `2px solid ${selected ? '#f6e05e' : glowing ? '#68d391' : '#2d3748'}`,
@@ -93,6 +85,7 @@ export default function Card({
         background: typeColor, color: '#fff', padding: small ? '2px 4px' : '3px 6px',
         fontWeight: 700, fontSize: small ? 8 : 9, letterSpacing: 1,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexShrink: 0,
       }}>
         <span>{TYPE_LABEL[card.type]}</span>
         <span style={{
@@ -120,23 +113,35 @@ export default function Card({
         <span>D:<strong style={{ color: '#fc8181' }}>{card.damage}</strong></span>
       </div>
 
+      {/* Card text — rawText preferred, derived fallback if rawText empty */}
       {!small && (
-        <>
-          <div style={{ flex: 1, padding: '3px 6px', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {clashDisplay && (
-              <div style={{ color: '#fbd38d', fontSize: 9, lineHeight: 1.3 }}>
-                <span style={{ color: '#f6ad55', fontWeight: 700 }}>⚔ </span>{clashDisplay}
-              </div>
-            )}
-            {neutralDisplay && (
-              <div style={{ color: '#9ae6b4', fontSize: 9, lineHeight: 1.3 }}>
-                <span style={{ color: '#68d391', fontWeight: 700 }}>◎ </span>{neutralDisplay}
-              </div>
-            )}
-          </div>
-        </>
+        <div style={{ padding: '3px 6px 5px', flexShrink: 0 }}>
+          {card.rawText
+            ? <div style={{ color: '#cbd5e0', fontSize: 9, lineHeight: 1.4 }}>{card.rawText}</div>
+            : <FallbackText card={card} />
+          }
+        </div>
       )}
     </div>
+  )
+}
+
+function FallbackText({ card }) {
+  const clashLines = (card.clashEffects || []).map(effectToText).filter(Boolean)
+  const neutralLines = (card.neutralEffects || []).map(effectToText).filter(Boolean)
+  return (
+    <>
+      {clashLines.map((t, i) => (
+        <div key={i} style={{ color: '#fbd38d', fontSize: 9, lineHeight: 1.4 }}>
+          <span style={{ color: '#f6ad55', fontWeight: 700 }}>⚔ </span>{t}
+        </div>
+      ))}
+      {neutralLines.map((t, i) => (
+        <div key={i} style={{ color: '#9ae6b4', fontSize: 9, lineHeight: 1.4 }}>
+          <span style={{ color: '#68d391', fontWeight: 700 }}>◎ </span>{t}
+        </div>
+      ))}
+    </>
   )
 }
 
