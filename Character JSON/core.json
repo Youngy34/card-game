@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "globals": {
+    "handSize": 5,
+    "drawPerTurn": 1,
+    "deckSize": 14,
+    "superCardsSetAside": 1,
+    "superGaugeThreshold": 3,
+    "gaugeResetAfterSuper": false,
+    "firstTurnRule": "lowestBaseHP",
+    "simTurnCapPerPlayer": 50,
+    "artBasePath": ""
+  },
+  "basics": [
+    {
+      "name": "Jab",
+      "type": "strike",
+      "priority": 2,
+      "damage": 1,
+      "combo": "linker",
+      "copies": 2,
+      "rawText": "Neutral: Discard this to charge your Super +1.",
+      "clashEffects": [],
+      "neutralEffects": [
+        { "type": "chargeSuper", "amount": 1 }
+      ],
+      "art": null
+    },
+    {
+      "name": "Guard",
+      "type": "guard",
+      "priority": "X",
+      "damage": 0,
+      "combo": "starter",
+      "copies": 2,
+      "rawText": "Neutral: Discard this to charge your Super +1.",
+      "clashEffects": [],
+      "neutralEffects": [
+        { "type": "chargeSuper", "amount": 1 }
+      ],
+      "art": null
+    },
+    {
+      "name": "Body Blow",
+      "type": "crush",
+      "priority": 2,
+      "damage": 2,
+      "combo": "linker",
+      "copies": 2,
+      "rawText": "Neutral: Discard this to charge your Super +1.",
+      "clashEffects": [],
+      "neutralEffects": [
+        { "type": "chargeSuper", "amount": 1 }
+      ],
+      "art": null
+    }
+  ]
+}

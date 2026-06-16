@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "id": "vex",
+  "name": "Vex, Twin Fang",
+  "archetype": "Rushdown",
+  "baseHP": 18,
+  "passive": {
+    "name": "Bloodthirst",
+    "rawText": "Whenever you win a Clash, draw a card.",
+    "effects": [
+      { "type": "draw", "amount": 1, "target": "self", "trigger": "onWinClash" }
+    ]
+  },
+  "signatureCards": [
+    {
+      "name": "Flurry",
+      "type": "strike",
+      "priority": 3,
+      "damage": 1,
+      "combo": "linker",
+      "copies": 2,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Gutter Cut",
+      "type": "strike",
+      "priority": 2,
+      "damage": 1,
+      "combo": "linker",
+      "copies": 1,
+      "rawText": "Deals its damage even if it loses.",
+      "clashEffects": [
+        { "type": "damageEvenOnLoss" }
+      ],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Quick Dodge",
+      "type": "strike",
+      "priority": "X",
+      "damage": 0,
+      "combo": "starter",
+      "copies": 1,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Eviscerate",
+      "type": "strike",
+      "priority": 3,
+      "damage": 4,
+      "combo": "ender",
+      "copies": 1,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Parry Riposte",
+      "type": "guard",
+      "priority": 2,
+      "damage": 2,
+      "combo": "ender",
+      "copies": 1,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Cross Guard",
+      "type": "guard",
+      "priority": 2,
+      "damage": 1,
+      "combo": "starter",
+      "copies": 1,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    },
+    {
+      "name": "Pommel Strike",
+      "type": "crush",
+      "priority": 2,
+      "damage": 2,
+      "combo": "linker",
+      "copies": 1,
+      "rawText": "",
+      "clashEffects": [],
+      "neutralEffects": [],
+      "art": null
+    }
+  ],
+  "superCard": {
+    "name": "Hundred Fang",
+    "type": "strike",
+    "priority": 3,
+    "damage": 4,
+    "combo": "ender",
+    "copies": 1,
+    "rawText": "+1 damage per other card chained before it.",
+    "clashEffects": [
+      { "type": "modifyDamage", "amount": 1, "per": "otherCardInCombo", "target": "opponent" }
+    ],
+    "neutralEffects": [],
+    "art": null
+  }
+}
