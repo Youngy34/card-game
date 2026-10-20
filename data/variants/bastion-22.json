@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "id": "bastion-22",
+  "name": "Bastion (Rim Shot, 22 HP)",
+  "epithet": "the Sentinel",
+  "concept": "Pressuring him is a mistake. His guard pushes you into Converts, and his Pressure punishes exactly those.",
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Knee Bash",
+      "type": "pressure",
+      "build": 4,
+      "chip": 0,
+      "cooldown": 1,
+      "lock": true
+    },
+    {
+      "name": "Shield Bash",
+      "type": "pressure",
+      "build": 3,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Shoulder Ram",
+      "type": "convert",
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Lockdown",
+      "type": "convert",
+      "chip": 2,
+      "cooldown": 1,
+      "lock": true
+    },
+    {
+      "name": "Vigilance",
+      "type": "recover",
+      "chip": 2,
+      "cooldown": 1,
+      "chipOnWin": 2
+    },
+    {
+      "name": "Riot Guard",
+      "type": "recover",
+      "chip": 3,
+      "cooldown": 1,
+      "chipPerCleared": 1,
+      "chipOnWin": 2,
+      "lockout": true
+    },
+    {
+      "name": "Sonic Cutter",
+      "type": "typeless",
+      "chip": 2,
+      "cooldown": 1
+    },
+    {
+      "name": "Rim Shot",
+      "type": "pressure",
+      "build": 3,
+      "chip": 0,
+      "cooldown": 1,
+      "stagger": "convert",
+      "lockout": true
+    }
+  ],
+  "super": {
+    "name": "Final Bastion",
+    "type": "recover",
+    "chip": 3,
+    "chipPerHpLost": 3,
+    "chipOnWin": 2,
+    "lock": true,
+    "flavour": "His last stand: the more he's been hurt, the harder it hits."
+  },
+  "variantOf": "bastion",
+  "notes": "yomi_sim.py 'bastion-22': bastion(hp=22, cutter=(2, 0))"
+}

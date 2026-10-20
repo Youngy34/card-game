@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 2,
+  "id": "atlas-taunt",
+  "name": "Atlas (Taunt)",
+  "hp": 23,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Knee Strike",
+      "type": "pressure",
+      "build": 3,
+      "chip": 1,
+      "cooldown": 1,
+      "chipIfMirror": 2
+    },
+    {
+      "name": "Lariat",
+      "type": "pressure",
+      "build": 4,
+      "chip": 0,
+      "cooldown": 1,
+      "chipOnWin": 2
+    },
+    {
+      "name": "Overhead",
+      "type": "convert",
+      "chip": 2,
+      "cooldown": 1,
+      "chipOnWin": 2
+    },
+    {
+      "name": "Hammer Spin",
+      "type": "convert",
+      "chip": 1,
+      "cooldown": 2,
+      "chipPerCashed": 2,
+      "chipOnWin": 2
+    },
+    {
+      "name": "Earthsplitter",
+      "type": "convert",
+      "chip": 4,
+      "cooldown": 1,
+      "chipOnWin": 2,
+      "lockout": true
+    },
+    {
+      "name": "Counterweight",
+      "type": "recover",
+      "chip": 2,
+      "cooldown": 1
+    },
+    {
+      "name": "Payback",
+      "type": "recover",
+      "chip": 1,
+      "cooldown": 1,
+      "chipPerCleared": 2
+    },
+    {
+      "name": "Taunt",
+      "type": "typeless",
+      "chip": 0,
+      "cooldown": 2,
+      "onCooldownConvertChip": 3
+    }
+  ],
+  "super": {
+    "name": "Avalanche",
+    "type": "convert",
+    "chip": 4,
+    "chipPerHpLost": 3,
+    "chipOnWin": 2
+  },
+  "notes": "yomi_sim.py 'atlas-taunt': atlas_taunt()",
+  "variantOf": "atlas"
+}

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "id": "gambler-rs",
+  "name": "Gambler (Rising Stakes, 19 Oct)",
+  "epithet": "name TBD",
+  "concept": "Her own grey pile is her fuel. The bigger it gets, the harder she hits, and the closer she is to dying to one Convert.",
+  "hp": 21,
+  "passive": {
+    "risingStakes": {
+      "tokens": 1
+    }
+  },
+  "ai": {
+    "ownGreyValue": 0.3
+  },
+  "cards": [
+    {
+      "name": "Let It Ride",
+      "type": "pressure",
+      "build": 5,
+      "chip": 0,
+      "cooldown": 1,
+      "buildIfOppHas": {
+        "tokens": 4,
+        "build": 2
+      }
+    },
+    {
+      "name": "Press",
+      "type": "pressure",
+      "build": 4,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Raise",
+      "type": "pressure",
+      "build": 3,
+      "chip": 0,
+      "cooldown": 1,
+      "chipPerOwnTokens": 3
+    },
+    {
+      "name": "Bloodprice",
+      "type": "convert",
+      "chip": 2,
+      "cooldown": 1,
+      "chipPerOwnTokens": 2
+    },
+    {
+      "name": "All In",
+      "type": "convert",
+      "chip": 4,
+      "cooldown": 1,
+      "chipPerOwnTokens": 1,
+      "lockout": true
+    },
+    {
+      "name": "Second Wind",
+      "type": "recover",
+      "chip": 1,
+      "cooldown": 1,
+      "chipPerCleared": 3
+    },
+    {
+      "name": "Fold",
+      "type": "recover",
+      "chip": 2,
+      "cooldown": 1
+    },
+    {
+      "name": "Ante",
+      "type": "typeless",
+      "chip": 3,
+      "cooldown": 1,
+      "selfAdd": 2
+    }
+  ],
+  "super": {
+    "name": "Brink",
+    "type": "convert",
+    "chip": 4,
+    "chipPerOwnTokens": 1,
+    "clearOwn": true
+  },
+  "notes": "yomi_sim.py 'gambler-rs': gambler(rising=1, brink='convert')",
+  "variantOf": "gambler"
+}

@@ -13,7 +13,7 @@ import { toEngineFighter, validateFighter } from '../../src/engine/fighters.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const load = id => {
-  for (const p of [`${here}/../../data/fighters/${id}.json`, `${here}/fixtures/${id}.json`]) {
+  for (const p of [`${here}/../../data/fighters/${id}.json`, `${here}/../../data/variants/${id}.json`]) {
     if (fs.existsSync(p)) {
       const f = JSON.parse(fs.readFileSync(p, 'utf8'))
       const v = validateFighter(f)

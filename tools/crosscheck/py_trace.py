@@ -19,7 +19,10 @@ G = int(sys.argv[3]) if len(sys.argv) > 3 else 12
 core = ['gambler', 'bastion', 'vex', 'atlas']
 pairs = [(a, b) for i, a in enumerate(core) for b in core[i:]]
 pairs += [('atlas-taunt', 'vex'), ('baseline', 'gambler'), ('gambler-rs', 'bastion'),
-          ('gambler-rs-empty', 'atlas'), ('baseline', 'baseline'), ('atlas-taunt', 'gambler-rs')]
+          ('gambler-rs-empty', 'atlas'), ('baseline', 'baseline'), ('atlas-taunt', 'gambler-rs'),
+          ('bastion-sc2', 'vex-22'), ('atlas-23', 'gambler-pact'), ('gambler-noself', 'bastion-22'),
+          ('gambler-cap4', 'vex-full'), ('atlas-bb4', 'bastion-sc2'), ('gambler-pact', 'gambler-pact'),
+          ('vex-full', 'atlas-23')]
 
 def enc(o): return 'S' if o == 'S' else int(o)
 def state(X): return dict(hp=X.hp, pile=X.pile, hand=sorted(X.hand), cd1=list(X.cd1), cd2=list(X.cd2),

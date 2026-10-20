@@ -5,7 +5,9 @@
 //   node tools/sim.mjs vex bastion -n 500 --seed 3
 //   node tools/sim.mjs --all -n 500 --seed 5      # round-robin of data/fighters
 //   node tools/sim.mjs gambler vex --counter attack
+//   node tools/sim.mjs bastion-sc2 atlas           # an earlier version, from data/variants
 //   node tools/sim.mjs path/to/variant.json atlas  # any fighter file
+//   node tools/sim.mjs --list                      # every fighter and version by name
 
 import fs from 'fs'
 import path from 'path'
@@ -21,12 +23,22 @@ const n = +opt('-n', 300), seed = +opt('--seed', 0), counter = opt('--counter', 
 const levels = opt('--levels', 'hard,hard').split(',')     // e.g. --levels hard,easy
 const json = args.includes('--json'); if (json) args.splice(args.indexOf('--json'), 1)
 const all = args.includes('--all'); if (all) args.splice(args.indexOf('--all'), 1)
+const list = args.includes('--list'); if (list) args.splice(args.indexOf('--list'), 1)
 const settings = JSON.parse(fs.readFileSync(`${root}/data/settings.json`, 'utf8'))
 const rules = { ...settings.rules, counterChip: counter }
 const W = { ...DEFAULT_WEIGHTS, ...settings.ai }
 
+function find(name) {
+  if (name.endsWith('.json')) return name
+  for (const dir of ['fighters', 'variants']) {
+    const p = `${root}/data/${dir}/${name}.json`
+    if (fs.existsSync(p)) return p
+  }
+  console.error(`No fighter called "${name}". Run with --list to see them.`); process.exit(1)
+}
+
 function load(name) {
-  const p = name.endsWith('.json') ? name : `${root}/data/fighters/${name}.json`
+  const p = find(name)
   const f = JSON.parse(fs.readFileSync(p, 'utf8'))
   const v = validateFighter(f)
   if (v.errors.length) { console.error(`${name}:`, v.errors); process.exit(1) }
@@ -56,11 +68,19 @@ async function report(a, b) {
   return r
 }
 
-if (all) {
+if (list) {
+  for (const dir of ['fighters', 'variants']) {
+    console.log(dir === 'fighters' ? 'Signed off (used by --all):' : 'Earlier versions and variants:')
+    for (const f of fs.readdirSync(`${root}/data/${dir}`).filter(f => f.endsWith('.json')).sort()) {
+      const j = JSON.parse(fs.readFileSync(`${root}/data/${dir}/${f}`, 'utf8'))
+      console.log(`  ${f.slice(0, -5).padEnd(18)} ${j.name}`)
+    }
+  }
+} else if (all) {
   const names = fs.readdirSync(`${root}/data/fighters`).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).sort()
   for (let i = 0; i < names.length; i++) for (let j = i; j < names.length; j++) await report(names[i], names[j])
 } else if (args.length === 2) {
   await report(args[0], args[1])
 } else {
-  console.log('usage: node tools/sim.mjs <a> <b> [-n games] [--seed s] [--counter strict|attack] [--levels hard,easy] | --all')
+  console.log('usage: node tools/sim.mjs <a> <b> [-n games] [--seed s] [--counter strict|attack] [--levels hard,easy] | --all | --list')
 }

@@ -25,10 +25,11 @@ Locally, edits and the log are kept in that browser only.
 | Path | What's there |
 |---|---|
 | `data/fighters/*.json` | The signed-off fighters (the source of truth) |
+| `data/variants/*.json` | Earlier versions and test variants, runnable by name in `tools/sim.mjs` (not shown in the app) |
 | `data/settings.json` | Default rules and sparring-partner weights |
 | `src/engine/` | The rules engine and sparring partner, plain JavaScript with no UI (runs in the browser and in Node) |
 | `src/app/` | The screens (Preact and htm, loaded from a CDN) |
-| `tools/sim.mjs` | Command-line balance runs on the same engine and JSON |
+| `tools/sim.mjs` | The simulator: command-line balance runs on the same engine and JSON (replaces `yomi_sim.py`) |
 | `tools/crosscheck/` | Proves the JavaScript engine plays exactly the same game as `yomi_sim.py` |
 | `tools/smoke/` | Click-through test of the built page in a fake browser |
 | `tools/build-artifact.mjs` | Packs the app into one page for publishing (`dist/yomi-playtest.html`) |
@@ -110,16 +111,26 @@ Calibrated on 20 October 2026 in the four mirror matchups, 2,000 games per pairi
 
 The Lab can give each fighter its own level, and the command line takes `--levels hard,easy`. Logged games record the level they were played at.
 
-## Checking the engine
+## The simulator
 
 ```
+node tools/sim.mjs --list
 node tools/sim.mjs gambler bastion -n 500 --seed 5
 node tools/sim.mjs --all -n 300
+node tools/sim.mjs bastion-sc2 atlas --counter attack
+node tools/sim.mjs vex vex --levels hard,easy
+```
+
+The full guide (reading the output, the value function, what to trust) is `claude/sim/yomi-sim guide.md` in the Claude project.
+
+**The Python simulator, `yomi_sim.py`, is retired** (20 October 2026). This engine replaces it. The cross-check below replays reference games recorded with it and compares every round: both players' options, both payoff grids, both game values and the board afterwards. On 20 October 2026 it matched on 322 games (2,798 rounds), covering the signed-off roster, every version in `data/variants/`, all three counter-chip settings, Rising Stakes, Taunt, card return and Cooldown 2. Five old Python versions use mechanics since ruled out and weren't ported: `gambler-edge`, `bastion-htl`, `bastion-typelock`, `vex-pre` and `atlas-v1`.
+
+```
 python3 tools/crosscheck/py_trace.py <folder with yomi_sim.py> trace.jsonl
 node tools/crosscheck/js_replay.mjs trace.jsonl
 ```
 
-The cross-check replays reference games from `yomi_sim.py` and compares the board after every round, both sparring partners' payoff grids and their game values. On 20 October 2026 it matched on 288 games (2,430 rounds), covering the counter-chip variants, Rising Stakes, Taunt, card return and Cooldown 2.
+Seeded runs here won't reproduce the exact figures in the Python-era tables (the random number generators differ), only the same figures within noise.
 
 ## Publishing
 
