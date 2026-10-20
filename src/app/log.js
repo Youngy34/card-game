@@ -4,6 +4,10 @@ import { html, useState, useMemo, pct } from './lib.js'
 import { getState, deleteGame, download, roster } from './store.js'
 import { Confirm, Seg, toast, copyText } from './ui.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
+import { LEVELS } from '../engine/ai.js'
+
+// Games logged before difficulty existed were all against Hard
+const levelOf = g => (g.mode === 'ai' ? g.levels?.[1] || 'hard' : null)
 
 const median = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2 }
 const when = t => new Date(t).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -37,6 +41,11 @@ export function Log() {
           <tbody>${Object.entries(s.fighters).sort((a, b) => b[1].games - a[1].games).map(([name, f]) => html`<tr><td>${name}</td><td class="r">${f.games}</td><td class="r">${f.wins}</td><td class="r">${pct(f.wins / f.games)}</td></tr>`)}</tbody></table></div>
           <p class="small muted">Draws count as half a win. Mirrors count once per seat.</p>
         </div>
+        ${s.vsPartner.length ? html`<div class="panel stack"><h3>Your record against the sparring partner</h3>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Difficulty</th><th class="r">Games</th><th class="r">Won</th><th class="r">Win rate</th></tr></thead>
+          <tbody>${s.vsPartner.map(([lvl, r]) => html`<tr><td>${LEVELS[lvl]?.label || lvl}</td><td class="r">${r.games}</td><td class="r">${r.wins}</td><td class="r">${pct(r.wins / r.games)}</td></tr>`)}</tbody></table></div>
+          <p class="small muted">Small samples swing a lot: over 5 games, an evenly matched player wins anywhere from 1 to 4 nearly every time.</p>
+        </div>` : null}
         <div class="panel stack"><h3>How games end</h3>
           <div class="tbl-wrap"><table class="tbl"><tbody>${Object.entries(s.routes).sort((a, b) => b[1] - a[1]).map(([r, c]) => html`<tr><td>${r}</td><td class="r">${c}</td><td class="r">${pct(c / games.length)}</td></tr>`)}</tbody></table></div>
         </div>
@@ -77,7 +86,7 @@ function GameRow({ g, current, onDelete, canDelete }) {
   return html`<div class="game-row">
     <div class="stack" style=${{ gap: '2px' }}>
       <strong>${a.name}${tag(a)} vs ${b.name}${tag(b)}</strong>
-      <span class="small muted">${when(g.finishedAt)} · ${g.mode === 'ai' ? `vs sparring partner (you were ${a.name})` : 'two players'} · ${g.rounds.length} rounds · ${winner ? `${winner} won` : 'draw'} by ${g.route}</span>
+      <span class="small muted">${when(g.finishedAt)} · ${g.mode === 'ai' ? `vs sparring partner on ${LEVELS[levelOf(g)]?.label || levelOf(g)} (you were ${a.name})` : 'two players'} · ${g.rounds.length} rounds · ${winner ? `${winner} won` : 'draw'} by ${g.route}</span>
     </div>
     <div class="row">
       <button class="link" onClick=${() => setOpen(!open)}>${open ? 'Hide rounds' : 'Rounds'}</button>
@@ -98,8 +107,10 @@ function GameRow({ g, current, onDelete, canDelete }) {
 }
 
 function summarise(games) {
-  const s = { dko: 0, draws: 0, rounds: 0, quiet: 0, locked: 0, seats: 0, lengths: [], routes: {}, fighters: {}, cards: {} }
+  const s = { dko: 0, draws: 0, rounds: 0, quiet: 0, locked: 0, seats: 0, lengths: [], routes: {}, fighters: {}, cards: {}, vsPartner: [] }
+  const vp = {}
   for (const g of games) {
+    if (g.mode === 'ai') { const r = (vp[levelOf(g)] ??= { games: 0, wins: 0 }); r.games++; r.wins += g.result }
     s.lengths.push(g.rounds.length)
     s.routes[g.route] = (s.routes[g.route] || 0) + 1
     const last = g.rounds[g.rounds.length - 1]
@@ -120,5 +131,6 @@ function summarise(games) {
     }
   }
   s.median = median(s.lengths)
+  s.vsPartner = Object.keys(LEVELS).filter(k => vp[k]).map(k => [k, vp[k]])
   return s
 }

@@ -6,13 +6,14 @@ import { roster, settings } from './store.js'
 import { runBalance } from '../engine/game.js'
 import { toEngineFighter } from '../engine/fighters.js'
 import { Seg, StatusChip } from './ui.js'
+import { LEVELS } from '../engine/ai.js'
 
 const SIZES = [[100, '100'], [300, '300'], [500, '500'], [1000, '1,000']]
 
 export function Lab({ state, setState }) {
   const list = roster()
   const ids = list.map(r => r.id)
-  const { a = ids[0], b = ids[1] || ids[0], n = 300, seed = 1, report = null, matrix = null } = state
+  const { a = ids[0], b = ids[1] || ids[0], n = 300, seed = 1, report = null, matrix = null, la = 'hard', lb = 'hard' } = state
   const [running, setRunning] = useState(null)
   const ctl = useRef(null)
   const upd = p => setState({ ...state, ...p })
@@ -23,10 +24,10 @@ export function Lab({ state, setState }) {
     ctl.current = new AbortController()
     setRunning({ done: 0, n, label: `${ra.fighter.name} vs ${rb.fighter.name}` })
     const fa = toEngineFighter(ra.fighter), fb = toEngineFighter(rb.fighter)
-    const r = await runBalance(fa, fb, { n, seed, rules: s.rules, W: s.ai, signal: ctl.current.signal,
+    const r = await runBalance(fa, fb, { n, seed, rules: s.rules, W: s.ai, levels: [la, lb], signal: ctl.current.signal,
       onProgress: (done) => setRunning(x => x && { ...x, done }) })
     setRunning(null)
-    upd({ report: { ...r, ids: [a, b], statuses: [ra.status, rb.status], seed, rules: s.rules, ran: Date.now() } })
+    upd({ report: { ...r, ids: [a, b], statuses: [ra.status, rb.status], levels: [la, lb], seed, rules: s.rules, ran: Date.now() } })
   }
 
   const all = async () => {
@@ -58,10 +59,12 @@ export function Lab({ state, setState }) {
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
         <label class="field"><span>Fighter A</span><select id="lab-a" value=${a} onChange=${e => upd({ a: e.target.value })}>${list.map(r => html`<option value=${r.id}>${r.fighter.name}${r.status !== 'signed-off' ? ` (${r.status})` : ''}</option>`)}</select></label>
         <label class="field"><span>Fighter B</span><select id="lab-b" value=${b} onChange=${e => upd({ b: e.target.value })}>${list.map(r => html`<option value=${r.id}>${r.fighter.name}${r.status !== 'signed-off' ? ` (${r.status})` : ''}</option>`)}</select></label>
+        <label class="field"><span>Fighter A's partner</span><select id="lab-la" value=${la} onChange=${e => upd({ la: e.target.value })}>${Object.entries(LEVELS).map(([k, l]) => html`<option value=${k}>${l.label}</option>`)}</select></label>
+        <label class="field"><span>Fighter B's partner</span><select id="lab-lb" value=${lb} onChange=${e => upd({ lb: e.target.value })}>${Object.entries(LEVELS).map(([k, l]) => html`<option value=${k}>${l.label}</option>`)}</select></label>
         <label class="field"><span>Seed</span><input id="lab-seed" type="number" value=${seed} onInput=${e => upd({ seed: Math.trunc(Number(e.target.value)) || 0 })} /></label>
       </div>
       <div class="row"><span class="label">Games per matchup</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games per matchup" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (Recover chip: ${s.rules.counterChip}).</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (Recover chip: ${s.rules.counterChip}). Use Hard for balance checks; pitting a level against Hard measures how much skill matters. The full round-robin always uses Hard.</p>
       <div class="actions">
         <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${all}>Run every matchup</button>
@@ -82,7 +85,7 @@ function Report({ r, list }) {
   const [fa, fb] = r.fighters
   const n = r.games
   return html`<section class="stack" style=${{ gap: '16px' }}>
-    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · Recover chip ${r.rules.counterChip}</span></div>
+    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · Recover chip ${r.rules.counterChip}${r.levels && r.levels.join() !== 'hard,hard' ? ` · ${LEVELS[r.levels[0]].label} vs ${LEVELS[r.levels[1]].label}` : ''}</span></div>
     <div class="row">${r.statuses.map((st, k) => html`<span class="small">${r.fighters[k].name} <${StatusChip} status=${st} /></span>`)}</div>
     <${WinBar} a=${fa.name} b=${fb.name} win=${r.win} margin=${r.margin} />
     <div class="stats">

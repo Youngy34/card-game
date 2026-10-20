@@ -5,7 +5,7 @@
 // Phases: 'pick' -> ('pass' between hot-seat picks) -> 'reveal' -> 'pick' ... 'over'
 
 import { newPlayer, step, options, card, blocked, flowing, convertChip } from '../engine/engine.js'
-import { mixes } from '../engine/ai.js'
+import { mixes, levelMixes, LEVELS } from '../engine/ai.js'
 import { roundRecord, winRoute } from '../engine/game.js'
 import { toEngineFighter, fighterHash } from '../engine/fighters.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
@@ -21,10 +21,10 @@ export function rand(s) {
 
 const HUMANS = { ai: [true, false], hotseat: [true, true], watch: [false, false] }
 
-export function startMatch({ fighters, statuses, mode, settings, seed = (Math.random() * 2 ** 32) >>> 0, id }) {
+export function startMatch({ fighters, statuses, mode, settings, levels = ['hard', 'hard'], seed = (Math.random() * 2 ** 32) >>> 0, id }) {
   const f = fighters.map(toEngineFighter)
   const m = {
-    id, mode, humans: HUMANS[mode], json: fighters, statuses: statuses || ['', ''],
+    id, mode, humans: HUMANS[mode], levels, json: fighters, statuses: statuses || ['', ''],
     f, rules: settings.rules, W: settings.ai, settingsUsed: settings,
     A: newPlayer(f[0]), B: newPlayer(f[1]),
     round: 1, picks: [null, null], phase: 'pick', picker: 0,
@@ -35,18 +35,21 @@ export function startMatch({ fighters, statuses, mode, settings, seed = (Math.ra
 
 function beginRound(m) {
   const mix = mixes(m.A, m.B, m.rules, m.W)
+  // the odds each sparring partner actually plays from, at its difficulty
+  const play = m.humans.every(Boolean) ? [mix.x, mix.y]
+    : levelMixes(mix, m.levels.map((l, k) => (m.humans[k] ? 'hard' : l)))
   let rng = m.rng
   const picks = [null, null]
   for (const side of [0, 1]) {
     if (m.humans[side]) continue
-    const p = side === 0 ? mix.x : mix.y
+    const p = play[side]
     let r; [r, rng] = rand(rng)
     let c = 0, k = p.length - 1
     for (let i = 0; i < p.length; i++) { c += p[i]; if (r < c) { k = i; break } }
     picks[side] = (side === 0 ? mix.oa : mix.ob)[k]
   }
   const picker = m.humans[0] ? 0 : m.humans[1] ? 1 : null
-  return { ...m, mix, rng, picks, phase: 'pick', picker }
+  return { ...m, mix, play, rng, picks, phase: 'pick', picker }
 }
 
 // A human locks in a card
@@ -68,6 +71,10 @@ export function resolveRound(m) {
   const mixInfo = {
     a: m.mix.oa.map((o, i) => [card(m.A, o).name, round2(m.mix.x[i])]),
     b: m.mix.ob.map((o, i) => [card(m.B, o).name, round2(m.mix.y[i])]),
+  }
+  // what an easier sparring partner actually played from
+  for (const [k, key, opts, X] of [[0, 'playedA', m.mix.oa, m.A], [1, 'playedB', m.mix.ob, m.B]]) {
+    if (!m.humans[k] && m.levels[k] !== 'hard') mixInfo[key] = opts.map((o, i) => [card(X, o).name, round2(m.play[k][i])])
   }
   const entry = { ...record, picks: [a, b], events, mix: mixInfo, humans: m.humans }
   let result = s.result
@@ -123,7 +130,7 @@ export function lethalTo(X, Y) {
   return best !== null && X.pile + best >= X.hp ? best : null
 }
 
-export { flowing }
+export { flowing, LEVELS }
 
 // ---- the log entry -------------------------------------------------------
 export function gameRecord(m) {
@@ -131,7 +138,7 @@ export function gameRecord(m) {
   return {
     id: m.id, v: 2,
     startedAt: m.startedAt, finishedAt: Date.now(),
-    mode: m.mode, humans: m.humans,
+    mode: m.mode, humans: m.humans, levels: m.levels,
     fighters: m.json.map((j, k) => ({ id: j.id, name: j.name, hash: fighterHash(j), status: m.statuses[k], json: j })),
     settings: m.settingsUsed,
     result: m.result, route: last ? winRoute(last, m.result) : null,
@@ -142,7 +149,7 @@ export function gameRecord(m) {
 
 // Rebuild a match from its record of picks (after the page reloads)
 export function replay(saved) {
-  let m = startMatch({ fighters: saved.json, statuses: saved.statuses, mode: saved.mode,
+  let m = startMatch({ fighters: saved.json, statuses: saved.statuses, mode: saved.mode, levels: saved.levels,
                        settings: saved.settingsUsed, seed: saved.seed, id: saved.id })
   m = { ...m, startedAt: saved.startedAt }
   for (const [a, b] of saved.picks) {
@@ -154,6 +161,6 @@ export function replay(saved) {
 }
 
 export function snapshot(m) {
-  return { id: m.id, mode: m.mode, json: m.json, statuses: m.statuses, settingsUsed: m.settingsUsed,
+  return { id: m.id, mode: m.mode, levels: m.levels, json: m.json, statuses: m.statuses, settingsUsed: m.settingsUsed,
            seed: m.seed, rng: m.rng, startedAt: m.startedAt, picks: m.history.map(h => h.picks) }
 }

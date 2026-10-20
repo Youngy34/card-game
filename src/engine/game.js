@@ -1,7 +1,7 @@
 // Whole games, logs and balance reports.
 
 import { newPlayer, step, card, options, outcome, DEFAULT_RULES } from './engine.js'
-import { mixes, sample, availableTypes, DEFAULT_WEIGHTS } from './ai.js'
+import { mixes, levelMixes, sample, availableTypes, DEFAULT_WEIGHTS } from './ai.js'
 
 export function mulberry32(seed) {
   let a = seed >>> 0
@@ -39,12 +39,14 @@ export function winRoute(last, result) {
   return cashed ? 'Convert cash' : 'chip'
 }
 
-export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS) {
+export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, levels = ['hard', 'hard']) {
   let A = newPlayer(fa), B = newPlayer(fb)
   const rounds = []
+  const hard = levels[0] === 'hard' && levels[1] === 'hard'
   for (let n = 1; ; n++) {
     const m = mixes(A, B, rules, W)
-    const i = sample(m.x, rng), j = sample(m.y, rng)
+    const [px, py] = hard ? [m.x, m.y] : levelMixes(m, levels)
+    const i = sample(px, rng), j = sample(py, rng)
     const s = m.next[i][j]
     rounds.push(roundRecord(n, A, B, m.oa[i], m.ob[j], s))
     A = s.A; B = s.B
@@ -100,13 +102,13 @@ export function summarise(games, fa, fb) {
 }
 
 // Play n AI games, yielding to the browser between batches. onProgress(done, n).
-export async function runBalance(fa, fb, { n = 300, seed = 1, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, onProgress, signal } = {}) {
+export async function runBalance(fa, fb, { n = 300, seed = 1, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, levels = ['hard', 'hard'], onProgress, signal } = {}) {
   const rng = mulberry32(seed)
   const games = []
   let t = Date.now()
   for (let i = 0; i < n; i++) {
     if (signal?.aborted) break
-    games.push(playAIGame(fa, fb, rng, rules, W))
+    games.push(playAIGame(fa, fb, rng, rules, W, levels))
     if (Date.now() - t > 30) {
       onProgress?.(i + 1, n)
       await new Promise(r => setTimeout(r, 0))

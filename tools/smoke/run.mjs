@@ -51,9 +51,15 @@ ok(text().includes('Fight night'), 'setup screen renders')
 ok(text().includes('This browser only'), 'falls back to browser storage outside claude.ai')
 ok(byText(app, 'button', 'Bastion').length >= 2, 'fighter pickers list Bastion')
 
-// ---- a full match against the sparring partner ----
+// ---- a full match against the sparring partner, on Easy, with the odds shown ----
+ok(text().includes('Difficulty'), 'difficulty choice shows for vs-partner games')
+await click('Easy')
+ok(text().includes('Hard beats it about 7 games in 10'), 'Easy is described')
+const odds = find(app, n => n.localName === 'input' && n.parentNode && n.parentNode.textContent.includes('Show the unexploitable mix'))
+await setValue(odds, true, 'change')
 await click('Start the match')
 ok(text().includes('Your pick'), 'match starts with your pick')
+ok(text().includes('Sparring partner · Easy'), 'the table shows the difficulty')
 ok(text().includes('Dead to a Convert') === false, 'no lethal flag at the start')
 let rounds = 0
 while (!text().includes('K.O.') && !text().includes('Draw') && rounds < 60) {
@@ -62,6 +68,7 @@ while (!text().includes('K.O.') && !text().includes('Draw') && rounds < 60) {
   cards[rounds % cards.length].dispatch('click'); await wait(40)
   await click('Lock in')
   ok(/beats|mirror|Both resolve/.test(text()), `round ${rounds + 1}: outcome shown`)
+  if (rounds === 0) ok(text().includes('actually played from (Easy)'), 'the odds Easy played from are shown')
   rounds++
   if (button('Next round')) await click('Next round')
 }
@@ -71,7 +78,8 @@ ok(text().includes('Saved to the playtest log'), 'finished game is logged')
 
 // ---- the log ----
 await click('Playtest log')
-ok(text().includes('Games') && text().includes('vs sparring partner'), 'log lists the game')
+ok(text().includes('Games') && text().includes('vs sparring partner on Easy'), 'log lists the game with its difficulty')
+ok(text().includes('Your record against the sparring partner'), 'log shows the record by difficulty')
 await click('Rounds')
 ok(text().includes('Outcome'), 'log shows the rounds of a game')
 
@@ -97,6 +105,7 @@ await click('Reveal')
 ok(/beats|mirror|Both resolve/.test(text()), 'watch mode reveals a round')
 await click('Leave this match')
 await click('You vs sparring partner')
+await click('Hard')
 
 // ---- move lists ----
 await click('Move lists')
@@ -135,12 +144,15 @@ ok(text().includes('Bastion v2'), 'duplicate makes a variant')
 
 // ---- lab ----
 await click('Lab')
+await setValue(byId('lab-lb'), 'medium', 'change')
 await click(byText(app, 'button', '100').find(b => b.parentNode && cls(b.parentNode, 'seg')))
 await click('Run this matchup')
 for (let i = 0; i < 100 && !text().includes('Median length'); i++) await wait(100)
 ok(text().includes('Median length') && text().includes('Share of plays'), 'Lab report renders')
+ok(text().includes('Hard vs Medium'), 'Lab report shows the difficulties')
+await setValue(byId('lab-lb'), 'hard', 'change')
 await click('Run every matchup')
-for (let i = 0; i < 600 && !text().includes('Every matchup'); i++) await wait(100)
+const t0 = Date.now(); for (let i = 0; i < 2400 && !text().includes('Row fighter'); i++) await wait(100); console.log('round-robin took', ((Date.now() - t0) / 1000).toFixed(0), 's')
 ok(text().includes('Every matchup') && text().includes('Average'), 'round-robin renders')
 
 // ---- settings ----

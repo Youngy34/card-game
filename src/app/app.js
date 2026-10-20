@@ -30,7 +30,7 @@ export function App({ boot = {} }) {
     if (!boot.match) return null
     try { return M.replay(boot.match) } catch { return null }
   })
-  const [prefs, setPrefsRaw] = useState(() => local.get('prefs', { mode: 'ai', sides: ['gambler', 'bastion'], odds: false }))
+  const [prefs, setPrefsRaw] = useState(() => ({ difficulty: 'hard', ...local.get('prefs', { mode: 'ai', sides: ['gambler', 'bastion'], odds: false }) }))
   const setPrefs = p => { setPrefsRaw(p); local.put('prefs', p) }
   const [edSel, setEdSel] = useState(boot.edSel || null)
   const [lab, setLab] = useState({})
@@ -52,7 +52,7 @@ export function App({ boot = {} }) {
       const rs = m.json.map(j => list.find(r => r.id === j.id))
       if (rs.every(Boolean)) {
         setM(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: m.mode,
-                           settings: m.settingsUsed, id: `g-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}` }))
+                           levels: m.levels, settings: m.settingsUsed, id: `g-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}` }))
         return
       }
     }

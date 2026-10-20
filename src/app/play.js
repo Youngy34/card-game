@@ -9,6 +9,7 @@ import { outcomeLine, eventLines, deltaLine } from './narrate.js'
 import { card } from '../engine/engine.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
 import { PASSIVES } from '../engine/keywords.js'
+import { LEVELS } from '../engine/ai.js'
 
 const MODES = [['ai', 'You vs sparring partner'], ['hotseat', 'Two players, one device'], ['watch', 'Watch the sparring partner']]
 const WHO = {
@@ -23,10 +24,12 @@ export function Setup({ onStart, prefs, setPrefs }) {
   const pick = (k, id) => setPrefs({ ...prefs, sides: prefs.sides.map((s, i) => (i === k ? id : s)) })
   const sides = prefs.sides.map((id, k) => (ids.includes(id) ? id : ids[k % ids.length]))
   const s = settings()
+  const difficulty = LEVELS[prefs.difficulty] ? prefs.difficulty : 'hard'
   const ruleNote = { always: 'whenever it resolves (the current rule)', strict: 'only when it beats a Pressure (test rule)', attack: 'only against an attack (test rule)' }[s.rules.counterChip]
   const start = () => {
     const rs = sides.map(id => list.find(r => r.id === id))
-    onStart(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: prefs.mode, settings: s, id: newId('g') }))
+    const levels = prefs.mode === 'ai' ? ['hard', difficulty] : ['hard', 'hard']
+    onStart(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: prefs.mode, settings: s, levels, id: newId('g') }))
   }
   return html`<div class="setup">
     <div class="stack">
@@ -42,6 +45,15 @@ export function Setup({ onStart, prefs, setPrefs }) {
         watch: 'Step through a game between two sparring partners.',
       }[prefs.mode]}</p>
     </div>
+    ${prefs.mode === 'ai' ? html`<div class="stack">
+      <span class="label">Difficulty</span>
+      <${Seg} value=${difficulty} options=${Object.entries(LEVELS).map(([k, l]) => [k, l.label])} onChange=${d => setPrefs({ ...prefs, difficulty: d })} label="Difficulty" />
+      <p class="small muted">${LEVELS[difficulty].about} ${{
+        easy: 'In testing, Hard beats it about 7 games in 10.',
+        medium: 'In testing, Hard beats it about 6 games in 10, and it beats Easy about 6 in 10.',
+        hard: 'Two Hard partners split games evenly.',
+      }[difficulty]}</p>
+    </div>` : null}
     <div class="pickers">
       ${[0, 1].map(k => html`<div class="stack">
         <span class="label">${WHO[prefs.mode][k]}</span>
@@ -63,7 +75,7 @@ export function Setup({ onStart, prefs, setPrefs }) {
 
 export function Table({ m, setM, prefs, onEnd }) {
   const names = m.f.map(f => f.name)
-  const who = WHO[m.mode]
+  const who = WHO[m.mode].map((w, k) => (!m.humans[k] && m.mode === 'ai' && m.levels?.[k] ? `${w} · ${LEVELS[m.levels[k]].label}` : w))
   const [sel, setSel] = useState(null)
   const [saveState, setSaveState] = useState(null)
   const [auto, setAuto] = useState(false)
@@ -185,18 +197,22 @@ function Clash({ m, names, prefs, sel }) {
         <span>${ev[k].card} ${ev[k].text}. <em>${deltaLine(L.before[k], k === 0 ? L.s.A : L.s.B)}</em></span>
       </div>`)}
     </div>
-    ${prefs.odds ? html`<${Mixes} entry=${m.history[m.history.length - 1]} names=${names} f=${m.f} />` : null}
+    ${prefs.odds ? html`<${Mixes} entry=${m.history[m.history.length - 1]} names=${names} f=${m.f} levels=${m.levels} />` : null}
   </section>`
 }
 
-function Mixes({ entry, names, f }) {
+function Mixes({ entry, names, f, levels }) {
   const typeOf = (k, name) => [...f[k].cards, f[k].sup].find(c => c.name === name)?.t || 'T'
+  const row = (k, mix, label) => html`<div class="stack" style=${{ gap: '4px' }}>
+    <span class="small">${label}: ${mix.filter(([, p]) => p >= 0.01).sort((a, b) => b[1] - a[1]).map(([n, p]) => `${n} ${Math.round(p * 100)}%`).join(', ')}</span>
+    <div class="mixbar">${mix.filter(([, p]) => p >= 0.01).map(([n, p]) => html`<span data-t=${typeOf(k, n)} style=${{ width: `${p * 100}%` }} title=${`${n} ${Math.round(p * 100)}%`}>${p > 0.12 ? n : ''}</span>`)}</div>
+  </div>`
   return html`<div class="mix">
     <span class="label">The unexploitable mix this round</span>
-    ${[[1, entry.mix.b], [0, entry.mix.a]].map(([k, mix]) => html`<div class="stack" style=${{ gap: '4px' }}>
-      <span class="small">${names[k]}: ${mix.filter(([, p]) => p >= 0.01).sort((a, b) => b[1] - a[1]).map(([n, p]) => `${n} ${Math.round(p * 100)}%`).join(', ')}</span>
-      <div class="mixbar">${mix.filter(([, p]) => p >= 0.01).map(([n, p]) => html`<span data-t=${typeOf(k, n)} style=${{ width: `${p * 100}%` }} title=${`${n} ${Math.round(p * 100)}%`}>${p > 0.12 ? n : ''}</span>`)}</div>
-    </div>`)}
+    ${row(1, entry.mix.b, names[1])}
+    ${row(0, entry.mix.a, names[0])}
+    ${entry.mix.playedB ? row(1, entry.mix.playedB, `${names[1]} actually played from (${LEVELS[levels[1]].label})`) : null}
+    ${entry.mix.playedA ? row(0, entry.mix.playedA, `${names[0]} actually played from (${LEVELS[levels[0]].label})`) : null}
   </div>`
 }
 

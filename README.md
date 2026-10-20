@@ -102,6 +102,14 @@ A value of 1 on a "for every" field reads as "for every token". Scaling chip on 
 
 All effects read the board as it was at the reveal, and the changes apply together (the "state at reveal" proposal, as in the simulator).
 
+## Difficulty
+
+Against the sparring partner you can pick Easy, Medium or Hard on the Play screen. Hard is the simulator's player, unchanged. The easier levels make mistakes that scale with their cost: each card is played with a chance that grows with how good it looks (a "quantal response" mix), so close calls become coin flips but big blunders stay rare. One number per level sets how sharply it prefers better cards (`LEVELS` in `src/engine/ai.js`: Easy 5, Medium 20).
+
+Calibrated on 20 October 2026 in the four mirror matchups, 2,000 games per pairing: Hard beats Medium about 62–38, Medium beats Easy about 60–40, and Hard beats Easy about 69–31. A player choosing at random still beats Hard about 22% of the time (12% as the Gambler, 32% as Atlas).
+
+The Lab can give each fighter its own level, and the command line takes `--levels hard,easy`. Logged games record the level they were played at.
+
 ## Checking the engine
 
 ```

@@ -18,6 +18,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const opt = (name, d) => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : d }
 const n = +opt('-n', 300), seed = +opt('--seed', 0), counter = opt('--counter', 'always')
+const levels = opt('--levels', 'hard,hard').split(',')     // e.g. --levels hard,easy
 const json = args.includes('--json'); if (json) args.splice(args.indexOf('--json'), 1)
 const all = args.includes('--all'); if (all) args.splice(args.indexOf('--all'), 1)
 const settings = JSON.parse(fs.readFileSync(`${root}/data/settings.json`, 'utf8'))
@@ -35,9 +36,9 @@ function load(name) {
 const fmt = x => (100 * x).toFixed(1) + '%'
 async function report(a, b) {
   const fa = load(a), fb = load(b)
-  const r = await runBalance(fa, fb, { n, seed, rules, W })
-  if (json) { console.log(JSON.stringify({ a, b, win: r.win, doubleKO: r.doubleKO / n, draws: r.draws / n, median: r.median })); return r }
-  console.log(`\n=== ${fa.name} vs ${fb.name}  (${n} games, seed ${seed}) ===`)
+  const r = await runBalance(fa, fb, { n, seed, rules, W, levels })
+  if (json) { console.log(JSON.stringify({ a, b, levels, win: r.win, doubleKO: r.doubleKO / n, draws: r.draws / n, median: r.median })); return r }
+  console.log(`\n=== ${fa.name} vs ${fb.name}  (${n} games, seed ${seed}${levels.join() !== 'hard,hard' ? `, levels ${levels.join(' v ')}` : ''}) ===`)
   console.log(`  ${fa.name} wins ${fmt(r.win)}  (about ±${Math.round(100 * r.margin)} points)`)
   console.log(`  game length: median ${r.median} rounds, mean ${r.mean.toFixed(1)}, 10th-90th percentile ${Math.round(r.p10)}-${Math.round(r.p90)}`)
   console.log(`  double KOs: ${fmt(r.doubleKO / n)} of games (${fmt(r.draws / n)} drawn)`)
@@ -61,5 +62,5 @@ if (all) {
 } else if (args.length === 2) {
   await report(args[0], args[1])
 } else {
-  console.log('usage: node tools/sim.mjs <a> <b> [-n games] [--seed s] [--counter strict|attack] | --all')
+  console.log('usage: node tools/sim.mjs <a> <b> [-n games] [--seed s] [--counter strict|attack] [--levels hard,easy] | --all')
 }
