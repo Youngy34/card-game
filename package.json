@@ -1,18 +1,13 @@
 {
-  "name": "card-game-playtest",
-  "version": "0.1.0",
+  "name": "yomi-playtest",
+  "version": "2.0.0",
+  "private": true,
   "type": "module",
+  "description": "Playtest table for Yomi, rules v11. No dependencies and no build step: serve the folder and open index.html.",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.1"
+    "serve": "python3 -m http.server 8000",
+    "build": "node tools/build-artifact.mjs",
+    "sim": "node tools/sim.mjs",
+    "crosscheck": "node tools/crosscheck/js_replay.mjs"
   }
 }

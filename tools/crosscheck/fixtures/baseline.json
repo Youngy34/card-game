@@ -1,0 +1,12 @@
+{ "schemaVersion": 2, "id": "baseline", "name": "Baseline", "hp": 20, "passive": null,
+  "cards": [
+    { "name": "Jab", "type": "pressure", "build": 5 },
+    { "name": "Poke", "type": "pressure", "build": 3, "chip": 1 },
+    { "name": "Rush", "type": "pressure", "build": 4, "chip": 1, "cooldown": 2 },
+    { "name": "Smash", "type": "convert", "chip": 2 },
+    { "name": "Slam", "type": "convert", "chip": 4, "cooldown": 2 },
+    { "name": "Block", "type": "recover", "chip": 2 },
+    { "name": "Parry", "type": "recover", "chip": 1, "returnCard": true },
+    { "name": "Shot", "type": "typeless", "chip": 2 }
+  ],
+  "super": { "name": "Base Super", "type": "convert", "chip": 6 } }

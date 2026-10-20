@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "id": "vex",
+  "name": "Vex",
+  "epithet": "Twin Fang",
+  "concept": "Relentless. Every Flow card powers up her next move, face up on her cooldown track for both players to see.",
+  "hp": 23,
+  "passive": { "flow": true },
+  "cards": [
+    { "name": "Twin Fang", "type": "pressure", "build": 3, "chip": 1, "cooldown": 1, "flowCard": true },
+    { "name": "Flurry", "type": "pressure", "build": 2, "chip": 0, "cooldown": 1, "flowCard": true, "flowBuild": 3 },
+    { "name": "Eviscerate", "type": "pressure", "build": 6, "chip": 1, "cooldown": 1, "flowCard": true, "onLossSelf": 3 },
+    { "name": "Undercut", "type": "convert", "chip": 2, "cooldown": 1 },
+    { "name": "Pommel Strike", "type": "convert", "chip": 1, "cooldown": 1, "flowChip": 5 },
+    { "name": "Parry Riposte", "type": "recover", "chip": 2, "cooldown": 1, "chipOnWin": 2 },
+    { "name": "Passing Cut", "type": "recover", "chip": 1, "cooldown": 1, "flowCard": true },
+    { "name": "Flying Fang", "type": "typeless", "chip": 2, "cooldown": 1, "flowChip": 2 }
+  ],
+  "super": { "name": "Hundred Fang", "type": "pressure", "build": 6, "chip": 3, "chipPerOppTokens": 2 }
+}
