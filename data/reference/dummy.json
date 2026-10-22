@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "id": "dummy",
+  "name": "Dummy",
+  "epithet": "Benchmark",
+  "concept": "A plain reference fighter for benchmarking: no card text, no Super, two identical cards of each type. In its own mirror it plays the three triangle types about evenly (Pressure 29%, Convert 33%, Recover 30%, typeless 8%).",
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    { "name": "Pressure A", "type": "pressure", "build": 3, "chip": 1 },
+    { "name": "Pressure B", "type": "pressure", "build": 3, "chip": 1 },
+    { "name": "Convert A", "type": "convert", "chip": 3 },
+    { "name": "Convert B", "type": "convert", "chip": 3 },
+    { "name": "Recover A", "type": "recover", "chip": 3 },
+    { "name": "Recover B", "type": "recover", "chip": 3 },
+    { "name": "Typeless A", "type": "typeless", "chip": 3, "selfAdd": 1 },
+    { "name": "Typeless B", "type": "typeless", "chip": 3, "selfAdd": 1 }
+  ],
+  "super": null,
+  "notes": "Added 22 Oct 2026. HP not yet calibrated against the roster."
+}

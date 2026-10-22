@@ -113,6 +113,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink-2); outline:
 .chip.signed-off { color: var(--ink-3); }
 .chip.edited { color: var(--convert); }
 .chip.variant { color: var(--typeless); }
+.chip.reference { color: var(--recover); }
 .chip.bad { color: var(--bad); }
 .chip.good { color: var(--good); }
 .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; min-width: 0; }
