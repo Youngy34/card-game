@@ -4,7 +4,7 @@
   "name": "Dummy",
   "epithet": "Benchmark",
   "concept": "A plain reference fighter for benchmarking: no card text, no Super, two identical cards of each type. In its own mirror it plays the three triangle types about evenly (Pressure 29%, Convert 33%, Recover 30%, typeless 8%).",
-  "hp": 22,
+  "hp": 25,
   "passive": null,
   "cards": [
     { "name": "Pressure A", "type": "pressure", "build": 3, "chip": 1 },
@@ -17,5 +17,5 @@
     { "name": "Typeless B", "type": "typeless", "chip": 3, "selfAdd": 1 }
   ],
   "super": null,
-  "notes": "Added 22 Oct 2026. HP not yet calibrated against the roster."
+  "notes": "Added 22 Oct 2026. HP calibrated the same day: at 25 HP the signed-off fighters average 49.3% against it (Gambler 51.4%, Bastion 44.8%, Vex 46.9%, Atlas 54.0%; Hard, 4,000 games each, seeds 5, 9, 13 and 17, seats alternated). 24 HP gave 53.2%."
 }
