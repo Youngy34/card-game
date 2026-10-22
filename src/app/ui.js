@@ -36,7 +36,7 @@ export function Hud({ X, Y, who, staggered }) {
       <span class="hud-flags">
         ${fl ? html`<span class="flag flow">Flowing</span>` : null}
         ${lethal !== null ? html`<span class="flag lethal" title=${`Pile ${X.pile} + a Convert chipping ${lethal} ≥ ${X.hp} HP`}>Dead to a Convert</span>` : null}
-        <span class=${cx('flag sup', !X.sup && 'spent')} title=${X.f.sup.name}>Super${X.sup ? ' ready' : ' used'}</span>
+        ${X.f.sup ? html`<span class=${cx('flag sup', !X.sup && 'spent')} title=${X.f.sup.name}>Super${X.sup ? ' ready' : ' used'}</span>` : null}
       </span>
     </div>
     <${LifeBar} X=${X} />
@@ -89,6 +89,6 @@ export function Seg({ value, options, onChange, label }) {
 }
 
 export function StatusChip({ status }) {
-  const label = { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant' }[status] || status
+  const label = { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference' }[status] || status
   return html`<span class=${cx('chip', status)}>${label}</span>`
 }

@@ -16,7 +16,7 @@ import { DEFAULT_WEIGHTS } from '../engine/ai.js'
 
 const listeners = new Set()
 let S = {
-  bundled: {}, order: [], defaults: null,
+  bundled: {}, order: [], reference: [], defaults: null,
   docs: {}, settings: null, games: [], gamesLoaded: false,
   backend: 'connecting',            // 'connecting' | 'db' | 'local' | 'none'
   canEdit: null, canWrite: null,
@@ -30,7 +30,7 @@ function set(patch) { S = { ...S, ...patch }; listeners.forEach(f => f()) }
 
 // ---- boot ----------------------------------------------------------------
 export function initData(data) {
-  set({ bundled: data.fighters, order: data.order, defaults: data.settings, settings: null })
+  set({ bundled: data.fighters, order: data.order, reference: data.reference || [], defaults: data.settings, settings: null })
 }
 
 const LS = {
@@ -85,7 +85,8 @@ export function settings() {
   }
 }
 
-// Every fighter the app knows: the signed-off ones (edited or not), then variants.
+// Every fighter the app knows: the signed-off ones (edited or not), the
+// reference fighters (the Dummy), then variants.
 export function roster() {
   const out = []
   const entry = (id, saved, base) => {
@@ -98,8 +99,9 @@ export function roster() {
     if (!fighter) return null                    // a broken variant: leave it out
     const hash = fighterHash(fighter)
     const baseHash = base ? fighterHash(base) : null
-    const status = !base ? 'variant' : hash === baseHash ? 'signed-off' : 'edited'
-    return { id, fighter, base, saved: saved !== undefined, status, hash, baseHash, problems }
+    const reference = S.reference.includes(id)
+    const status = !base ? 'variant' : hash !== baseHash ? 'edited' : reference ? 'reference' : 'signed-off'
+    return { id, fighter, base, saved: saved !== undefined, status, reference, hash, baseHash, problems }
   }
   for (const id of S.order) out.push(entry(id, S.docs[id]?.fighter, S.bundled[id]))
   const variants = Object.keys(S.docs).filter(id => !S.bundled[id]).sort()

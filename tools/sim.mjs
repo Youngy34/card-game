@@ -7,6 +7,7 @@
 //   node tools/sim.mjs gambler vex --counter attack
 //   node tools/sim.mjs bastion-sc2 atlas           # an earlier version, from data/variants
 //   node tools/sim.mjs path/to/variant.json atlas  # any fighter file
+//   node tools/sim.mjs vex dummy                   # against the benchmark Dummy (data/reference)
 //   node tools/sim.mjs --list                      # every fighter and version by name
 
 import fs from 'fs'
@@ -30,7 +31,7 @@ const W = { ...DEFAULT_WEIGHTS, ...settings.ai }
 
 function find(name) {
   if (name.endsWith('.json')) return name
-  for (const dir of ['fighters', 'variants']) {
+  for (const dir of ['fighters', 'reference', 'variants']) {
     const p = `${root}/data/${dir}/${name}.json`
     if (fs.existsSync(p)) return p
   }
@@ -58,7 +59,7 @@ async function report(a, b) {
   for (const k of [0, 1]) {
     const f = [fa, fb][k], S = r.sides[k], tot = Object.values(S.plays).reduce((x, y) => x + y, 0)
     console.log(`  ${f.name} type split: Pressure ${fmt(S.types.P / tot)}  Convert ${fmt(S.types.C / tot)}  Recover ${fmt(S.types.R / tot)}  Typeless ${fmt(S.types.T / tot)}`)
-    for (const c of [...f.cards, f.sup]) {
+    for (const c of [...f.cards, f.sup].filter(Boolean)) {
       const p = S.plays[c.name] || 0
       console.log(`      ${c.name.padEnd(16)} ${fmt(p / tot).padStart(6)}   resolved ${fmt((S.resolved[c.name] || 0) / Math.max(p, 1)).padStart(6)}`)
     }
@@ -69,8 +70,8 @@ async function report(a, b) {
 }
 
 if (list) {
-  for (const dir of ['fighters', 'variants']) {
-    console.log(dir === 'fighters' ? 'Signed off (used by --all):' : 'Earlier versions and variants:')
+  for (const dir of ['fighters', 'reference', 'variants']) {
+    console.log({ fighters: 'Signed off (used by --all):', reference: 'Reference (benchmarks):', variants: 'Earlier versions and variants:' }[dir])
     for (const f of fs.readdirSync(`${root}/data/${dir}`).filter(f => f.endsWith('.json')).sort()) {
       const j = JSON.parse(fs.readFileSync(`${root}/data/${dir}/${f}`, 'utf8'))
       console.log(`  ${f.slice(0, -5).padEnd(18)} ${j.name}`)

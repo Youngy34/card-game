@@ -31,7 +31,7 @@ export function Lab({ state, setState }) {
   }
 
   const all = async () => {
-    const rs = list.filter(r => r.status !== 'variant' || state.withVariants)
+    const rs = list.filter(r => (r.status !== 'variant' && !r.reference) || state.withVariants)
     ctl.current = new AbortController()
     const pairs = []
     for (let i = 0; i < rs.length; i++) for (let j = i; j < rs.length; j++) pairs.push([rs[i], rs[j]])
@@ -68,7 +68,7 @@ export function Lab({ state, setState }) {
       <div class="actions">
         <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${all}>Run every matchup</button>
-        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants</label>
+        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants and the Dummy</label>
       </div>
       ${running ? html`<div class="stack" style=${{ gap: '6px' }}>
         <div class="spread small"><span>${running.label}</span><span class="num">${running.done} / ${running.n} games</span></div>
@@ -119,7 +119,7 @@ function SideTable({ f, S, n, total }) {
     <p class="small muted">Pressure ${pct(S.types.P / tot)} · Convert ${pct(S.types.C / tot)} · Recover ${pct(S.types.R / tot)} · Typeless ${pct(S.types.T / tot)}</p>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Card</th><th class="r">Share of plays</th><th></th><th class="r">Resolved</th></tr></thead>
-      <tbody>${[...f.cards, f.sup].map(c => {
+      <tbody>${[...f.cards, f.sup].filter(Boolean).map(c => {
         const p = S.plays[c.name] || 0
         return html`<tr data-t=${c.t}>
           <td><span class="tdot" data-t=${c.t}></span> ${c.name}${c.sup ? ' (Super)' : ''}</td>
@@ -129,7 +129,7 @@ function SideTable({ f, S, n, total }) {
         </tr>`
       })}</tbody>
     </table></div>
-    <p class="small muted">Super used in ${pct(1 - S.superUnused / n)} of games${sr ? `, around round ${sr.toFixed(1)}` : ''}. Without a type in ${pct(S.lockedOut / total, 1)} of rounds.</p>
+    <p class="small muted">${f.sup ? html`Super used in ${pct(1 - S.superUnused / n)} of games${sr ? `, around round ${sr.toFixed(1)}` : ''}.` : 'No Super.'} Without a type in ${pct(S.lockedOut / total, 1)} of rounds.</p>
   </div>`
 }
 

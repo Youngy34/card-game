@@ -135,7 +135,8 @@ export function validateFighter(f) {
       names.add(c.name)
     }
   })
-  if (!f.super) errors.push({ where: 'Super', msg: 'Needs a Super.' })
+  if (f.super === null) warnings.push({ where: 'Super', msg: 'No Super. Fine for a reference fighter like the Dummy; every real fighter has one.' })
+  else if (!f.super) errors.push({ where: 'Super', msg: 'Needs a Super (or "super": null for a reference fighter).' })
   else {
     add(f.super.name || 'Super', validateCard(f.super, { isSuper: true, hasFlow }))
     if (names.has(f.super.name)) errors.push({ where: f.super.name, msg: 'The Super shares a name with a card.' })
@@ -169,7 +170,7 @@ export function toEngineFighter(f) {
   return {
     id: f.id, name: f.name, hp: f.hp,
     cards: f.cards.map(c => engineCard(c, false)),
-    sup: engineCard(f.super, true),
+    sup: f.super ? engineCard(f.super, true) : null,
     flow: !!f.passive?.flow,
     rising: rs ? rs.tokens : 0,
     risingCap: rs?.whilePileUnder ?? null,
@@ -183,7 +184,7 @@ export function toEngineFighter(f) {
 export function fighterHash(f) {
   const strip = c => { const { art, flavour, notes, ...rest } = c; return rest }
   const core = { hp: f.hp, passive: f.passive ?? null, ai: f.ai ?? null,
-                 cards: f.cards.map(strip), super: strip(f.super) }
+                 cards: f.cards.map(strip), super: f.super ? strip(f.super) : null }
   const s = stableStringify(core)
   let h = 2166136261 >>> 0
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0 }

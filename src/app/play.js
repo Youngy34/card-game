@@ -202,7 +202,7 @@ function Clash({ m, names, prefs, sel }) {
 }
 
 function Mixes({ entry, names, f, levels }) {
-  const typeOf = (k, name) => [...f[k].cards, f[k].sup].find(c => c.name === name)?.t || 'T'
+  const typeOf = (k, name) => [...f[k].cards, f[k].sup].find(c => c?.name === name)?.t || 'T'
   const row = (k, mix, label) => html`<div class="stack" style=${{ gap: '4px' }}>
     <span class="small">${label}: ${mix.filter(([, p]) => p >= 0.01).sort((a, b) => b[1] - a[1]).map(([n, p]) => `${n} ${Math.round(p * 100)}%`).join(', ')}</span>
     <div class="mixbar">${mix.filter(([, p]) => p >= 0.01).map(([n, p]) => html`<span data-t=${typeOf(k, n)} style=${{ width: `${p * 100}%` }} title=${`${n} ${Math.round(p * 100)}%`}>${p > 0.12 ? n : ''}</span>`)}</div>

@@ -110,7 +110,7 @@ export function handView(X) {
     return 'Unavailable'
   }
   const list = X.f.cards.map((c, i) => ({ i, c, ok: opts.has(i), why: opts.has(i) ? null : why(c, i), space: X.cd1.includes(i) ? 1 : X.cd2.includes(i) ? 2 : 0 }))
-  list.push({ i: 'S', c: X.f.sup, ok: opts.has('S'), why: opts.has('S') ? null : why(X.f.sup, 'S'), space: 0, sup: true })
+  if (X.f.sup) list.push({ i: 'S', c: X.f.sup, ok: opts.has('S'), why: opts.has('S') ? null : why(X.f.sup, 'S'), space: 0, sup: true })
   return list
 }
 

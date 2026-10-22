@@ -51,6 +51,7 @@ function FighterEditor({ entry, list, setSelected }) {
   const hasFlow = !!draft.passive?.flow
   const base = entry.base
   const changes = base ? diffFighter(base, draft) : []
+  const baseWord = entry.reference ? 'bundled' : 'signed-off', resetWord = entry.reference ? 'bundled' : 'signed off'
 
   const run = async (fn, ok) => {
     setBusy(true)
@@ -87,13 +88,13 @@ function FighterEditor({ entry, list, setSelected }) {
       <button class="btn" disabled=${!dirty || v.errors.length > 0 || readOnly || offline || busy} onClick=${save}>Save</button>
       ${dirty ? html`<button class="btn ghost" onClick=${() => { setDraft(clone(baseline)); setEditing(null) }}>Discard changes</button>` : null}
       <button class="btn ghost small" disabled=${readOnly || offline || busy || dirty} onClick=${duplicate} title=${dirty ? 'Save or discard your changes first' : ''}>Duplicate as variant</button>
-      ${entry.status === 'edited' && !dirty ? html`<button class="btn ghost small" disabled=${readOnly || busy} onClick=${() => setAsk('reset')}>Reset to signed off</button>` : null}
+      ${entry.status === 'edited' && !dirty ? html`<button class="btn ghost small" disabled=${readOnly || busy} onClick=${() => setAsk('reset')}>Reset to ${resetWord}</button>` : null}
       ${entry.status === 'variant' && !dirty ? html`<button class="btn ghost small" disabled=${readOnly || busy} onClick=${() => setAsk('delete')}>Delete variant</button>` : null}
       <button class="link" onClick=${() => copyText(JSON.stringify(draft, null, 2))}>Copy JSON</button>
       <button class="link" onClick=${() => download(`${draft.id}.json`, JSON.stringify(draft, null, 2) + '\n').catch(e => toast(e.message))}>Download JSON</button>
     </div>
-    ${ask === 'reset' ? html`<${Confirm} text=${`Reset ${entry.fighter.name} to the signed-off version? Your saved edits to this fighter will be lost.`} yes="Reset"
-      onYes=${() => { setAsk(null); run(() => removeFighter(entry.id), 'Reset to signed off') }} onNo=${() => setAsk(null)} />` : null}
+    ${ask === 'reset' ? html`<${Confirm} text=${`Reset ${entry.fighter.name} to the ${baseWord} version? Your saved edits to this fighter will be lost.`} yes="Reset"
+      onYes=${() => { setAsk(null); run(() => removeFighter(entry.id), `Reset to ${resetWord}`) }} onNo=${() => setAsk(null)} />` : null}
     ${ask === 'delete' ? html`<${Confirm} text=${`Delete ${entry.fighter.name}? Games already logged with it keep their copy.`} yes="Delete"
       onYes=${() => { setAsk(null); run(async () => { await removeFighter(entry.id); setSelected(null) }, 'Deleted') }} onNo=${() => setAsk(null)} />` : null}
 
@@ -102,19 +103,19 @@ function FighterEditor({ entry, list, setSelected }) {
       ${v.warnings.map(e => html`<p class="msg-w">${e.where}: ${e.msg}</p>`)}
     </div>` : null}
     ${changes.length ? html`<div class="panel stack" style=${{ gap: '6px' }}>
-      <span class="label">Changes from the signed-off version</span>
+      <span class="label">Changes from the ${baseWord} version</span>
       ${changes.map(c => html`<p class="diff">${c}</p>`)}
     </div>` : null}
 
     ${view === 'json' ? html`<${JsonEditor} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />` : html`
       <${FighterFields} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />
-      ${editing !== null ? html`<${CardEditor} key=${editing} card=${editing === 'S' ? draft.super : draft.cards[editing]}
+      ${editing !== null && (editing === 'S' ? draft.super : draft.cards[editing]) ? html`<${CardEditor} key=${editing} card=${editing === 'S' ? draft.super : draft.cards[editing]}
         isSuper=${editing === 'S'} hasFlow=${hasFlow} readOnly=${readOnly}
-        baseCard=${base ? (editing === 'S' ? base.super : base.cards[editing]) : null}
+        baseCard=${base ? (editing === 'S' ? base.super : base.cards[editing]) || null : null}
         onChange=${c => setCard(editing, c)} onClose=${() => setEditing(null)} />` : null}
       <div class="cards-grid">
-        ${[...draft.cards.map((c, i) => [i, c]), ['S', draft.super]].map(([i, c]) => {
-          const b = base ? (i === 'S' ? base.super : base.cards[i]) : null
+        ${[...draft.cards.map((c, i) => [i, c]), ...(draft.super ? [['S', draft.super]] : [])].map(([i, c]) => {
+          const b = base ? (i === 'S' ? base.super : base.cards[i]) || null : null
           const changed = b && !same(b, c)
           const cv = validateCard(c, { isSuper: i === 'S', hasFlow })
           return html`<div key=${i}>
@@ -314,6 +315,8 @@ export function diffFighter(a, b) {
     else if (!b.cards[i]) out.push(`Removed card ${a.cards[i].name}`)
     else out.push(...diffCard(a.cards[i], b.cards[i]))
   }
-  out.push(...diffCard(a.super, b.super))
+  if (a.super && b.super) out.push(...diffCard(a.super, b.super))
+  else if (b.super) out.push(`Added Super ${b.super.name}`)
+  else if (a.super) out.push(`Removed Super ${a.super.name}`)
   return out
 }

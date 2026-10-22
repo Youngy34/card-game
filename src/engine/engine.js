@@ -12,7 +12,7 @@ export const DEFAULT_RULES = { counterChip: 'always', maxRounds: 60 }
 // hand: sorted card indices; cd1/cd2: cooldown spaces (in arrival order);
 // sup: Super still in hand; tlock: a type this player can't play this round.
 export function newPlayer(f) {
-  return { f, hp: f.hp, pile: 0, hand: f.cards.map((_, i) => i), cd1: [], cd2: [], sup: true, tlock: null }
+  return { f, hp: f.hp, pile: 0, hand: f.cards.map((_, i) => i), cd1: [], cd2: [], sup: !!f.sup, tlock: null }
 }
 const clone = X => ({ ...X, hand: X.hand.slice(), cd1: X.cd1.slice(), cd2: X.cd2.slice() })
 export const card = (X, i) => (i === 'S' ? X.f.sup : X.f.cards[i])

@@ -154,6 +154,39 @@ await setValue(byId('lab-lb'), 'hard', 'change')
 await click('Run every matchup')
 const t0 = Date.now(); for (let i = 0; i < 2400 && !text().includes('Row fighter'); i++) await wait(100); console.log('round-robin took', ((Date.now() - t0) / 1000).toFixed(0), 's')
 ok(text().includes('Every matchup') && text().includes('Average'), 'round-robin renders')
+const rrTable = find(app, n => n.localName === 'section' && n.textContent.includes('Every matchup'))
+ok(rrTable && !rrTable.textContent.includes('Dummy'), 'round-robin leaves the Dummy out by default')
+
+// ---- the Dummy: a reference fighter with no Super ----
+await setValue(byId('lab-a'), 'dummy', 'change')
+await setValue(byId('lab-b'), 'dummy', 'change')
+await click('Run this matchup')
+for (let i = 0; i < 200 && !text().includes('No Super.'); i++) await wait(100)
+ok(text().includes('Dummy vs Dummy') && text().includes('No Super.'), 'Lab runs the Dummy and reports no Super')
+ok(!text().includes('(Super)'), 'Lab card table has no Super row for the Dummy')
+await click('Move lists')
+await click(byText(app, 'button', 'Dummy').find(b => cls(b, 'fpick')))
+ok(byText(app, 'span', 'Reference').length > 0, 'the Dummy shows as Reference')
+ok(text().includes('No Super. Fine for a reference fighter'), 'the editor notes the missing Super')
+ok(all(app, n => n.localName === 'button' && cls(n, 'card')).length === 8, 'the Dummy shows 8 cards and no Super')
+await click('Play')
+for (const k of [0, 1]) {
+  const group = find(app, n => n.attributes.role === 'group' && /fighter$/.test(n.attributes['aria-label'] || '') && all(app, m => m.attributes.role === 'group' && /fighter$/.test(m.attributes['aria-label'] || '')).indexOf(n) === k)
+  await click(byText(group, 'button', 'Dummy')[0])
+}
+await click('Start the match')
+ok(text().includes('Your pick') && !text().includes('Super ready'), 'a Dummy match starts with no Super flag')
+let drounds = 0
+while (!text().includes('K.O.') && !text().includes('Draw') && drounds < 60) {
+  const cards = all(app, n => n.localName === 'button' && cls(n, 'card') && !n.disabled)
+  if (!cards.length) { ok(false, `Dummy round ${drounds + 1}: no playable card`); break }
+  cards[drounds % cards.length].dispatch('click'); await wait(40)
+  await click('Lock in')
+  drounds++
+  if (button('Next round')) await click('Next round')
+}
+ok(text().includes('K.O.') || text().includes('Draw'), `a Dummy match ends (${drounds} rounds)`)
+await click('Leave this match').catch(() => {})
 
 // ---- settings ----
 await click('Settings')

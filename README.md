@@ -25,6 +25,7 @@ Locally, edits and the log are kept in that browser only.
 | Path | What's there |
 |---|---|
 | `data/fighters/*.json` | The signed-off fighters (the source of truth) |
+| `data/reference/*.json` | Reference fighters for benchmarking, shown in the app and runnable by name in `tools/sim.mjs`, but left out of `--all` and the Lab's round-robin. Currently the Dummy. |
 | `data/variants/*.json` | Earlier versions and test variants, runnable by name in `tools/sim.mjs` (not shown in the app) |
 | `data/settings.json` | Default rules and sparring-partner weights |
 | `src/engine/` | The rules engine and sparring partner, plain JavaScript with no UI (runs in the browser and in Node) |
@@ -56,6 +57,7 @@ A fighter file:
 
 - `passive`: `null`, `{ "flow": true }` (you're flowing while a Flow card of yours is on cooldown space 1), or `{ "risingStakes": { "tokens": 1, "whilePileUnder": 1 } }` (`whilePileUnder` optional).
 - `ai.ownGreyValue` (optional): how the sparring partner values its own grey tokens, in HP. The default is 0.6; the Gambler uses 0.3 because her grey is her fuel.
+- `super`: the Super, or `null` for a reference fighter with no Super (the Dummy). The validator warns about it, since every real fighter has one.
 - `variantOf` (variants only): the fighter it was copied from.
 
 A card:

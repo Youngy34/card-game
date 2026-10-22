@@ -45,9 +45,11 @@ visit(entry)
 
 const fighters = {}
 const ORDER = ['gambler', 'bastion', 'vex', 'atlas']
+const REFERENCE = ['dummy']                 // benchmark fighters, from data/reference/
 for (const id of ORDER) fighters[id] = JSON.parse(fs.readFileSync(path.join(root, `data/fighters/${id}.json`), 'utf8'))
+for (const id of REFERENCE) fighters[id] = JSON.parse(fs.readFileSync(path.join(root, `data/reference/${id}.json`), 'utf8'))
 const settings = JSON.parse(fs.readFileSync(path.join(root, 'data/settings.json'), 'utf8'))
-const data = { fighters, order: ORDER, settings, built: new Date().toISOString() }
+const data = { fighters, order: [...ORDER, ...REFERENCE], reference: REFERENCE, settings, built: new Date().toISOString() }
 
 let js = `window.__YOMI_DATA__ = ${JSON.stringify(data)};\n(function () {\n'use strict';\nconst __m = {};\n`
 for (const k of order) {
