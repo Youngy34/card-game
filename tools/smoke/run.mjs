@@ -188,6 +188,64 @@ while (!text().includes('K.O.') && !text().includes('Draw') && drounds < 60) {
 ok(text().includes('K.O.') || text().includes('Draw'), `a Dummy match ends (${drounds} rounds)`)
 await click('Leave this match').catch(() => {})
 
+// ---- rules v12: Clarence, a draft ----
+const pickBoth = async name => {
+  for (const k of [0, 1]) {
+    const groups = all(app, m => m.attributes.role === 'group' && /fighter$/.test(m.attributes['aria-label'] || ''))
+    await click(byText(groups[k], 'button', name)[0])
+  }
+}
+await click('Play')
+await pickBoth('Clarence')
+ok(text().includes('rules v12') && text().includes('Guards and Counters turn'), 'v12 fighters are marked, with the v12 rule note')
+// a v11 fighter against a v12 one can't start
+const groups = all(app, m => m.attributes.role === 'group' && /fighter$/.test(m.attributes['aria-label'] || ''))
+await click(byText(groups[1], 'button', 'Bastion')[0])
+ok(text().includes('Pick two fighters on the same rules') && !button('Start the match'), 'v11 and v12 fighters can\'t be paired')
+await pickBoth('Clarence')
+await click('Start the match')
+ok(text().includes('Your pick') && text().includes('Speed') && text().includes('Pressure · Strike'), 'a Clarence match starts, and his cards show kind and speed')
+let crounds = 0
+const v12words = /beats|is faster|trade|cancel|tech|Both defend|Setup/
+while (!text().includes('K.O.') && !text().includes('Draw') && crounds < 60) {
+  const cards = all(app, n => n.localName === 'button' && cls(n, 'card') && !n.disabled)
+  if (!cards.length) { ok(false, `Clarence round ${crounds + 1}: no playable card`); break }
+  cards[crounds % cards.length].dispatch('click'); await wait(40)
+  await click('Lock in')
+  ok(v12words.test(text()), `Clarence round ${crounds + 1}: outcome shown`)
+  crounds++
+  if (button('Next round')) await click('Next round')
+}
+ok(text().includes('K.O.') || text().includes('Draw'), `a Clarence match ends (${crounds} rounds)`); console.log('Clarence match:', crounds, 'rounds')
+await wait(300)
+await click('Playtest log')
+await click(byText(app, 'button', 'Rounds')[0])
+ok(text().includes('Clarence') && text().includes('Outcome'), 'the log shows the Clarence game')
+await click('Lab')
+await setValue(byId('lab-a'), 'clarence', 'change')
+await setValue(byId('lab-b'), 'clarence', 'change')
+await click('Run this matchup')
+for (let i = 0; i < 200 && !text().includes('Same-type attacks'); i++) await wait(100)
+ok(text().includes('Clarence vs Clarence') && text().includes('Same-type attacks') && text().includes('Counter turn-backs'), 'Lab reports v12 clash stats for Clarence')
+ok(text().includes('rules v12'), 'Lab report says it ran rules v12')
+await setValue(byId('lab-b'), 'bastion', 'change')
+ok(text().includes('Pick two fighters on the same rules'), 'Lab warns about a v11 against v12 matchup')
+await click('Move lists')
+await click(byText(app, 'button', 'Clarence').find(b => cls(b, 'fpick')))
+ok(byText(app, 'span', 'Draft').length > 0, 'Clarence shows as a Draft')
+ok(text().includes("Knockdown: the opponent can't play a Pressure next round."), 'knockdown text generated')
+ok(text().includes("If it beats a Pressure, that Pressure's Build goes on its owner's own pile."), 'Guard reminder text on the card')
+await click(find(app, n => n.localName === 'button' && n.attributes['aria-label'] === 'Edit Throw'))
+ok(byId('c-kind') && byId('c-speed') && byId('kw-knockdown'), 'the editor shows kind, speed and the knockdown timing')
+await setValue(byId('c-speed'), '14')
+ok(text().includes('speed must be a whole number from 1 to 10'), 'a Convert faster than the band is caught')
+await setValue(byId('c-speed'), '7')
+await setValue(byId('kw-knockdown'), 'recover', 'change')
+ok(text().includes("Knockdown: if it beats a Recover"), 'knockdown timing changes the card text')
+await setValue(byId('c-type'), 'recover', 'change')
+ok(byId('c-kind') && !byId('c-speed'), 'changing to a Recover picks a Recover kind and drops the speed')
+await click('Discard changes')
+
 // ---- settings ----
 await click('Settings')
 await setValue(byId('s-counter'), 'attack', 'change')

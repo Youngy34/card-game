@@ -26,15 +26,19 @@ export function Setup({ onStart, prefs, setPrefs }) {
   const s = settings()
   const difficulty = LEVELS[prefs.difficulty] ? prefs.difficulty : 'hard'
   const ruleNote = { always: 'whenever it resolves (the current rule)', strict: 'only when it beats a Pressure (test rule)', attack: 'only against an attack (test rule)' }[s.rules.counterChip]
+  const picked = sides.map(id => list.find(r => r.id === id))
+  const mixed = picked[0] && picked[1] && picked[0].rules !== picked[1].rules
+  const v12 = picked.every(r => r?.rules === 12)
   const start = () => {
     const rs = sides.map(id => list.find(r => r.id === id))
+    if (rs[0].rules !== rs[1].rules) return
     const levels = prefs.mode === 'ai' ? ['hard', difficulty] : ['hard', 'hard']
     onStart(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: prefs.mode, settings: s, levels, id: newId('g') }))
   }
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">Pick two fighters and play a full v11 game. Both move lists are open information; only the card you choose is hidden until the reveal.</p>
+      <p class="lede">Pick two fighters and play a full game. The signed-off fighters play rules v11; drafts such as Clarence play rules v12, with kinds and speed. Both move lists are open information; only the card you choose is hidden until the reveal.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -60,15 +64,16 @@ export function Setup({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${WHO[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP${r.fighter.epithet ? ` · ${r.fighter.epithet}` : ''}${r.fighter.passive ? ` · ${Object.keys(r.fighter.passive).map(p => PASSIVES[p]?.label).join(', ')}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP${r.rules === 12 ? ' · rules v12' : ''}${r.fighter.epithet ? ` · ${r.fighter.epithet}` : ''}${r.fighter.passive ? ` · ${Object.keys(r.fighter.passive).map(p => PASSIVES[p]?.label).join(', ')}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
     </div>
     <div class="stack">
       <label class="check"><input type="checkbox" checked=${prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the unexploitable mix after each reveal</label>
-      <p class="small muted">Recover chip lands ${ruleNote}. Change rules and the sparring partner's weights in Settings.</p>
-      <div class="actions"><button class="btn" onClick=${start}>Start the match</button></div>
+      ${mixed ? html`<p class="small msg-w">${picked[0].fighter.name} plays rules v${picked[0].rules} and ${picked[1].fighter.name} plays rules v${picked[1].rules}. Pick two fighters on the same rules.</p>` : null}
+      <p class="small muted">${v12 ? 'Rules v12: Recovers never chip; Guards and Counters turn the attacker\'s Build or chip back.' : `Recover chip lands ${ruleNote}.`} Change rules and the sparring partner's weights in Settings.</p>
+      <div class="actions"><button class="btn" disabled=${mixed} onClick=${start}>Start the match</button></div>
     </div>
   </div>`
 }

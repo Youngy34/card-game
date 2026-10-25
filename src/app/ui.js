@@ -89,6 +89,6 @@ export function Seg({ value, options, onChange, label }) {
 }
 
 export function StatusChip({ status }) {
-  const label = { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference' }[status] || status
+  const label = { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference', draft: 'Draft' }[status] || status
   return html`<span class=${cx('chip', status)}>${label}</span>`
 }

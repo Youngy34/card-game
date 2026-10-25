@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Playtest table for Yomi, rules v11. No dependencies and no build step: serve the folder and open index.html.",
+  "description": "Playtest table for Yomi, rules v11 and v12. No dependencies and no build step: serve the folder and open index.html.",
   "scripts": {
     "serve": "python3 -m http.server 8000",
     "build": "node tools/build-artifact.mjs",

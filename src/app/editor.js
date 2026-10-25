@@ -7,7 +7,7 @@ import { CardFace } from './card.js'
 import { Confirm, StatusChip, copyText, toast, Seg } from './ui.js'
 import { roster, saveFighter, removeFighter, getState, download } from './store.js'
 import { validateFighter, validateCard, stableStringify } from '../engine/fighters.js'
-import { KEYWORDS, KEYWORD, TYPES, TYPE_CODE, CODE_TYPE, BEATEN_BY, PASSIVES, cardLines } from '../engine/keywords.js'
+import { KEYWORDS, KEYWORD, TYPES, TYPE_CODE, CODE_TYPE, BEATEN_BY, PASSIVES, cardLines, KINDS, KINDS_OF, SPEED_BAND, DEFAULT_SPEED } from '../engine/keywords.js'
 
 const clone = v => JSON.parse(JSON.stringify(v))
 const same = (a, b) => stableStringify(a) === stableStringify(b)
@@ -49,6 +49,7 @@ function FighterEditor({ entry, list, setSelected }) {
 
   const v = useMemo(() => validateFighter(draft), [stableStringify(draft)])
   const hasFlow = !!draft.passive?.flow
+  const v12 = draft.rules === 12
   const base = entry.base
   const changes = base ? diffFighter(base, draft) : []
   const baseWord = entry.reference ? 'bundled' : 'signed-off', resetWord = entry.reference ? 'bundled' : 'signed off'
@@ -110,14 +111,14 @@ function FighterEditor({ entry, list, setSelected }) {
     ${view === 'json' ? html`<${JsonEditor} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />` : html`
       <${FighterFields} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />
       ${editing !== null && (editing === 'S' ? draft.super : draft.cards[editing]) ? html`<${CardEditor} key=${editing} card=${editing === 'S' ? draft.super : draft.cards[editing]}
-        isSuper=${editing === 'S'} hasFlow=${hasFlow} readOnly=${readOnly}
+        isSuper=${editing === 'S'} hasFlow=${hasFlow} v12=${v12} readOnly=${readOnly}
         baseCard=${base ? (editing === 'S' ? base.super : base.cards[editing]) || null : null}
         onChange=${c => setCard(editing, c)} onClose=${() => setEditing(null)} />` : null}
       <div class="cards-grid">
         ${[...draft.cards.map((c, i) => [i, c]), ...(draft.super ? [['S', draft.super]] : [])].map(([i, c]) => {
           const b = base ? (i === 'S' ? base.super : base.cards[i]) || null : null
           const changed = b && !same(b, c)
-          const cv = validateCard(c, { isSuper: i === 'S', hasFlow })
+          const cv = validateCard(c, { isSuper: i === 'S', hasFlow, v12 })
           return html`<div key=${i}>
             <${CardFace} card=${c} isSuper=${i === 'S'} hasFlow=${hasFlow} as="button" onClick=${() => setEditing(i)}
               cls=${editing === i ? 'selected' : ''} label=${`Edit ${c.name}`} />
@@ -139,6 +140,12 @@ function FighterFields({ draft, setDraft, readOnly }) {
   return html`<div class="panel grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
     <label class="field"><span>Name</span><input id="f-name" type="text" value=${draft.name} disabled=${readOnly} onInput=${e => upd({ name: e.target.value })} /></label>
     <label class="field"><span>Epithet</span><input id="f-epithet" type="text" value=${draft.epithet || ''} disabled=${readOnly} onInput=${e => upd({ epithet: e.target.value || undefined })} /></label>
+    <label class="field" title="Rules v12 adds kinds and speed. Switching a fighter's rules doesn't convert its cards: fix what the checks list."><span>Rules</span>
+      <select id="f-rules" value=${String(draft.rules === 12 ? 12 : 11)} disabled=${readOnly} onChange=${e => upd({ rules: e.target.value === '12' ? 12 : undefined })}>
+        <option value="11">v11 (signed-off roster)</option>
+        <option value="12">v12 (kinds and speed)</option>
+      </select>
+    </label>
     <label class="field"><span>Base HP</span><input id="f-hp" type="number" min="1" max="99" value=${draft.hp} disabled=${readOnly} onInput=${e => upd({ hp: toInt(e.target.value) })} /></label>
     <label class="field"><span>Passive</span>
       <select id="f-passive" value=${passive} disabled=${readOnly} onChange=${e => setPassive(e.target.value)}>
@@ -164,13 +171,14 @@ const toInt = s => (s === '' ? 0 : Math.trunc(Number(s)))
 function defaultValue(k, t) {
   if (k.kind === 'bool') return true
   if (k.kind === 'pair') return { tokens: 4, build: 2 }
+  if (k.kind === 'choice') return k.options[0][0]
   if (k.kind === 'type') return CODE_TYPE[t === 'T' ? 'C' : BEATEN_BY[t]]
   return k.key.startsWith('chipPer') || k.key.startsWith('buildPer') ? 2 : 1
 }
 
-function CardEditor({ card, isSuper, hasFlow, readOnly, baseCard, onChange, onClose }) {
+function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange, onClose }) {
   const t = TYPE_CODE[card.type]
-  const v = validateCard(card, { isSuper, hasFlow })
+  const v = validateCard(card, { isSuper, hasFlow, v12 })
   const [note, setNote] = useState(null)
   const set = patch => {
     const c = { ...card, ...patch }
@@ -191,6 +199,12 @@ function CardEditor({ card, isSuper, hasFlow, readOnly, baseCard, onChange, onCl
     }
     if (nt === 'P') c.build = c.build || 3; else delete c.build
     if (nt === 'C' && !(c.chip > 0)) c.chip = 2
+    if (v12) {                                   // a kind and speed that fit the new type
+      if (!KINDS_OF[nt].includes(c.kind)) c.kind = KINDS_OF[nt][0]
+      if (SPEED_BAND[nt]) { const [lo, hi] = SPEED_BAND[nt]; if (!(c.speed >= lo && c.speed <= hi)) c.speed = DEFAULT_SPEED[c.kind] }
+      else delete c.speed
+      if (nt === 'R' || nt === 'T') delete c.chip
+    }
     setNote(removed.length ? `Removed what a ${type} card can't have: ${removed.join(', ')}.` : null)
     onChange(c)
   }
@@ -211,8 +225,15 @@ function CardEditor({ card, isSuper, hasFlow, readOnly, baseCard, onChange, onCl
               ${TYPES.map(x => html`<option value=${x}>${x[0].toUpperCase() + x.slice(1)}</option>`)}
             </select>
           </label>
+          ${v12 ? html`<label class="field"><span>Kind</span>
+            <select id="c-kind" value=${card.kind || ''} onChange=${e => set({ kind: e.target.value })}>
+              ${!KINDS_OF[t].includes(card.kind) ? html`<option value="">Choose…</option>` : null}
+              ${KINDS_OF[t].map(k => html`<option value=${k}>${KINDS[k].label}</option>`)}
+            </select>
+          </label>` : null}
+          ${v12 && SPEED_BAND[t] ? html`<label class="field"><span>Speed (${SPEED_BAND[t][0]}–${SPEED_BAND[t][1]}, higher is faster)</span><input id="c-speed" type="number" min=${SPEED_BAND[t][0]} max=${SPEED_BAND[t][1]} value=${card.speed ?? ''} onInput=${e => set({ speed: toInt(e.target.value) })} /></label>` : null}
           ${t === 'P' ? html`<label class="field"><span>Build</span><input id="c-build" type="number" min="1" value=${card.build ?? 0} onInput=${e => set({ build: toInt(e.target.value) })} /></label>` : null}
-          <label class="field"><span>Chip</span><input id="c-chip" type="number" min="0" value=${card.chip ?? 0} onInput=${e => set({ chip: toInt(e.target.value) })} /></label>
+          ${v12 && (t === 'R' || t === 'T') && !card.chip ? null : html`<label class="field"><span>Chip</span><input id="c-chip" type="number" min="0" value=${card.chip ?? 0} onInput=${e => set({ chip: toInt(e.target.value) })} /></label>`}
           ${!isSuper ? html`<label class="field"><span>Cooldown</span>
             <select id="c-cd" value=${String(card.cooldown ?? 1)} onChange=${e => set({ cooldown: Number(e.target.value) })}><option value="1">1 round</option><option value="2">2 rounds</option></select>
           </label>` : null}
@@ -222,6 +243,7 @@ function CardEditor({ card, isSuper, hasFlow, readOnly, baseCard, onChange, onCl
 
         <div class="stack" style=${{ gap: '8px' }}>
           <span class="label">Effects and costs</span>
+          ${v12 && KINDS[card.kind]?.line ? html`<p class="small muted">As a ${KINDS[card.kind].label}: ${KINDS[card.kind].line}</p>` : null}
           ${present.length === 0 ? html`<p class="small muted">No text: the card does its type effect${t === 'T' ? ' (none, for a typeless card)' : ''} and its chip.</p>` : null}
           ${present.map(k => html`<${KeywordRow} k=${k} t=${t} value=${card[k.key]} onChange=${val => set({ [k.key]: val })} onRemove=${() => set({ [k.key]: undefined })} />`)}
           ${addable.length && !readOnly ? html`<label class="field" style=${{ maxWidth: '360px' }}><span>Add an effect or cost</span>
@@ -251,6 +273,9 @@ function KeywordRow({ k, t, value, onChange, onRemove }) {
     <div class="kw-inputs">
       ${k.kind === 'int' ? html`<label class="field"><span>${k.unit || 'Amount'}</span><input id=${'kw-' + k.key} type="number" min=${k.min} max=${k.max} value=${value} onInput=${e => onChange(toInt(e.target.value))} /></label>` : null}
       ${k.kind === 'pair' ? k.fields.map(f => html`<label class="field"><span>${f.label}</span><input id=${'kw-' + k.key + '-' + f.key} type="number" min=${f.min} max=${f.max} value=${value[f.key]} onInput=${e => onChange({ ...value, [f.key]: toInt(e.target.value) })} /></label>`) : null}
+      ${k.kind === 'choice' ? html`<label class="field"><span>When</span><select id=${'kw-' + k.key} value=${value} onChange=${e => onChange(e.target.value)}>
+        ${k.options.map(([v, l]) => html`<option value=${v}>${l}</option>`)}
+      </select></label>` : null}
       ${k.kind === 'type' ? html`<label class="field"><span>Type</span><select id=${'kw-' + k.key} value=${value} onChange=${e => onChange(e.target.value)}>
         ${['pressure', 'convert', 'recover'].map(x => html`<option value=${x}>${x[0].toUpperCase() + x.slice(1)}</option>`)}
       </select></label>` : null}
@@ -289,6 +314,8 @@ export function diffCard(a, b) {
   const nm = b.name
   if (a.name !== b.name) out.push(`${a.name} renamed ${b.name}`)
   if (a.type !== b.type) out.push(`${nm}: type ${a.type} → ${b.type}`)
+  if ((a.kind || '') !== (b.kind || '')) out.push(`${nm}: kind ${a.kind || 'none'} → ${b.kind || 'none'}`)
+  if ((a.speed ?? null) !== (b.speed ?? null)) out.push(`${nm}: Speed ${a.speed ?? 'none'} → ${b.speed ?? 'none'}`)
   for (const [f, label] of [['build', 'Build'], ['chip', 'Chip'], ['cooldown', 'Cooldown']]) {
     if ((a[f] ?? (f === 'cooldown' ? 1 : 0)) !== (b[f] ?? (f === 'cooldown' ? 1 : 0))) out.push(`${nm}: ${label} ${a[f] ?? (f === 'cooldown' ? 1 : 0)} → ${b[f] ?? (f === 'cooldown' ? 1 : 0)}`)
   }
@@ -307,6 +334,7 @@ export function diffFighter(a, b) {
   const out = []
   if (a.name !== b.name) out.push(`Name ${a.name} → ${b.name}`)
   if (a.hp !== b.hp) out.push(`Base HP ${a.hp} → ${b.hp}`)
+  if ((a.rules ?? 11) !== (b.rules ?? 11)) out.push(`Rules v${a.rules ?? 11} → v${b.rules ?? 11}`)
   if (!same(a.passive ?? null, b.passive ?? null)) out.push('Passive changed')
   if ((a.ai?.ownGreyValue ?? null) !== (b.ai?.ownGreyValue ?? null)) out.push(`Partner's value for its own grey ${a.ai?.ownGreyValue ?? 'default'} → ${b.ai?.ownGreyValue ?? 'default'}`)
   const n = Math.max(a.cards.length, b.cards.length)

@@ -8,7 +8,11 @@
 //   node tools/sim.mjs bastion-sc2 atlas           # an earlier version, from data/variants
 //   node tools/sim.mjs path/to/variant.json atlas  # any fighter file
 //   node tools/sim.mjs vex dummy                   # against the benchmark Dummy (data/reference)
+//   node tools/sim.mjs clarence clarence           # a rules v12 draft (data/drafts)
 //   node tools/sim.mjs --list                      # every fighter and version by name
+//
+// A fighter plays the rules its file declares ("rules": 12, or v11 if absent).
+// Both fighters in a matchup must play the same rules.
 
 import fs from 'fs'
 import path from 'path'
@@ -31,7 +35,7 @@ const W = { ...DEFAULT_WEIGHTS, ...settings.ai }
 
 function find(name) {
   if (name.endsWith('.json')) return name
-  for (const dir of ['fighters', 'reference', 'variants']) {
+  for (const dir of ['fighters', 'reference', 'drafts', 'variants']) {
     const p = `${root}/data/${dir}/${name}.json`
     if (fs.existsSync(p)) return p
   }
@@ -49,6 +53,7 @@ function load(name) {
 const fmt = x => (100 * x).toFixed(1) + '%'
 async function report(a, b) {
   const fa = load(a), fb = load(b)
+  if (fa.v12 !== fb.v12) { console.error(`${fa.name} plays rules ${fa.v12 ? 12 : 11} and ${fb.name} plays rules ${fb.v12 ? 12 : 11}: a matchup needs both on the same rules.`); process.exit(1) }
   const r = await runBalance(fa, fb, { n, seed, rules, W, levels })
   if (json) { console.log(JSON.stringify({ a, b, levels, win: r.win, doubleKO: r.doubleKO / n, draws: r.draws / n, median: r.median })); return r }
   console.log(`\n=== ${fa.name} vs ${fb.name}  (${n} games, seed ${seed}${levels.join() !== 'hard,hard' ? `, levels ${levels.join(' v ')}` : ''}) ===`)
@@ -56,6 +61,18 @@ async function report(a, b) {
   console.log(`  game length: median ${r.median} rounds, mean ${r.mean.toFixed(1)}, 10th-90th percentile ${Math.round(r.p10)}-${Math.round(r.p90)}`)
   console.log(`  double KOs: ${fmt(r.doubleKO / n)} of games (${fmt(r.draws / n)} drawn)`)
   console.log(`  quiet rounds: ${fmt(r.quiet / r.totalRounds)}; Recover mirrors: ${fmt(r.recoverMirrors / r.totalRounds)}`)
+  if (r.v12) {
+    const V = r.v12, R = r.totalRounds, q = V.quietBy
+    console.log(`  rules v12:`)
+    console.log(`    quiet rounds by cause: two Recovers ${fmt(q.recovers / R)}, Projectile cancels ${fmt(q.cancel / R)}, Grab techs ${fmt(q.tech / R)}, other ${fmt(q.other / R)}`)
+    console.log(`    same-type attacks: ${fmt(V.sameType / R)} of rounds; of those, speed decided ${fmt(V.bySpeed / Math.max(V.sameType, 1))}, trades ${fmt(V.trades / Math.max(V.sameType, 1))}, cancels ${fmt(V.cancels / Math.max(V.sameType, 1))}, techs ${fmt(V.techs / Math.max(V.sameType, 1))}`)
+    const per = (x, y) => (x / Math.max(y, 1)).toFixed(1)
+    console.log(`    Guards beat a Pressure in ${fmt(V.guarded / R)} of rounds, turning back ${per(V.guardBuild, V.guarded)} Build each${V.guardedProjectiles ? ` (a Projectile's chip got through ${V.guardedProjectiles} times, ${per(V.through, V.guardedProjectiles)} each)` : ''}`)
+    console.log(`    Counters beat a Pressure in ${fmt(V.countered / R)} of rounds, turning back ${per(V.counterChip, V.countered)} chip each`)
+    if (V.setups) console.log(`    Setups played ${V.setups} times, interrupted ${fmt(V.interrupted / V.setups)}`)
+    const routes = Object.entries(r.routes).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${fmt(v / n)}`).join(', ')
+    console.log(`    how games end: ${routes}`)
+  }
   for (const k of [0, 1]) {
     const f = [fa, fb][k], S = r.sides[k], tot = Object.values(S.plays).reduce((x, y) => x + y, 0)
     console.log(`  ${f.name} type split: Pressure ${fmt(S.types.P / tot)}  Convert ${fmt(S.types.C / tot)}  Recover ${fmt(S.types.R / tot)}  Typeless ${fmt(S.types.T / tot)}`)
@@ -70,8 +87,8 @@ async function report(a, b) {
 }
 
 if (list) {
-  for (const dir of ['fighters', 'reference', 'variants']) {
-    console.log({ fighters: 'Signed off (used by --all):', reference: 'Reference (benchmarks):', variants: 'Earlier versions and variants:' }[dir])
+  for (const dir of ['fighters', 'reference', 'drafts', 'variants']) {
+    console.log({ fighters: 'Signed off (used by --all):', reference: 'Reference (benchmarks):', drafts: 'Drafts (rules v12):', variants: 'Earlier versions and variants:' }[dir])
     for (const f of fs.readdirSync(`${root}/data/${dir}`).filter(f => f.endsWith('.json')).sort()) {
       const j = JSON.parse(fs.readFileSync(`${root}/data/${dir}/${f}`, 'utf8'))
       console.log(`  ${f.slice(0, -5).padEnd(18)} ${j.name}`)
@@ -84,4 +101,5 @@ if (list) {
   await report(args[0], args[1])
 } else {
   console.log('usage: node tools/sim.mjs <a> <b> [-n games] [--seed s] [--counter strict|attack] [--levels hard,easy] | --all | --list')
+  console.log('       (--counter only applies to rules v11 fighters)')
 }

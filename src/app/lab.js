@@ -19,8 +19,11 @@ export function Lab({ state, setState }) {
   const upd = p => setState({ ...state, ...p })
   const s = settings()
 
+  const ra0 = list.find(r => r.id === a), rb0 = list.find(r => r.id === b)
+  const mixed = ra0 && rb0 && ra0.rules !== rb0.rules
   const one = async () => {
     const ra = list.find(r => r.id === a), rb = list.find(r => r.id === b)
+    if (ra.rules !== rb.rules) return
     ctl.current = new AbortController()
     setRunning({ done: 0, n, label: `${ra.fighter.name} vs ${rb.fighter.name}` })
     const fa = toEngineFighter(ra.fighter), fb = toEngineFighter(rb.fighter)
@@ -31,10 +34,10 @@ export function Lab({ state, setState }) {
   }
 
   const all = async () => {
-    const rs = list.filter(r => (r.status !== 'variant' && !r.reference) || state.withVariants)
+    const rs = list.filter(r => (r.status !== 'variant' && !r.reference && !r.draft) || state.withVariants)
     ctl.current = new AbortController()
     const pairs = []
-    for (let i = 0; i < rs.length; i++) for (let j = i; j < rs.length; j++) pairs.push([rs[i], rs[j]])
+    for (let i = 0; i < rs.length; i++) for (let j = i; j < rs.length; j++) if (rs[i].rules === rs[j].rules) pairs.push([rs[i], rs[j]])
     const cells = {}
     const total = pairs.length * n
     let done = 0
@@ -64,11 +67,12 @@ export function Lab({ state, setState }) {
         <label class="field"><span>Seed</span><input id="lab-seed" type="number" value=${seed} onInput=${e => upd({ seed: Math.trunc(Number(e.target.value)) || 0 })} /></label>
       </div>
       <div class="row"><span class="label">Games per matchup</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games per matchup" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (Recover chip: ${s.rules.counterChip}). Use Hard for balance checks; pitting a level against Hard measures how much skill matters. The full round-robin always uses Hard.</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (Recover chip for v11 fighters: ${s.rules.counterChip}). Use Hard for balance checks; pitting a level against Hard measures how much skill matters. The full round-robin always uses Hard, and only pairs fighters on the same rules.</p>
+      ${mixed ? html`<p class="small msg-w">${ra0.fighter.name} plays rules v${ra0.rules} and ${rb0.fighter.name} plays rules v${rb0.rules}. Pick two fighters on the same rules.</p>` : null}
       <div class="actions">
-        <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
+        <button class="btn" disabled=${!!running || mixed} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${all}>Run every matchup</button>
-        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants and the Dummy</label>
+        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants, drafts and the Dummy</label>
       </div>
       ${running ? html`<div class="stack" style=${{ gap: '6px' }}>
         <div class="spread small"><span>${running.label}</span><span class="num">${running.done} / ${running.n} games</span></div>
@@ -85,7 +89,7 @@ function Report({ r, list }) {
   const [fa, fb] = r.fighters
   const n = r.games
   return html`<section class="stack" style=${{ gap: '16px' }}>
-    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · Recover chip ${r.rules.counterChip}${r.levels && r.levels.join() !== 'hard,hard' ? ` · ${LEVELS[r.levels[0]].label} vs ${LEVELS[r.levels[1]].label}` : ''}</span></div>
+    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · ${fa.v12 ? 'rules v12' : `Recover chip ${r.rules.counterChip}`}${r.levels && r.levels.join() !== 'hard,hard' ? ` · ${LEVELS[r.levels[0]].label} vs ${LEVELS[r.levels[1]].label}` : ''}</span></div>
     <div class="row">${r.statuses.map((st, k) => html`<span class="small">${r.fighters[k].name} <${StatusChip} status=${st} /></span>`)}</div>
     <${WinBar} a=${fa.name} b=${fb.name} win=${r.win} margin=${r.margin} />
     <div class="stats">
@@ -94,6 +98,11 @@ function Report({ r, list }) {
       <div class="stat-tile"><span class="label">Median length</span><b>${r.median}</b><span class="small muted">rounds · 10–90%: ${Math.round(r.p10)}–${Math.round(r.p90)}</span></div>
       <div class="stat-tile"><span class="label">Quiet rounds</span><b>${pct(r.quiet / r.totalRounds, 1)}</b><span class="small muted">no HP or pile change</span></div>
       <div class="stat-tile"><span class="label">Recover mirrors</span><b>${pct(r.recoverMirrors / r.totalRounds, 1)}</b><span class="small muted">of rounds</span></div>
+      ${r.v12 ? html`
+        <div class="stat-tile"><span class="label">Same-type attacks</span><b>${pct(r.v12.sameType / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${pct(r.v12.bySpeed / Math.max(r.v12.sameType, 1))} by speed, ${pct(r.v12.trades / Math.max(r.v12.sameType, 1))} trades, ${pct(r.v12.cancels / Math.max(r.v12.sameType, 1))} cancels, ${pct(r.v12.techs / Math.max(r.v12.sameType, 1))} techs</span></div>
+        <div class="stat-tile"><span class="label">Guard turn-backs</span><b>${pct(r.v12.guarded / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.guardBuild / Math.max(r.v12.guarded, 1)).toFixed(1)} Build each</span></div>
+        <div class="stat-tile"><span class="label">Counter turn-backs</span><b>${pct(r.v12.countered / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.counterChip / Math.max(r.v12.countered, 1)).toFixed(1)} chip each</span></div>
+        ${r.v12.setups ? html`<div class="stat-tile"><span class="label">Setups interrupted</span><b>${pct(r.v12.interrupted / r.v12.setups, 1)}</b><span class="small muted">of ${r.v12.setups} played</span></div>` : null}` : null}
     </div>
     <div class="pickers">
       ${[0, 1].map(k => html`<${SideTable} f=${r.fighters[k]} S=${r.sides[k]} n=${n} total=${r.totalRounds} />`)}

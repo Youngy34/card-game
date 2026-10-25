@@ -51,7 +51,7 @@ export function Log() {
         </div>
       </div>
       <div class="panel stack"><h3>What people played</h3>
-        <p class="small muted">Picks made by people only, not the sparring partner. Resolved means it won, mirrored or met a typeless card.</p>
+        <p class="small muted">Picks made by people only, not the sparring partner. Resolved means it won, mirrored or traded, or met a typeless card.</p>
         <div class="pickers">${Object.entries(s.cards).map(([fname, cards]) => {
           const tot = Object.values(cards).reduce((x, y) => x + y.plays, 0)
           return html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${fname}</th><th class="r">Plays</th><th class="r">Share</th><th class="r">Resolved</th></tr></thead>
@@ -71,6 +71,8 @@ export function Log() {
       </section>`}
   </div>`
 }
+
+const OUTCOME_WORD = { mirror: 'Mirror', typeless: 'Typeless', trade: 'Trade', cancel: 'Cancel', tech: 'Tech', recovers: 'Both defend', setup: 'Setup' }
 
 function GameRow({ g, current, onDelete, canDelete }) {
   const [open, setOpen] = useState(false)
@@ -98,7 +100,7 @@ function GameRow({ g, current, onDelete, canDelete }) {
         <td>${r.n}</td>
         <td><span class="tdot" data-t=${r.types[0]}></span> ${r.cards[0]}${r.lockedOut[0] ? ' ·' : ''}</td>
         <td><span class="tdot" data-t=${r.types[1]}></span> ${r.cards[1]}${r.lockedOut[1] ? ' ·' : ''}</td>
-        <td>${r.outcome === 'A' ? `${TYPE_LABEL[r.types[0]]} wins` : r.outcome === 'B' ? `${TYPE_LABEL[r.types[1]]} wins` : r.outcome === 'mirror' ? 'Mirror' : 'Typeless'}</td>
+        <td>${r.outcome === 'A' ? `${TYPE_LABEL[r.types[0]]} wins` : r.outcome === 'B' ? `${TYPE_LABEL[r.types[1]]} wins` : OUTCOME_WORD[r.outcome] || r.outcome}</td>
         <td class="r num">${r.after[0].hp} · ${r.after[0].pile}</td>
         <td class="r num">${r.after[1].hp} · ${r.after[1].pile}</td>
       </tr>`)}</tbody>

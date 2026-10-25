@@ -5,9 +5,9 @@
 // chips); the editor won't save a fighter with errors. Warnings are authoring
 // guidelines (8 cards, 2 of each type) that are fine to break while testing.
 
-import { KEYWORDS, KEYWORD, BASE_FIELDS, TYPES, TYPE_CODE, PASSIVES, BEATEN_BY } from './keywords.js'
+import { KEYWORDS, KEYWORD, BASE_FIELDS, TYPES, TYPE_CODE, CODE_TYPE, PASSIVES, BEATEN_BY, KINDS, KINDS_OF, SPEED_BAND } from './keywords.js'
 
-const FIGHTER_FIELDS = ['schemaVersion', 'id', 'name', 'epithet', 'concept', 'hp', 'passive', 'ai', 'cards', 'super',
+const FIGHTER_FIELDS = ['schemaVersion', 'id', 'name', 'epithet', 'concept', 'rules', 'hp', 'passive', 'ai', 'cards', 'super',
                         'variantOf', 'notes']
 const isInt = v => Number.isInteger(v)
 
@@ -28,7 +28,7 @@ function lev(a, b) {
   return dp[m][n]
 }
 
-export function validateCard(card, { isSuper = false, hasFlow = false } = {}) {
+export function validateCard(card, { isSuper = false, hasFlow = false, v12 = false } = {}) {
   const errors = [], warnings = []
   const E = m => errors.push(m), W = m => warnings.push(m)
   if (!card || typeof card !== 'object') { E('Card is not an object.'); return { errors, warnings } }
@@ -76,6 +76,8 @@ export function validateCard(card, { isSuper = false, hasFlow = false } = {}) {
       if (!T || T === 'T') E(`"${k.label}" must name pressure, convert or recover.`)
       else if (t !== 'T' && BEATEN_BY[T] === t) E(`A ${card.type} card is always beaten by a ${v}, so this stagger could never happen.`)
       else if (t !== 'T' && t !== T && BEATEN_BY[t] !== T) E('This stagger could never happen.')
+    } else if (k.kind === 'choice') {
+      if (!k.options.some(o => o[0] === v)) E(`"${k.label}" must be one of ${k.options.map(o => `"${o[0]}"`).join(', ')}.`)
     } else if (k.kind === 'pair') {
       if (typeof v !== 'object') { E(`"${k.label}" needs ${k.fields.map(f => f.key).join(' and ')}.`); continue }
       for (const f of k.fields) {
@@ -86,11 +88,38 @@ export function validateCard(card, { isSuper = false, hasFlow = false } = {}) {
     }
   }
   if (t === 'T' && card.onLossSelf) E('A typeless card never loses, so it has no On loss.')
+  if (v12) validateCard12(card, t, chip, isSuper, E, W)
+  else if (card.kind !== undefined || card.speed !== undefined) E('Kind and speed are rules v12 fields. Set "rules": 12 on the fighter to use them.')
   // Authoring guidelines
   const isDefensiveName = /\b(block|dodge|brace|guard)\b/i.test(card.name || '')
-  if (t === 'R' && chip > 0 && isDefensiveName) W('A card that sounds purely defensive never chips; a Recover that chips is a counter, and its name should say so.')
+  if (!v12 && t === 'R' && chip > 0 && isDefensiveName) W('A card that sounds purely defensive never chips; a Recover that chips is a counter, and its name should say so.')
   if (t !== 'T' && chip > 4) W('Chip above 4 on a typed card is unusually high (usually 1–2).')
   return { errors, warnings }
+}
+
+// Rules v12: every card has a kind matching its type, every attack a speed in
+// its type's band, Recovers deal no damage of their own, and Setups never attack.
+function validateCard12(card, t, chip, isSuper, E, W) {
+  const K = KINDS[card.kind]
+  const kinds = KINDS_OF[t].join(' or ')
+  if (card.kind === undefined) E(`Needs a kind (${kinds}): every v12 card has one.`)
+  else if (!K) E(`Kind must be one of ${Object.keys(KINDS).join(', ')}.`)
+  else if (K.t !== t) E(`A ${K.label} is a ${CODE_TYPE[K.t]} kind; a ${card.type} card is a ${kinds}.`)
+  const band = SPEED_BAND[t]
+  if (band) {
+    if (card.speed === undefined) E(`Needs a speed from ${band[0]} to ${band[1]} (higher is faster).`)
+    else if (!isInt(card.speed) || card.speed < band[0] || card.speed > band[1]) {
+      E(`A ${card.type}'s speed must be a whole number from ${band[0]} to ${band[1]}, so every Pressure is faster than every Convert.`)
+    }
+  } else if (card.speed !== undefined) E('Only attacks (Pressures and Converts) have a speed.')
+  if (t === 'R') {
+    const chips = chip > 0 || ['chipPerCleared', 'chipPerHpLost', 'chipOnWin'].some(k => card[k])
+    const m = 'A Recover never deals damage of its own; its reward is the turn-back.'
+    if (chips) { if (isSuper) W(`${m} Whether a Recover Super may still chip is an open question.`); else E(m) }
+  }
+  if (t === 'T') {
+    if (chip > 0 || card.flowChip) E('A Setup is never an attack, so it deals no chip.')
+  }
 }
 
 export function validateFighter(f) {
@@ -109,6 +138,8 @@ export function validateFighter(f) {
   if (!f.id || !/^[a-z0-9-]+$/.test(f.id)) errors.push({ where: 'Fighter', msg: 'id must be lower-case letters, numbers and dashes.' })
   if (!f.name) errors.push({ where: 'Fighter', msg: 'Needs a name.' })
   if (!isInt(f.hp) || f.hp < 1 || f.hp > 99) errors.push({ where: 'Fighter', msg: 'HP must be a whole number from 1 to 99.' })
+  if (f.rules !== undefined && f.rules !== 11 && f.rules !== 12) errors.push({ where: 'Fighter', msg: 'rules must be 11 or 12 (leave it out for 11).' })
+  const v12 = f.rules === 12
   let hasFlow = false
   if (f.passive) {
     for (const key of Object.keys(f.passive)) {
@@ -129,7 +160,7 @@ export function validateFighter(f) {
   }
   const names = new Set()
   f.cards.forEach((c, i) => {
-    add(c?.name || `Card ${i + 1}`, validateCard(c, { hasFlow }))
+    add(c?.name || `Card ${i + 1}`, validateCard(c, { hasFlow, v12 }))
     if (c?.name) {
       if (names.has(c.name)) errors.push({ where: c.name, msg: 'Two cards share this name.' })
       names.add(c.name)
@@ -138,7 +169,7 @@ export function validateFighter(f) {
   if (f.super === null) warnings.push({ where: 'Super', msg: 'No Super. Fine for a reference fighter like the Dummy; every real fighter has one.' })
   else if (!f.super) errors.push({ where: 'Super', msg: 'Needs a Super (or "super": null for a reference fighter).' })
   else {
-    add(f.super.name || 'Super', validateCard(f.super, { isSuper: true, hasFlow }))
+    add(f.super.name || 'Super', validateCard(f.super, { isSuper: true, hasFlow, v12 }))
     if (names.has(f.super.name)) errors.push({ where: f.super.name, msg: 'The Super shares a name with a card.' })
   }
   if (f.cards.length !== 8) warnings.push({ where: 'Move list', msg: `A move list is 8 cards plus a Super (this has ${f.cards.length}).` })
@@ -147,7 +178,26 @@ export function validateFighter(f) {
     if (n < 2) warnings.push({ where: 'Move list', msg: `Move lists carry at least 2 of each triangle type (${n} ${t}).` })
   }
   if (hasFlow && !f.cards.some(c => c?.flowCard)) warnings.push({ where: 'Passive', msg: 'Flow needs at least one Flow card, or she can never be flowing.' })
+  if (v12) warnings.push(...authoring12(f.cards))
   return { errors, warnings }
+}
+
+// Rules v12 authoring guidelines (warnings, not errors)
+function authoring12(cards) {
+  const out = []
+  const ok = cards.filter(c => c && typeof c === 'object')
+  if (ok.some(c => c.type === 'pressure') && !ok.some(c => c.type === 'pressure' && c.chip > 0)) {
+    out.push({ where: 'Move list', msg: "No Pressure chips, so opponents' Counters have nothing to turn back against this fighter." })
+  }
+  // Speed is a cost: no card both faster and bigger than its same-type sibling
+  const plain = c => !KEYWORDS.some(k => c[k.key] !== undefined && c[k.key] !== null && c[k.key] !== false)
+  for (const a of ok) for (const b of ok) {
+    if (a === b || a.type !== b.type || !SPEED_BAND[TYPE_CODE[a.type]] || !plain(a) || !plain(b)) continue
+    if (!(a.speed > b.speed)) continue
+    const ge = (a.build ?? 0) >= (b.build ?? 0) && (a.chip ?? 0) >= (b.chip ?? 0) && (a.cooldown ?? 1) <= (b.cooldown ?? 1)
+    if (ge) out.push({ where: a.name, msg: `Faster than ${b.name} and at least as big: speed is a cost, so a faster card should hit softer.` })
+  }
+  return out
 }
 
 // ---- engine form ---------------------------------------------------------
@@ -162,13 +212,14 @@ function engineCard(c, isSuper) {
   return {
     name: c.name, t: TYPE_CODE[c.type], build: c.build ?? 0, chip: c.chip ?? 0,
     cd: isSuper ? 0 : (c.cooldown ?? 1), sup: isSuper, kw, src: c,
+    kind: c.kind ?? null, speed: c.speed ?? null,       // rules v12
   }
 }
 
 export function toEngineFighter(f) {
   const rs = f.passive?.risingStakes
   return {
-    id: f.id, name: f.name, hp: f.hp,
+    id: f.id, name: f.name, hp: f.hp, v12: f.rules === 12,
     cards: f.cards.map(c => engineCard(c, false)),
     sup: f.super ? engineCard(f.super, true) : null,
     flow: !!f.passive?.flow,

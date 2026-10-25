@@ -1,6 +1,6 @@
 # Yomi Playtest
 
-The digital playtest table for *Yomi*, the 1v1 fighting-game card game, on rules v11 (move lists, cooldown, single-use Supers).
+The digital playtest table for *Yomi*, the 1v1 fighting-game card game. The signed-off fighters play rules v11 (move lists, cooldown, single-use Supers). Drafts play **rules v12** (kinds of move, speed, Guard and Counter turn-backs, Setups), from `rules-overview 12.md` in the Claude project; a fighter's file says which rules it plays, and a matchup needs both fighters on the same rules.
 
 - **Play** a full game against the sparring partner (the simulator's player), against another person on one device, or watch two sparring partners.
 - **Move lists**: every fighter's cards, editable as a form or as raw JSON, with validation. Card text is written from each card's effects, so the face always matches what the engine does.
@@ -26,6 +26,7 @@ Locally, edits and the log are kept in that browser only.
 |---|---|
 | `data/fighters/*.json` | The signed-off fighters (the source of truth) |
 | `data/reference/*.json` | Reference fighters for benchmarking, shown in the app and runnable by name in `tools/sim.mjs`, but left out of `--all` and the Lab's round-robin. Currently the Dummy. |
+| `data/drafts/*.json` | Rules v12 drafts, shown in the app (marked Draft) and runnable by name, but left out of `--all` and the Lab's round-robin. Currently Clarence, the v12 starter. |
 | `data/variants/*.json` | Earlier versions and test variants, runnable by name in `tools/sim.mjs` (not shown in the app) |
 | `data/settings.json` | Default rules and sparring-partner weights |
 | `src/engine/` | The rules engine and sparring partner, plain JavaScript with no UI (runs in the browser and in Node) |
@@ -59,6 +60,7 @@ A fighter file:
 - `ai.ownGreyValue` (optional): how the sparring partner values its own grey tokens, in HP. The default is 0.6; the Gambler uses 0.3 because her grey is her fuel.
 - `super`: the Super, or `null` for a reference fighter with no Super (the Dummy). The validator warns about it, since every real fighter has one.
 - `variantOf` (variants only): the fighter it was copied from.
+- `rules` (optional): `12` for a rules v12 fighter. Leave it out for v11.
 
 A card:
 
@@ -76,6 +78,8 @@ A card:
 | `flowCard` | `true` marks a Flow card |
 | `art` | Optional URL of a full card-design image, shown instead of the generated face |
 | `flavour`, `notes` | Optional text |
+| `kind` | Rules v12 only, and required there: `strike` or `projectile` (Pressure), `heavy` or `grab` (Convert), `guard` or `counter` (Recover), `setup` (typeless) |
+| `speed` | Rules v12 attacks only, and required there: 11–20 for a Pressure, 1–10 for a Convert, higher is faster |
 
 Effects and costs, added as extra fields. Any other field is reported as a problem, with a suggestion if it looks like a typo.
 
@@ -96,6 +100,7 @@ Effects and costs, added as extra fields. Any other field is reported as a probl
 | `onCooldownConvertChip` | 2 | Any (not on a Super) | On cooldown: your Converts chip +2. |
 | `lock` | true | Any | The opponent's played card goes one space further on cooldown. |
 | `stagger` | "convert" | Any | If it beats a Convert, the opponent can't play a Convert next round. |
+| `knockdown` | "resolves" or "recover" | Convert | Knockdown: (if it beats a Recover,) the opponent can't play a Pressure next round. |
 | `returnCard` | true | Any | Return one card from your cooldown track to your hand. |
 | `selfAdd` | 2 | Any | Cost: add 2 tokens to your own pile. |
 | `onLossSelf` | 2 | Pressure, Convert, Recover | Cost: on loss, add 2 tokens to your own pile. |
@@ -104,6 +109,18 @@ Effects and costs, added as extra fields. Any other field is reported as a probl
 A value of 1 on a "for every" field reads as "for every token". Scaling chip on a Recover adds up (`chipPerCleared` plus `chipPerHpLost`); in the simulator only one applied, which no current card relies on.
 
 All effects read the board as it was at the reveal, and the changes apply together (the "state at reveal" proposal, as in the simulator).
+
+### Rules v12 in the engine
+
+For a fighter with `"rules": 12` (see `rules-overview 12.md`):
+
+- **Different types:** the triangle decides. Every Pressure is faster than every Convert, so Pressure still beats Convert.
+- **Two attacks of the same type:** two Projectiles cancel and two Grabs tech (neither resolves, whatever their speeds); otherwise the faster card wins, and a tie trades (both resolve). The beaten card's On loss text applies.
+- **Two Recovers:** both resolve, each clearing its own pile.
+- **A Guard or Counter that beats a Pressure turns its numbers back,** as the Pressure would have landed them: a Guard puts its Build on the attacker's own pile (and a Projectile's chip still gets through the Guard), and a Counter turns its chip back on the attacker.
+- **A Setup** never wins or loses. If the opponent played a Pressure or Convert, the Setup is interrupted and none of its text applies; otherwise it takes effect.
+- **Validation:** Recovers and Setups deal no chip (a Recover Super that chips is only a warning, since it's an open question), every attack has a speed in its band, and two warnings cover the authoring guidelines: Counters need Pressures that chip, and speed is a cost (no plain card both faster and at least as big as its same-type sibling).
+- **The Settings screen's Recover-chip rule only applies to v11 fighters.**
 
 ## Difficulty
 
@@ -121,7 +138,10 @@ node tools/sim.mjs gambler bastion -n 500 --seed 5
 node tools/sim.mjs --all -n 300
 node tools/sim.mjs bastion-sc2 atlas --counter attack
 node tools/sim.mjs vex vex --levels hard,easy
+node tools/sim.mjs clarence clarence -n 500 --seed 5    # rules v12
 ```
+
+For rules v12 fighters the report adds quiet rounds by cause, how same-type attacks were settled (speed, trades, cancels, techs), how often Guards and Counters turned a Pressure back and by how much, Setups interrupted, and how games end.
 
 The full guide (reading the output, the value function, what to trust) is `claude/sim/yomi-sim guide.md` in the Claude project.
 

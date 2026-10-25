@@ -114,6 +114,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink-2); outline:
 .chip.edited { color: var(--convert); }
 .chip.variant { color: var(--typeless); }
 .chip.reference { color: var(--recover); }
+.chip.draft { color: var(--pressure); }
 .chip.bad { color: var(--bad); }
 .chip.good { color: var(--good); }
 .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; min-width: 0; }
@@ -147,6 +148,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink-2); outline:
 .stat b { font-family: var(--font-display); font-weight: 900; font-size: 1.55em; line-height: 1; font-variant-numeric: tabular-nums; }
 .stat i { font-style: normal; font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
 .card-text { padding: 0 0.5em; font-size: 0.86em; color: var(--ink-2); display: grid; gap: 0.25em; flex: 1; }
+.card-kind { font-style: italic; color: var(--ink-3); }
+.stat.speed { border-left-color: var(--ink-3); }
 .card-cost {
   margin-top: auto; padding: 0.3em 0.5em 0.4em; font-size: 0.8em; color: var(--ink);
   background: repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0 4px, transparent 4px 8px), var(--ground);

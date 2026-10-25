@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "id": "clarence",
+  "name": "Clarence",
+  "epithet": "the Starter",
+  "concept": "The rules v12 starter: one of nearly every kind of move. Draft, from rules-overview 12. HP and speeds are placeholders, and the Super and eighth card are still to decide.",
+  "rules": 12,
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    { "name": "Slash", "type": "pressure", "kind": "strike", "speed": 17, "build": 3, "chip": 2, "cooldown": 1 },
+    { "name": "Fireball", "type": "pressure", "kind": "projectile", "speed": 13, "build": 1, "chip": 3, "cooldown": 1 },
+    { "name": "Dive", "type": "pressure", "kind": "strike", "speed": 15, "build": 5, "chip": 2, "cooldown": 2 },
+    { "name": "Big Swing", "type": "convert", "kind": "heavy", "speed": 3, "chip": 3, "cooldown": 1 },
+    { "name": "Throw", "type": "convert", "kind": "grab", "speed": 7, "chip": 1, "cooldown": 1, "knockdown": "resolves" },
+    { "name": "Block", "type": "recover", "kind": "guard", "cooldown": 1 },
+    { "name": "Counter", "type": "recover", "kind": "counter", "cooldown": 1 }
+  ],
+  "super": null,
+  "notes": "Added 25 Oct 2026 as the first v12 fighter. HP 22 is a placeholder in the v11 roster's range. Tuning flags from the rules: chip on the Pressures is high (suggested trim Slash 3/1, Fireball 1/2, Dive 5/1: variant clarence-trim), Throw's knockdown timing (only if it beats a Recover: variant clarence-kd), and Block was first sketched at Cooldown 0."
+}

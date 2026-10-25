@@ -15,6 +15,24 @@ export const TYPE_LABEL = { P: 'Pressure', C: 'Convert', R: 'Recover', T: 'Typel
 // The card each type beats (winner -> loser)
 export const BEATEN_BY = { P: 'C', C: 'R', R: 'P' }
 
+// ---- rules v12: kinds and speed -------------------------------------------
+// A v12 fighter ("rules": 12) gives every card a kind, and every attack a speed.
+// The type still decides clashes between types; the kind decides how a card
+// lands, and speed decides clashes between two attacks of the same type.
+export const KINDS = {
+  strike:     { t: 'P', label: 'Strike' },
+  projectile: { t: 'P', label: 'Projectile', line: 'Its chip gets through a Guard. Two Projectiles cancel.' },
+  heavy:      { t: 'C', label: 'Heavy' },
+  grab:       { t: 'C', label: 'Grab', line: 'Two Grabs tech.' },
+  guard:      { t: 'R', label: 'Guard', line: "If it beats a Pressure, that Pressure's Build goes on its owner's own pile." },
+  counter:    { t: 'R', label: 'Counter', line: "If it beats a Pressure, that Pressure's chip hits its owner." },
+  setup:      { t: 'T', label: 'Setup', line: 'Interrupted if the opponent attacks.' },
+}
+export const KINDS_OF = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['guard', 'counter'], T: ['setup'] }
+// Speed bands: higher is faster, and every Pressure is faster than every Convert
+export const SPEED_BAND = { P: [11, 20], C: [1, 10] }
+export const DEFAULT_SPEED = { strike: 17, projectile: 13, heavy: 3, grab: 7 }
+
 const every = (k, unit) => (k === 1 ? `every ${unit}` : `every ${k} ${unit}s`)
 const tokens = n => `${n} token${n === 1 ? '' : 's'}`
 
@@ -105,6 +123,14 @@ export const KEYWORDS = [
     },
   },
   {
+    key: 'knockdown', kind: 'choice', zone: 'text', types: ['C'], superOk: true,
+    options: [['resolves', 'Whenever it resolves'], ['recover', 'Only if it beats a Recover']],
+    label: "Knockdown: the opponent can't play a Pressure next round",
+    text: v => (v === 'recover'
+      ? "Knockdown: if it beats a Recover, the opponent can't play a Pressure next round."
+      : "Knockdown: the opponent can't play a Pressure next round."),
+  },
+  {
     key: 'returnCard', kind: 'bool', zone: 'text', types: ['P', 'C', 'R', 'T'], superOk: true,
     label: 'Return a card from your cooldown to your hand',
     text: () => 'Return one card from your cooldown track to your hand.',
@@ -130,7 +156,7 @@ export const KEYWORDS = [
 export const KEYWORD = Object.fromEntries(KEYWORDS.map(k => [k.key, k]))
 
 // Plain fields every card has. Everything else on a card must be a keyword.
-export const BASE_FIELDS = ['name', 'type', 'build', 'chip', 'cooldown', 'flowCard', 'art', 'flavour', 'notes']
+export const BASE_FIELDS = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'cooldown', 'flowCard', 'art', 'flavour', 'notes']
 
 export const PASSIVES = {
   flow: {

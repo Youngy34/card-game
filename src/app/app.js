@@ -69,7 +69,7 @@ export function App({ boot = {} }) {
   return html`<div>
     <header class="top">
       <div class="top-inner">
-        <div class="brand"><b>YOMI</b><span>Playtest table · rules v11</span></div>
+        <div class="brand"><b>YOMI</b><span>Playtest table · rules v11 and v12</span></div>
         <nav class="tabs" aria-label="Sections">
           ${TABS.map(([k, label]) => html`<button class="tab" aria-current=${tab === k ? 'page' : undefined} onClick=${() => setTab(k)}>${label}${k === 'play' && m && m.phase !== 'over' ? ' ·' : ''}</button>`)}
         </nav>

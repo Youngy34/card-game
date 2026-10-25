@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 2,
+  "id": "clarence-trim",
+  "name": "Clarence (trimmed chip)",
+  "epithet": "the Starter",
+  "concept": "The rules v12 starter: one of nearly every kind of move. Draft, from rules-overview 12. HP and speeds are placeholders, and the Super and eighth card are still to decide.",
+  "rules": 12,
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 3,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Fireball",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 1,
+      "chip": 2,
+      "cooldown": 1
+    },
+    {
+      "name": "Dive",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 5,
+      "chip": 1,
+      "cooldown": 2
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "heavy",
+      "speed": 3,
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "cooldown": 1,
+      "knockdown": "resolves"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "cooldown": 1
+    },
+    {
+      "name": "Counter",
+      "type": "recover",
+      "kind": "counter",
+      "cooldown": 1
+    }
+  ],
+  "super": null,
+  "notes": "The suggested chip trim from the rules' tuning flags: Slash 3/1, Fireball 1/2, Dive 5/1.",
+  "variantOf": "clarence"
+}

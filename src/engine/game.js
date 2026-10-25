@@ -26,6 +26,8 @@ export function roundRecord(n, A, B, a, b, s) {
     after: [{ hp: s.A.hp, pile: s.A.pile }, { hp: s.B.hp, pile: s.B.pile }],
     lockedOut: [lockedOut(A), lockedOut(B)],
     quiet: s.quiet,
+    // rules v12: each card's kind and speed, and what Guards and Counters turned back
+    ...(s.turn ? { kinds: [ca.kind, cb.kind], speeds: [ca.speed, cb.speed], turn: s.turn } : {}),
   }
 }
 
@@ -36,7 +38,9 @@ export function winRoute(last, result) {
   const loser = result === 1 ? 1 : 0
   const winner = 1 - loser
   const cashed = last.resolved[winner] && last.types[winner] === 'C' && last.before[loser].pile > 0
-  return cashed ? 'Convert cash' : 'chip'
+  if (cashed) return 'Convert cash'
+  if (last.turn && last.turn[loser].chip > 0) return 'turn-back (Counter)'
+  return 'chip'
 }
 
 export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, levels = ['hard', 'hard']) {
@@ -59,11 +63,46 @@ export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGH
 const median = a => { const s = [...a].sort((x, y) => x - y), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2 }
 const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); const i = (s.length - 1) * p, lo = Math.floor(i); return s[lo] + (s[Math.ceil(i)] - s[lo]) * (i - lo) }
 
+// Rules v12: how same-type attacks were settled, what Setups did, and what
+// Guards and Counters turned back. Kept apart so v11 reports are unchanged.
+function tally12(out, rd) {
+  const V = (out.v12 ??= {
+    sameType: 0, bySpeed: 0, trades: 0, cancels: 0, techs: 0,
+    setups: 0, interrupted: 0,
+    guarded: 0, guardBuild: 0, guardedProjectiles: 0, through: 0, countered: 0, counterChip: 0,
+    quietBy: { recovers: 0, cancel: 0, tech: 0, other: 0 },
+  })
+  const same = rd.types[0] === rd.types[1] && (rd.types[0] === 'P' || rd.types[0] === 'C')
+  if (same) {
+    V.sameType++
+    if (rd.outcome === 'trade') V.trades++
+    else if (rd.outcome === 'cancel') V.cancels++
+    else if (rd.outcome === 'tech') V.techs++
+    else V.bySpeed++
+  }
+  for (const k of [0, 1]) {
+    if (rd.types[k] === 'T') { V.setups++; if (!rd.resolved[k]) V.interrupted++ }
+    const t = rd.turn[k]
+    if (rd.types[k] === 'P' && rd.types[1 - k] === 'R' && !rd.resolved[k]) {
+      if (rd.kinds[1 - k] === 'guard') {
+        V.guarded++; V.guardBuild += t.build
+        if (rd.kinds[k] === 'projectile') { V.guardedProjectiles++; V.through += t.through }
+      }
+      else { V.countered++; V.counterChip += t.chip }
+    }
+  }
+  if (rd.quiet) {
+    const q = rd.outcome === 'recovers' ? 'recovers' : rd.outcome === 'cancel' ? 'cancel' : rd.outcome === 'tech' ? 'tech' : 'other'
+    V.quietBy[q]++
+  }
+}
+
 // games: [{ result, rounds }], with side 0 = fighter A.
 export function summarise(games, fa, fb) {
   const n = games.length
   const out = {
     games: n, win: 0, doubleKO: 0, draws: 0, lengths: [], quiet: 0, recoverMirrors: 0, totalRounds: 0,
+    v12: null,       // rules v12 clash counts, when the fighters play v12
     routes: {}, sides: [0, 1].map(k => ({
       plays: {}, resolved: {}, types: { P: 0, C: 0, R: 0, T: 0 }, superRounds: [], superUnused: 0, lockedOut: 0,
     })),
@@ -81,6 +120,7 @@ export function summarise(games, fa, fb) {
       out.totalRounds++
       if (rd.quiet) out.quiet++
       if (rd.types[0] === 'R' && rd.types[1] === 'R') out.recoverMirrors++
+      if (rd.kinds) tally12(out, rd)
       for (const k of [0, 1]) {
         const S = out.sides[k], nm = rd.cards[k]
         S.plays[nm] = (S.plays[nm] || 0) + 1

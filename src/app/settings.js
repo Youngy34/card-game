@@ -32,7 +32,7 @@ export function Settings() {
     ${readOnly ? html`<div class="banner">Only editors of this page can change settings.</div>` : null}
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
       <h3>Rules</h3>
-      <label class="field"><span>When a Recover's chip lands</span>
+      <label class="field"><span>When a Recover's chip lands (rules v11 fighters only; under v12, Recovers never chip)</span>
         <select id="s-counter" value=${d.rules.counterChip} onChange=${e => setD({ ...d, rules: { ...d.rules, counterChip: e.target.value } })}>
           <option value="always">Whenever it resolves (current rule)</option>
           <option value="attack">Only against an attack: a Pressure it beats, or a typeless card that chips (tested, not adopted)</option>

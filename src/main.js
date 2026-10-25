@@ -7,6 +7,7 @@ import { App } from './app/app.js'
 
 const ORDER = ['gambler', 'bastion', 'vex', 'atlas']
 const REFERENCE = ['dummy']                 // benchmark fighters, from data/reference/
+const DRAFTS = ['clarence']                 // rules v12 drafts, from data/drafts/
 
 async function loadData() {
   if (globalThis.__YOMI_DATA__) return globalThis.__YOMI_DATA__
@@ -14,7 +15,8 @@ async function loadData() {
   const fighters = {}
   for (const id of ORDER) fighters[id] = await get(`data/fighters/${id}.json`)
   for (const id of REFERENCE) fighters[id] = await get(`data/reference/${id}.json`)
-  return { fighters, order: [...ORDER, ...REFERENCE], reference: REFERENCE, settings: await get('data/settings.json') }
+  for (const id of DRAFTS) fighters[id] = await get(`data/drafts/${id}.json`)
+  return { fighters, order: [...ORDER, ...REFERENCE, ...DRAFTS], reference: REFERENCE, drafts: DRAFTS, settings: await get('data/settings.json') }
 }
 
 function start(boot) {
