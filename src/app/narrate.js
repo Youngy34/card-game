@@ -53,9 +53,9 @@ export function eventLines(last, names) {
       case 'tech': L.push('is teched'); break
       case 'interrupted': L.push("is interrupted and doesn't finish"); break
       case 'turnBuild': L.push(`is guarded: its ${e.n} Build goes on ${me}'s own pile`); break
-      case 'chipThrough': L.push(`but its ${e.n} chip gets through the guard`); break
       case 'turnChip': L.push(`is countered: its ${e.n} chip hits ${me}`); break
       case 'knockdown': L.push(`knocks ${op} down: no Pressure next round`); break
+      case 'offBalance': L.push(`knocks ${op} off-balance: no Recover next round`); break
     }
   }
   const beaten = k => (last.s.beaten ? last.s.beaten[k] : !last.s.resolved[k])

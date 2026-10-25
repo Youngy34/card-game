@@ -101,7 +101,7 @@ function Report({ r, list }) {
       ${r.v12 ? html`
         <div class="stat-tile"><span class="label">Same-type attacks</span><b>${pct(r.v12.sameType / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${pct(r.v12.bySpeed / Math.max(r.v12.sameType, 1))} by speed, ${pct(r.v12.trades / Math.max(r.v12.sameType, 1))} trades, ${pct(r.v12.cancels / Math.max(r.v12.sameType, 1))} cancels, ${pct(r.v12.techs / Math.max(r.v12.sameType, 1))} techs</span></div>
         <div class="stat-tile"><span class="label">Guard turn-backs</span><b>${pct(r.v12.guarded / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.guardBuild / Math.max(r.v12.guarded, 1)).toFixed(1)} Build each</span></div>
-        <div class="stat-tile"><span class="label">Counter turn-backs</span><b>${pct(r.v12.countered / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.counterChip / Math.max(r.v12.countered, 1)).toFixed(1)} chip each</span></div>
+        ${r.v12.countered ? html`<div class="stat-tile"><span class="label">Counter turn-backs</span><b>${pct(r.v12.countered / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.counterChip / Math.max(r.v12.countered, 1)).toFixed(1)} chip each</span></div>` : null}
         ${r.v12.setups ? html`<div class="stat-tile"><span class="label">Setups interrupted</span><b>${pct(r.v12.interrupted / r.v12.setups, 1)}</b><span class="small muted">of ${r.v12.setups} played</span></div>` : null}` : null}
     </div>
     <div class="pickers">

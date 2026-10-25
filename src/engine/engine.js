@@ -115,21 +115,20 @@ export function clash12(ca, cb) {
 }
 
 // A Guard or Counter that beats a Pressure turns its numbers back: a Guard puts
-// its Build on the attacker's own pile (and a Projectile's chip still gets
-// through the Guard); a Counter turns its chip back on the attacker.
+// its Build on the attacker's own pile; a Counter turns its chip back on the
+// attacker. (A Projectile's chip getting through a Guard was dropped on
+// 25 October 2026: with Counter as a candidate for removal, it left
+// Projectiles losing only to faster Strikes.)
 function turnBack(ca, cb, A, B, cl, dA, dB, ev) {
-  const t = [{ build: 0, chip: 0, through: 0 }, { build: 0, chip: 0, through: 0 }]
-  const sides = [[0, ca, cb, A, B, dA, dB], [1, cb, ca, B, A, dB, dA]]
-  for (const [k, c, oc, me, op, dMe, dOp] of sides) {
+  const t = [{ build: 0, chip: 0 }, { build: 0, chip: 0 }]
+  const sides = [[0, ca, cb, A, B, dA], [1, cb, ca, B, A, dB]]
+  for (const [k, c, oc, me, op, dMe] of sides) {
     if (!cl.beaten[k] || c.t !== 'P' || oc.t !== 'R') continue
     const { build, chip } = pressureNumbers(c, me, op, oc)
-    if (oc.kind === 'guard') {
-      dMe.pile += build; t[k].build = build
-      if (c.kind === 'projectile' && chip) { dOp.hp -= chip; t[k].through = chip }
-    } else if (oc.kind === 'counter' && chip) { dMe.hp -= chip; t[k].chip = chip }
+    if (oc.kind === 'guard') { dMe.pile += build; t[k].build = build }
+    else if (oc.kind === 'counter' && chip) { dMe.hp -= chip; t[k].chip = chip }
     if (ev) {
       if (t[k].build) ev.push({ side: k, kind: 'turnBuild', n: t[k].build })
-      if (t[k].through) ev.push({ side: k, kind: 'chipThrough', n: t[k].through })
       if (t[k].chip) ev.push({ side: k, kind: 'turnChip', n: t[k].chip })
     }
   }
@@ -161,6 +160,7 @@ function applyEffect(c, me, op, dMe, dOp, flags, opp, rules, ev, side) {
     else if (me.f.v12) { /* v12: the counter-chip test rules don't apply */ }
     else if (rules.counterChip === 'strict') chip = 0             // a counter needs a Pressure to counter
     else if (rules.counterChip === 'attack' && !(opp.t === 'T' && opp.chip > 0)) chip = 0
+    if (kw.offBalance && opp.t === 'P') { flags.stagger = 'R'; flags.offBalance = true }   // it beat a Pressure
     dMe.pile -= me.pile; dOp.hp -= chip
     if (ev) { ev.push({ side, kind: 'clear', n: me.pile }); if (chip) ev.push({ side, kind: 'chip', n: chip }) }
   } else {
@@ -227,8 +227,9 @@ export function step(A0, B0, a, b, rules = DEFAULT_RULES, ev = null) {
   if (ev) {
     if (fA.lock) ev.push({ side: 0, kind: 'lock' })
     if (fB.lock) ev.push({ side: 1, kind: 'lock' })
-    if (fA.stagger) ev.push({ side: 0, kind: fA.knockdown ? 'knockdown' : 'stagger', t: fA.stagger })
-    if (fB.stagger) ev.push({ side: 1, kind: fB.knockdown ? 'knockdown' : 'stagger', t: fB.stagger })
+    for (const [side, F] of [[0, fA], [1, fB]]) {
+      if (F.stagger) ev.push({ side, kind: F.knockdown ? 'knockdown' : F.offBalance ? 'offBalance' : 'stagger', t: F.stagger })
+    }
     if (fA.ret) ev.push({ side: 0, kind: 'return' })
     if (fB.ret) ev.push({ side: 1, kind: 'return' })
   }

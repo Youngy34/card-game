@@ -21,7 +21,7 @@ export const BEATEN_BY = { P: 'C', C: 'R', R: 'P' }
 // lands, and speed decides clashes between two attacks of the same type.
 export const KINDS = {
   strike:     { t: 'P', label: 'Strike' },
-  projectile: { t: 'P', label: 'Projectile', line: 'Its chip gets through a Guard. Two Projectiles cancel.' },
+  projectile: { t: 'P', label: 'Projectile', line: 'Two Projectiles cancel.' },
   heavy:      { t: 'C', label: 'Heavy' },
   grab:       { t: 'C', label: 'Grab', line: 'Two Grabs tech.' },
   guard:      { t: 'R', label: 'Guard', line: "If it beats a Pressure, that Pressure's Build goes on its owner's own pile." },
@@ -129,6 +129,11 @@ export const KEYWORDS = [
     text: v => (v === 'recover'
       ? "Knockdown: if it beats a Recover, the opponent can't play a Pressure next round."
       : "Knockdown: the opponent can't play a Pressure next round."),
+  },
+  {
+    key: 'offBalance', kind: 'bool', zone: 'text', types: ['R'], superOk: true,
+    label: "Off-balance: if it beats a Pressure, the opponent can't play a Recover next round",
+    text: () => "If it beats a Pressure, the opponent is off-balance: they can't play a Recover next round.",
   },
   {
     key: 'returnCard', kind: 'bool', zone: 'text', types: ['P', 'C', 'R', 'T'], superOk: true,

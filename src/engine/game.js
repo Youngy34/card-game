@@ -69,7 +69,7 @@ function tally12(out, rd) {
   const V = (out.v12 ??= {
     sameType: 0, bySpeed: 0, trades: 0, cancels: 0, techs: 0,
     setups: 0, interrupted: 0,
-    guarded: 0, guardBuild: 0, guardedProjectiles: 0, through: 0, countered: 0, counterChip: 0,
+    guarded: 0, guardBuild: 0, countered: 0, counterChip: 0,
     quietBy: { recovers: 0, cancel: 0, tech: 0, other: 0 },
   })
   const same = rd.types[0] === rd.types[1] && (rd.types[0] === 'P' || rd.types[0] === 'C')
@@ -84,10 +84,7 @@ function tally12(out, rd) {
     if (rd.types[k] === 'T') { V.setups++; if (!rd.resolved[k]) V.interrupted++ }
     const t = rd.turn[k]
     if (rd.types[k] === 'P' && rd.types[1 - k] === 'R' && !rd.resolved[k]) {
-      if (rd.kinds[1 - k] === 'guard') {
-        V.guarded++; V.guardBuild += t.build
-        if (rd.kinds[k] === 'projectile') { V.guardedProjectiles++; V.through += t.through }
-      }
+      if (rd.kinds[1 - k] === 'guard') { V.guarded++; V.guardBuild += t.build }
       else { V.countered++; V.counterChip += t.chip }
     }
   }

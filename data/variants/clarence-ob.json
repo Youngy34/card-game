@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "id": "clarence-ob",
+  "name": "Clarence (Brace: off-balance)",
+  "epithet": "the Starter",
+  "concept": "The rules v12 starter: one of nearly every kind of move. Draft, from rules-overview 12. HP and speeds are placeholders, and the Super and eighth card are still to decide.",
+  "rules": 12,
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 4,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Fireball",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 1,
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Dive",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 5,
+      "chip": 1,
+      "cooldown": 2,
+      "chipOnWin": 2
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "heavy",
+      "speed": 3,
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "cooldown": 1,
+      "knockdown": "resolves"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "cooldown": 1
+    },
+    {
+      "name": "Brace",
+      "type": "recover",
+      "kind": "guard",
+      "cooldown": 1,
+      "offBalance": true
+    }
+  ],
+  "super": null,
+  "notes": "Slash 4/1 and Dive 5/1 (+2 chip if it beats a Convert), from the 25 October 2026 balance pass. Counter replaced by Brace, a second Guard: if it beats a Pressure, the opponent is off-balance and can't play a Recover next round.",
+  "variantOf": "clarence"
+}

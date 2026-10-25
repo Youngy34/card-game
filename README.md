@@ -101,6 +101,7 @@ Effects and costs, added as extra fields. Any other field is reported as a probl
 | `lock` | true | Any | The opponent's played card goes one space further on cooldown. |
 | `stagger` | "convert" | Any | If it beats a Convert, the opponent can't play a Convert next round. |
 | `knockdown` | "resolves" or "recover" | Convert | Knockdown: (if it beats a Recover,) the opponent can't play a Pressure next round. |
+| `offBalance` | true | Recover | If it beats a Pressure, the opponent is off-balance: they can't play a Recover next round. |
 | `returnCard` | true | Any | Return one card from your cooldown track to your hand. |
 | `selfAdd` | 2 | Any | Cost: add 2 tokens to your own pile. |
 | `onLossSelf` | 2 | Pressure, Convert, Recover | Cost: on loss, add 2 tokens to your own pile. |
@@ -117,7 +118,7 @@ For a fighter with `"rules": 12` (see `rules-overview 12.md`):
 - **Different types:** the triangle decides. Every Pressure is faster than every Convert, so Pressure still beats Convert.
 - **Two attacks of the same type:** two Projectiles cancel and two Grabs tech (neither resolves, whatever their speeds); otherwise the faster card wins, and a tie trades (both resolve). The beaten card's On loss text applies.
 - **Two Recovers:** both resolve, each clearing its own pile.
-- **A Guard or Counter that beats a Pressure turns its numbers back,** as the Pressure would have landed them: a Guard puts its Build on the attacker's own pile (and a Projectile's chip still gets through the Guard), and a Counter turns its chip back on the attacker.
+- **A Guard or Counter that beats a Pressure turns its numbers back,** as the Pressure would have landed them: a Guard puts its Build on the attacker's own pile, and a Counter turns its chip back on the attacker. (A Projectile's chip no longer gets through a Guard: dropped on 25 October 2026.)
 - **A Setup** never wins or loses. If the opponent played a Pressure or Convert, the Setup is interrupted and none of its text applies; otherwise it takes effect.
 - **Validation:** Recovers and Setups deal no chip (a Recover Super that chips is only a warning, since it's an open question), every attack has a speed in its band, and two warnings cover the authoring guidelines: Counters need Pressures that chip, and speed is a cost (no plain card both faster and at least as big as its same-type sibling).
 - **The Settings screen's Recover-chip rule only applies to v11 fighters.**
