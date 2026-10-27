@@ -166,7 +166,7 @@ function CardEditor({ card, readOnly, baseCard, onChange, onClose, onRemove }) {
     onChange(c)
   }
   const setDirection = d => {
-    if (d === 'throw') set({ direction: d, onBlock: undefined, linker: undefined, ender: undefined, bonus: undefined, keepInitiative: undefined, grey: card.grey && !card.linker ? card.grey : undefined })
+    if (d === 'throw') set({ direction: d, onBlock: undefined, linker: undefined, ender: undefined, bonus: undefined, keepInitiative: undefined, blockGrey: undefined, grey: card.grey && !card.linker ? card.grey : undefined })
     else set({ direction: d, onBlock: card.onBlock ?? '-', grey: card.linker ? card.grey : undefined })
   }
   const setRole = r => {
@@ -181,7 +181,7 @@ function CardEditor({ card, readOnly, baseCard, onChange, onClose, onRemove }) {
       <button class="link" onClick=${onClose}>Close</button>
     </div></div>
     <div class="card-ed">
-      <${CardFace} card=${card} />
+      <${CardFace} card=${card} guard=${card.blockGrey !== undefined} />
       <fieldset class="stack" style=${{ border: 0, padding: 0, margin: 0, minWidth: 0 }} disabled=${readOnly}>
         <div class="grid3">
           <label class="field" style=${{ gridColumn: 'span 2' }}><span>Name</span><input id="c-name" type="text" value=${card.name} onInput=${e => set({ name: e.target.value })} /></label>
@@ -200,6 +200,7 @@ function CardEditor({ card, readOnly, baseCard, onChange, onClose, onRemove }) {
           <label class="field"><span>Cooldown</span>
             <select id="c-cd" value=${String(card.cooldown ?? 1)} onChange=${e => set({ cooldown: Number(e.target.value) })}><option value="1">1 reveal</option><option value="2">2 reveals</option></select>
           </label>
+          ${!isThrow ? html`<label class="field" title="Used only by the guard damage experiment (Settings)"><span>Block grey (guard damage)</span><input id="c-bgrey" type="number" min="0" placeholder="1" value=${card.blockGrey ?? ''} onInput=${e => set({ blockGrey: e.target.value === '' ? undefined : toInt(e.target.value) })} /></label>` : null}
           ${isThrow ? html`<label class="field"><span>Grey on throw</span><input id="c-tgrey" type="number" min="0" value=${card.grey ?? 0} onInput=${e => set({ grey: toInt(e.target.value) || undefined })} /></label>` : null}
         </div>
         ${!isThrow ? html`<div class="stack" style=${{ gap: '8px' }}>
@@ -239,7 +240,7 @@ function JsonEditor({ draft, setDraft, readOnly }) {
     try { const f = JSON.parse(s); setErr(null); setDraft(f) } catch (x) { setErr(x.message) }
   }
   return html`<div class="stack" style=${{ gap: '8px' }}>
-    <p class="small muted">The fighter as it's stored. Edits here update the cards as you type; problems show above. Card fields: name, direction (horizontal, vertical, throw), speed, hit, onBlock ("+", "=", "-"), cooldown, then either "linker" (light, medium, heavy) with "grey", or "ender": true with optional "bonus" and "keepInitiative": true. A throw may have "grey".</p>
+    <p class="small muted">The fighter as it's stored. Edits here update the cards as you type; problems show above. Card fields: name, direction (horizontal, vertical, throw), speed, hit, onBlock ("+", "=", "-"), cooldown, then either "linker" (light, medium, heavy) with "grey", or "ender": true with optional "bonus" and "keepInitiative": true. A throw may have "grey". A strike may have "blockGrey", used only by the guard damage experiment.</p>
     <textarea id="json" rows="28" spellcheck="false" value=${text} onInput=${onInput} readOnly=${readOnly} aria-label="Fighter JSON"></textarea>
     ${err ? html`<p class="msg-e">That isn't valid JSON yet: ${err}</p>` : null}
   </div>`
@@ -247,7 +248,8 @@ function JsonEditor({ draft, setDraft, readOnly }) {
 
 // ---- differences, in words ----------------------------------------------------
 const FIELDS = [['direction', 'Direction'], ['speed', 'Speed'], ['hit', 'Hit'], ['onBlock', 'On block'], ['cooldown', 'Cooldown'],
-                ['linker', 'Linker'], ['grey', 'Grey'], ['ender', 'Ender'], ['bonus', 'Bonus'], ['keepInitiative', 'Keeps the initiative']]
+                ['linker', 'Linker'], ['grey', 'Grey'], ['ender', 'Ender'], ['bonus', 'Bonus'], ['keepInitiative', 'Keeps the initiative'],
+                ['blockGrey', 'Block grey']]
 export function diffCard(a, b) {
   const out = [], nm = b.name
   if (a.name !== b.name) out.push(`${a.name} renamed ${b.name}`)

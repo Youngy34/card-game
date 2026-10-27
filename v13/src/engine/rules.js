@@ -36,6 +36,7 @@ export const UNIVERSAL = {
 export const DEFENCE_IDS = ['G', 'D', 'S']
 export const BREAK_IDS = ['BL', 'BM', 'BH']
 export const BREAK_BIT = { BL: 1, BM: 2, BH: 4 }
+export const EVADE_BIT = { D: 1, S: 2 }
 for (const id of BREAK_IDS) {
   const s = STR_LABEL[UNIVERSAL[id].str]
   UNIVERSAL[id].combo = `Breaks a ${s} linker: your whole pile clears, you take the initiative and the combo ends.`
@@ -60,7 +61,11 @@ export const DEFAULT_RULES = {
   counterCheck: 'after',       // 'after': the counter counts the defender's new +3 (as written)
                                // 'reveal': initiative as it stood at the reveal, so the holder's
                                //   attacks keep their +3 and the defender gets none
-  blockGrey: 0,                // grey a blocked strike puts on the blocker's pile
+  guardDamage: 'off',          // a blocked strike puts grey on the blocker: 'off', 'flat' (blockGrey
+                               //   for every strike) or 'card' (each strike's own Block grey, else 1)
+  blockGrey: 1,                // the 'flat' amount
+  throwCashes: false,          // a throw that lands first cashes the thrown player's whole pile
+  evadeCooldown: false,        // Duck and Step go on cooldown 1 (Guard never does)
   waitPasses: false,           // two defences pass the initiative to the other player
   wrongBreakLocks: false,      // a Break of the wrong strength is locked for the next beat, like a feinted one
 }
@@ -79,11 +84,12 @@ export function comboLine(c) {
   return null
 }
 
-export function cardText(c) {
+export function cardText(c, opts = {}) {
   const lines = []
   const combo = comboLine(c)
   if (combo) lines.push(combo)
   if (c.direction === 'throw' && c.grey) lines.push(`On throw: also puts ${c.grey} grey on their pile.`)
+  if (opts.guard && c.direction !== 'throw') lines.push(`Guard damage: ${c.blockGrey ?? 1} grey on the blocker.`)
   return lines
 }
 

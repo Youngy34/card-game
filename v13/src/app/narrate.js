@@ -39,7 +39,7 @@ export function describe(G0, ev, N, names) {
       } else if (ev.result === 'blocked') {
         title = `Blocked · ${OB_TEXT[ev.onBlock]}`
         sub = `${names[d]} guards ${c.name}. ${initLine(ev.init0, holder)}`
-        if (ev.grey[d]) lines.push(`Blocking costs ${names[d]} ${ev.grey[d]} grey.`)
+        if (ev.grey[d]) lines.push(`Guard damage: ${ev.grey[d]} grey on ${names[d]}'s pile${G0.R.throwCashes ? ', which a throw would cash' : ''}.`)
       } else if (ev.result === 'evaded') {
         title = 'Evaded'
         sub = `${names[d]} steps ${c.name} and takes the initiative. No counter after an evade.`
@@ -86,7 +86,10 @@ export function describe(G0, ev, N, names) {
 
 function landLine(result, k, c, ev, names) {
   const d = 1 - k
-  if (result === 'thrown') return `${c.hit} damage${c.grey ? ` and ${c.grey} grey on ${names[d]}'s pile` : ''}. ${names[k]} takes the initiative.`
+  if (result === 'thrown') {
+    const cash = ev.throwCash ? `${c.hit} damage plus ${ev.throwCash} cashed from ${names[d]}'s pile` : `${c.hit} damage`
+    return `${cash}${c.grey ? `, then ${c.grey} grey on ${names[d]}'s pile` : ''}. ${names[k]} takes the initiative.`
+  }
   return `${c.hit} damage, and ${names[k]} starts a combo.`
 }
 

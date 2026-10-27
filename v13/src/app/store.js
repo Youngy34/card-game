@@ -81,8 +81,11 @@ const isGame = g => g && Array.isArray(g.reveals) && Array.isArray(g.fighters) &
 export function settings() {
   const d = S.defaults || { rules: {}, ai: {} }
   const s = S.settings || {}
+  const saved = { ...(s.rules || {}) }
+  // settings saved before guard damage had modes: a flat block grey meant 'flat'
+  if (saved.guardDamage === undefined && saved.blockGrey > 0) saved.guardDamage = 'flat'
   return {
-    rules: { ...DEFAULT_RULES, ...d.rules, ...(s.rules || {}) },
+    rules: { ...DEFAULT_RULES, ...d.rules, ...saved },
     ai: { ...DEFAULT_WEIGHTS, ...d.ai, ...(s.ai || {}) },
   }
 }

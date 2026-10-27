@@ -10,7 +10,7 @@ import { DIRECTIONS, DIR_CODE, STRENGTHS, STR_CODE, ON_BLOCK, UNIVERSAL } from '
 
 const FIGHTER_FIELDS = ['schemaVersion', 'rules', 'id', 'name', 'epithet', 'concept', 'hp', 'cards', 'variantOf', 'notes']
 const CARD_FIELDS = ['name', 'direction', 'speed', 'hit', 'onBlock', 'linker', 'ender', 'grey', 'bonus', 'keepInitiative',
-                     'cooldown', 'art', 'notes']
+                     'blockGrey', 'cooldown', 'art', 'notes']
 export const MAX_CARDS = 16
 const isInt = v => Number.isInteger(v)
 
@@ -53,6 +53,7 @@ export function validateCard(card) {
     if (card.onBlock !== undefined) E('Throws have no on-block value: Guard never blocks a throw.')
     if (card.linker !== undefined || card.ender !== undefined) E("Throws can't be linkers or enders.")
     if (card.grey !== undefined && (!isInt(card.grey) || card.grey < 0)) E('Grey must be a whole number, 0 or more.')
+    if (card.blockGrey !== undefined) E('Throws have no Block grey: Guard never blocks a throw.')
     if (card.speed > 5) W(`A fast throw (Speed ${card.speed}) beats Guard and slow strikes. The guidelines keep throws mostly at Speed 2–5, with fast ones as signature cards.`)
   } else {
     if (!(card.onBlock in ON_BLOCK)) E('Strikes need an on-block value: "+", "=" or "-".')
@@ -62,6 +63,7 @@ export function validateCard(card) {
       if (!isInt(card.grey) || card.grey < 1) E('A linker needs grey: a whole number, 1 or more.')
     } else if (card.grey !== undefined) E('Only linkers and throws put grey on the pile. Make it a linker or remove the grey.')
     if (card.ender !== undefined && card.ender !== true) E('"ender" must be true or left out.')
+    if (card.blockGrey !== undefined && (!isInt(card.blockGrey) || card.blockGrey < 0)) E('Block grey must be a whole number, 0 or more.')
   }
   if (card.ender !== true) {
     if (card.bonus !== undefined) E('Bonus damage only goes on an ender.')
@@ -123,6 +125,7 @@ export function toEngineFighter(f) {
       link: c.linker ? STR_CODE[c.linker] : null,
       ender: c.ender === true,
       grey: c.grey ?? 0, bonus: c.bonus ?? 0, keep: c.keepInitiative === true,
+      bg: c.blockGrey ?? 1,                      // grey on the blocker, under experimental per-card guard damage
       cd: c.cooldown ?? 1,
       src: c,
     }

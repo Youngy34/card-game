@@ -1,5 +1,5 @@
 {
   "schemaVersion": 3,
-  "rules": { "initiativeBonus": 3, "comboCap": 3, "firstInitiative": "random", "maxReveals": 100, "clock": 0, "counterCheck": "after", "blockGrey": 0, "waitPasses": false },
-  "ai": { "alpha": 0.5, "init": 2, "opt": 0.4, "gap": 1, "k": 0.2 }
+  "rules": {"initiativeBonus": 3, "comboCap": 3, "firstInitiative": "random", "maxReveals": 100, "clock": 0, "counterCheck": "after", "guardDamage": "off", "blockGrey": 1, "throwCashes": false, "evadeCooldown": false, "waitPasses": false, "wrongBreakLocks": false},
+  "ai": {"alpha": 0.5, "init": 2, "opt": 0.4, "gap": 1, "k": 0.2}
 }

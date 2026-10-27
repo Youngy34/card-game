@@ -113,7 +113,7 @@ export function handView(m, side) {
   const attack = c => ({ id: c.i, card: c.src, attack: true, ok: opts.has(c.i), why: opts.has(c.i) ? null : cdWhy(c.i) || 'Not now' })
   if (G.mode === 'neutral') {
     for (const c of X.f.cards) out.push(attack(c))
-    for (const id of ['G', 'D', 'S']) out.push({ id, card: UNIVERSAL[id], ok: true, why: null })
+    for (const id of ['G', 'D', 'S']) out.push({ id, card: UNIVERSAL[id], ok: opts.has(id), why: opts.has(id) ? null : 'Cooldown · back next reveal' })
     return out
   }
   const cb = G.combo

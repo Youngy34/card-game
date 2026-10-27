@@ -5,7 +5,8 @@
 //   node v13/tools/sim.mjs vex vex --levels hard,easy
 //   node v13/tools/sim.mjs vex atlas --bonus 2 --cap 3 --first a
 //   node v13/tools/sim.mjs vex atlas --json            (the full report as JSON)
-//   Experiments: --clock 30, --block-grey 1, --counter reveal, --wait-passes, --wrong-break-locks
+//   Experiments: --clock 30, --guard-damage card (or --block-grey 2 for the same on every strike),
+//   --throw-cashes, --evade-cooldown, --counter reveal, --wait-passes, --wrong-break-locks
 //
 // A fighter is an id from data/fighters/ or a path to a fighter JSON file.
 
@@ -21,7 +22,7 @@ import { reportLines } from '../src/engine/report.js'
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const flag = (name, d) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : d }
-const SWITCHES = ['--json', '--wait-passes', '--wrong-break-locks']          // flags that take no value
+const SWITCHES = ['--json', '--wait-passes', '--wrong-break-locks', '--throw-cashes', '--evade-cooldown']          // flags that take no value
 const ids = args.filter((a, i) => !a.startsWith('-') && !(i > 0 && args[i - 1].startsWith('-') && !SWITCHES.includes(args[i - 1])))
 
 function load(id) {
@@ -45,7 +46,10 @@ const rules = {
   ...(flag('--first') ? { firstInitiative: flag('--first') } : {}),
   // experiments
   ...(flag('--clock') ? { clock: Number(flag('--clock')) } : {}),
-  ...(flag('--block-grey') ? { blockGrey: Number(flag('--block-grey')) } : {}),
+  ...(flag('--block-grey') ? { guardDamage: 'flat', blockGrey: Number(flag('--block-grey')) } : {}),
+  ...(flag('--guard-damage') ? { guardDamage: flag('--guard-damage') } : {}),
+  ...(args.includes('--throw-cashes') ? { throwCashes: true } : {}),
+  ...(args.includes('--evade-cooldown') ? { evadeCooldown: true } : {}),
   ...(flag('--counter') ? { counterCheck: flag('--counter') } : {}),
   ...(args.includes('--wait-passes') ? { waitPasses: true } : {}),
   ...(args.includes('--wrong-break-locks') ? { wrongBreakLocks: true } : {}),

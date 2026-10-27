@@ -21,7 +21,11 @@ export function experimentsOn(rules) {
   const on = []
   if (rules.clock) on.push(`round timer of ${rules.clock} reveals`)
   if (rules.counterCheck === 'reveal') on.push("counters check the initiative as it stood at the reveal")
-  if (rules.blockGrey) on.push(`blocking costs ${rules.blockGrey} grey`)
+  const gd = rules.guardDamage ?? (rules.blockGrey > 0 ? 'flat' : 'off')
+  if (gd === 'card') on.push('guard damage per card')
+  else if (gd === 'flat') on.push(`guard damage ${rules.blockGrey} on every strike`)
+  if (rules.throwCashes) on.push('throws cash the pile')
+  if (rules.evadeCooldown) on.push('Duck and Step cool down')
   if (rules.waitPasses) on.push('two defences pass the initiative')
   if (rules.wrongBreakLocks) on.push('a wrong-strength break is locked')
   return on
@@ -81,13 +85,16 @@ export function Setup({ onStart, prefs, setPrefs }) {
 export function Table({ m, setM, prefs, onEnd }) {
   const names = m.f.map(f => f.name)
   const who = WHO[m.mode].map((w, k) => (!m.humans[k] && m.mode === 'ai' && m.levels?.[k] ? `${w} · ${LEVELS[m.levels[k]].label}` : w))
-  const [sel, setSel] = useState(null)
+  // the selection belongs to one pick: a new reveal, picker or phase clears it
+  const turn = `${m.id}|${m.history.length}|${m.picker}|${m.phase}`
+  const [picked, setPicked] = useState(null)
+  const sel = picked && picked.turn === turn ? picked.id : null
+  const setSel = id => setPicked({ turn, id })
   const [saveState, setSaveState] = useState(null)
   const [auto, setAuto] = useState(false)
   const savedFor = useRef(null)
   const G = m.G
 
-  useEffect(() => { setSel(null) }, [m.history.length, m.picker, m.phase])
 
   // log the finished game (only games with a person in them)
   useEffect(() => {
@@ -184,7 +191,7 @@ function Hand({ m, side, sel, setSel }) {
     ${M.handView(m, side).map(v => {
       const note = v.attack && v.ok && G.mode === 'neutral' ? `Clashes at ${v.card.speed + (holds ? G.R.initiativeBonus : 0)}` : null
       return html`<div key=${String(v.id)}>
-        <${AnyFace} v=${v} as="button" cls=${cx(!v.ok && 'off', sel === v.id && 'selected')} why=${v.why} note=${note} disabled=${!v.ok}
+        <${AnyFace} v=${v} as="button" cls=${cx(!v.ok && 'off', sel === v.id && 'selected')} why=${v.why} note=${note} disabled=${!v.ok} guard=${G.R.guardDamage === 'card'}
           onClick=${() => v.ok && setSel(v.id)} />
       </div>`
     })}
@@ -206,7 +213,7 @@ function CounterPick({ m, setM, who, names }) {
     <p class="small muted">${names[k]}'s ${exposed.name} (Speed ${exposed.speed}) is exposed and ${names[d]} has the initiative. Any attack at Speed ${Math.max(exposed.speed - m.G.R.initiativeBonus, 0)} or more counters it, unopposed: a strike starts a combo, a throw throws.</p>
     <div class="hand">
       ${M.counterView(m).map(v => html`<div key=${v.id}>
-        <${CardFace} card=${v.card} as="button" cls=${cx(!v.ok && 'off', sel === v.id && 'selected')} why=${v.why} disabled=${!v.ok}
+        <${CardFace} card=${v.card} as="button" cls=${cx(!v.ok && 'off', sel === v.id && 'selected')} why=${v.why} disabled=${!v.ok} guard=${m.G.R.guardDamage === 'card'}
           onClick=${() => v.ok && setSel(v.id)} />
       </div>`)}
     </div>
@@ -215,7 +222,7 @@ function CounterPick({ m, setM, who, names }) {
 
 // what a revealed pick looks like
 function faceFor(G, side, pick, extra = {}) {
-  if (typeof pick === 'number') return html`<${CardFace} card=${player(G, side).f.cards[pick].src} ...${extra} />`
+  if (typeof pick === 'number') return html`<${CardFace} card=${player(G, side).f.cards[pick].src} guard=${G.R.guardDamage === 'card'} ...${extra} />`
   const role = pick === 'G' && G.mode === 'combo' ? (G.combo.att === side ? 'feint' : 'hold') : null
   return html`<${UniversalFace} card=${UNIVERSAL[pick]} role=${role} ...${extra} />`
 }
@@ -351,7 +358,7 @@ function Reference({ rules }) {
           <tr><th><span class="tdot" data-d="T"></span> Throw</th><td class="bad">Thrown</td><td class="good">Exposed</td><td>Evaded</td></tr>
         </tbody>
       </table></div>
-      <p class="small muted">Two attacks clash on Speed; the initiative holder adds +${rules.initiativeBonus} and wins ties. After Exposed, the defender takes the initiative and may counter with any attack that would win that clash. Blocked: + the striker takes the initiative, = it stays, − the blocker takes it.</p>
+      <p class="small muted">Two attacks clash on Speed; the initiative holder adds +${rules.initiativeBonus} and wins ties. After Exposed, the defender takes the initiative and may counter with any attack that would win that clash. Blocked: + the striker takes the initiative, = it stays, − the blocker takes it.${experimentsOn(rules).length ? html` <span class="exp">Experiments on: ${experimentsOn(rules).join('; ')}.</span>` : ''}</p>
       <div class="tbl-wrap"><table class="tbl ref">
         <thead><tr><th>Attacker</th><th>Defender</th><th>Result</th></tr></thead>
         <tbody>

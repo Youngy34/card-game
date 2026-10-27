@@ -5,12 +5,12 @@ import { html, cx } from './lib.js'
 import { cardText, DIR_CODE, DIR_LABEL, ON_BLOCK, OB_TEXT, STR_CODE, STR_LABEL } from '../engine/rules.js'
 
 // An attack card from a fighter file (card format v3)
-export function CardFace({ card, cls = '', stamp = null, why = null, note = null, as = 'div', onClick, disabled, label, style }) {
+export function CardFace({ card, cls = '', stamp = null, why = null, note = null, guard = false, as = 'div', onClick, disabled, label, style }) {
   if (!card) return null
   const d = DIR_CODE[card.direction] || 'H'
   const isThrow = d === 'T'
   const ob = ON_BLOCK[card.onBlock]
-  const text = cardText(card)
+  const text = cardText(card, { guard })
   const role = card.linker ? `${STR_LABEL[STR_CODE[card.linker]] || ''} linker` : card.ender ? 'Ender' : null
   const Tag = as
   const aria = label || `${card.name}, ${DIR_LABEL[d]}, Speed ${card.speed}, Hit ${card.hit}${isThrow ? '' : `, ${card.onBlock} on block`}${role ? `, ${role}` : ''}`
@@ -62,8 +62,8 @@ export function UniversalFace({ card, role = null, cls = '', stamp = null, why =
 }
 
 // Either kind, from a hand-view entry
-export function AnyFace({ v, ...rest }) {
-  return v.attack ? html`<${CardFace} card=${v.card} ...${rest} />` : html`<${UniversalFace} card=${v.card} role=${v.role} ...${rest} />`
+export function AnyFace({ v, guard, ...rest }) {
+  return v.attack ? html`<${CardFace} card=${v.card} guard=${guard} ...${rest} />` : html`<${UniversalFace} card=${v.card} role=${v.role} ...${rest} />`
 }
 
 export function CardBack({ cls = '', label = 'Face down' }) {

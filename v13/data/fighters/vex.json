@@ -7,13 +7,13 @@
   "concept": "Fast duellist. Wins speed clashes, her Lights are safe on block, and Hilt Hook punishes guarding. Low damage and small combos.",
   "hp": 30,
   "cards": [
-    { "name": "Needle", "direction": "vertical", "speed": 8, "hit": 1, "onBlock": "=", "linker": "light", "grey": 2, "cooldown": 1 },
-    { "name": "Flick Cut", "direction": "horizontal", "speed": 7, "hit": 1, "onBlock": "+", "linker": "light", "grey": 2, "cooldown": 1 },
-    { "name": "Twin Fang", "direction": "horizontal", "speed": 6, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "cooldown": 1 },
-    { "name": "Lunge", "direction": "vertical", "speed": 6, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "cooldown": 1 },
-    { "name": "Crescent", "direction": "horizontal", "speed": 5, "hit": 2, "onBlock": "-", "ender": true, "bonus": 2, "cooldown": 2 },
-    { "name": "Eviscerate", "direction": "vertical", "speed": 4, "hit": 3, "onBlock": "-", "ender": true, "keepInitiative": true, "cooldown": 2 },
+    { "name": "Needle", "direction": "vertical", "speed": 8, "hit": 1, "onBlock": "=", "linker": "light", "grey": 2, "blockGrey": 1, "cooldown": 1 },
+    { "name": "Flick Cut", "direction": "horizontal", "speed": 7, "hit": 1, "onBlock": "+", "linker": "light", "grey": 2, "blockGrey": 1, "cooldown": 1 },
+    { "name": "Twin Fang", "direction": "horizontal", "speed": 6, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "blockGrey": 1, "cooldown": 1 },
+    { "name": "Lunge", "direction": "vertical", "speed": 6, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "blockGrey": 1, "cooldown": 1 },
+    { "name": "Crescent", "direction": "horizontal", "speed": 5, "hit": 2, "onBlock": "-", "ender": true, "bonus": 2, "blockGrey": 2, "cooldown": 2 },
+    { "name": "Eviscerate", "direction": "vertical", "speed": 4, "hit": 3, "onBlock": "-", "ender": true, "keepInitiative": true, "blockGrey": 2, "cooldown": 2 },
     { "name": "Hilt Hook", "direction": "throw", "speed": 6, "hit": 2, "grey": 1, "cooldown": 1 }
   ],
-  "notes": "Draft from character-vex v13.md (26 Oct 2026, on-block values revised 27 Oct). Core rules only. All numbers are placeholders."
+  "notes": "Draft from character-vex v13.md (26 Oct 2026, on-block values revised 27 Oct). Core rules only. blockGrey is used only by the guard damage experiment. All numbers are placeholders."
 }

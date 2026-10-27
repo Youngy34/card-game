@@ -23,6 +23,7 @@ python3 -m http.server 8000      # then open http://localhost:8000
 node v13/tools/test-engine.mjs                       # hand-checked rules cases
 node v13/tools/sim.mjs vex atlas -n 200 --seed 1     # the simulator
 node v13/tools/sim.mjs vex atlas --clock 30 --wrong-break-locks
+node v13/tools/sim.mjs vex atlas --guard-damage card --throw-cashes --evade-cooldown
 node v13/tools/build-artifact.mjs                    # -> v13/dist/yomi-playtest-v13.html
 node --import ./tools/smoke/register.mjs v13/tools/smoke/run.mjs <vendor dir>
 ```
@@ -54,6 +55,7 @@ The smoke test needs Preact 10.24.3 and htm 3.1.1 source in `<vendor dir>/pkg/pr
 | `linker` | `light`, `medium` or `heavy`, with `grey` (1 or more). Strikes only |
 | `ender` | `true`, with optional `bonus` (extra damage on the cash) and `keepInitiative: true`. Strikes only |
 | `grey` | A linker's grey, or a throw's grey on throw |
+| `blockGrey` | Strikes only: grey on the blocker under the guard damage experiment (default 1) |
 | `cooldown` | 1 or 2 (default 1) |
 | `art`, `notes` | Optional |
 
@@ -68,10 +70,14 @@ Each neutral reveal it plays every pairing of the two players' available cards, 
 | Switch | What it does |
 |---|---|
 | Round timer (`clock`) | After this many reveals, at the end of a neutral reveal or combo, more HP wins; level HP draws |
-| Block grey (`blockGrey`) | A blocked strike puts this much grey on the blocker's pile |
+| Guard damage (`guardDamage`) | A blocked strike puts grey on the blocker: `"card"` uses each strike's `blockGrey` (1 if unset), `"flat"` uses `blockGrey` from the settings for every strike |
+| Throws cash the pile (`throwCashes`) | A throw that lands first cashes the thrown player's whole pile, as well as dealing its Hit |
+| Evade cooldown (`evadeCooldown`) | Duck and Step go on cooldown 1; Guard never does |
 | Counter check (`counterCheck: "reveal"`) | The counter check uses the initiative as it stood at the reveal: the holder's attacks keep their +3 |
 | Waiting passes (`waitPasses`) | Two defences pass the initiative to the other player |
 | Wrong break locks (`wrongBreakLocks`) | A Break of the wrong strength is locked for the next beat |
+
+The Lab and the simulator also report **read strength**: each neutral reveal, the Hard mix for each player grouped by kind of move (Horizontal, Vertical, Throw, Guard, Duck, Step). *Focus* is the likeliest kind's share (an even spread is 17%); *shift* is how far the grouped mix moved since that player's previous neutral reveal (0% is the same guess every time).
 
 `maxReveals` (default 100) is a safety net, not a rule: a game still going is a draw.
 

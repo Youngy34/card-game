@@ -46,6 +46,7 @@ export function revealRecord(G, ev, N) {
     if (ev.speeds) r.speeds = ev.speeds
     if (ev.onBlock !== undefined) r.onBlock = ev.onBlock
     if (ev.combo !== undefined) r.combo = ev.combo
+    if (ev.throwCash) r.throwCash = ev.throwCash
     if (ev.counter) {
       const c = ev.counter
       r.counter = { side: c.side, card: c.card === null ? null : label(G, c.side, c.card), result: c.result, options: c.options }
@@ -72,14 +73,41 @@ export function winRoute(last, result) {
   return last.result === 'thrown' ? 'throw' : 'hit'
 }
 
+// ---- read strength ------------------------------------------------------------------
+// How much the board tells you. Each neutral reveal, the Hard mix for each player
+// is grouped by kind of move (Horizontal, Vertical, Throw, Guard, Duck, Step):
+//   focus: the share of the most likely kind (1/6 ≈ 17% is an even spread)
+//   shift: how far that grouped mix moved since the player's previous neutral
+//          reveal (half the summed differences: 0% = the same guess again)
+export function kindMix(G, side, opts, p) {
+  const m = {}
+  opts.forEach((o, i) => { const k = playCode(G, side, o); m[k] = (m[k] || 0) + p[i] })
+  return m
+}
+export function mixShift(a, b) {
+  let d = 0
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) d += Math.abs((a[k] || 0) - (b[k] || 0))
+  return d / 2
+}
+const top = m => Math.max(...Object.values(m))
+
 export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, levels = ['hard', 'hard']) {
   const init = firstInit(rules, rng())
   let G = newGame(fa, fb, rules, init)
   const ctx = newContext(W)
   const hard = levels[0] === 'hard' && levels[1] === 'hard'
   const reveals = []
+  const read = { focus: 0, shift: 0, nf: 0, ns: 0 }, prev = [null, null]
   while (!G.over) {
     const mx = mixes(G, ctx)
+    if (G.mode === 'neutral') {
+      for (const k of [0, 1]) {
+        const m = kindMix(G, k, k ? mx.ob : mx.oa, k ? mx.y : mx.x)
+        read.focus += top(m); read.nf++
+        if (prev[k]) { read.shift += mixShift(prev[k], m); read.ns++ }
+        prev[k] = m
+      }
+    }
     const [px, py] = hard ? [mx.x, mx.y] : levelMixes(mx, levels)
     const a = mx.oa[sampleIndex(px, rng())], b = mx.ob[sampleIndex(py, rng())]
     let r = reveal(G, a, b)
@@ -90,7 +118,7 @@ export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGH
     reveals.push(revealRecord(G, r.ev, r.G))
     G = r.G
   }
-  return { result: G.result, startInit: init, reveals }
+  return { result: G.result, startInit: init, reveals, read }
 }
 
 // ---- reports ----------------------------------------------------------------------
@@ -106,7 +134,8 @@ export function emptyStats() {
     holds: 0, breakPlays: { BL: 0, BM: 0, BH: 0 }, broken: 0, wrongBreak: 0, breakVsEnder: 0, breakVsFeint: 0,
     feints: 0, locked: 0, dropped: 0,
     damage: { opener: 0, counter: 0, throw: 0, ender: 0 },
-    leftover: 0, leftoverGrey: 0, maxPiles: [],
+    leftover: 0, leftoverGrey: 0, maxPiles: [], throwCash: 0, throwCashes: 0, guardGrey: 0,
+    read: { focus: 0, shift: 0, nf: 0, ns: 0 },
     minus: 0, minusGuard: 0, minusDefend: 0, holderAttack: 0, twoDef: 0, streaks: [],
     routes: {},
     sides: [0, 1].map(() => ({ neutral: {}, counter: {}, linker: {}, ender: {}, wins: 0 })),
@@ -119,6 +148,7 @@ export function addGame(S, g) {
   S.win += g.result
   if (g.result === 0.5) S.draws++
   S.startWin += g.startInit === 0 ? g.result : 1 - g.result
+  if (g.read) for (const k of ['focus', 'shift', 'nf', 'ns']) S.read[k] += g.read[k]
   S.lengths.push(g.reveals.length)
   const last = g.reveals[g.reveals.length - 1]
   const route = winRoute(last, g.result)
@@ -131,6 +161,8 @@ export function addGame(S, g) {
       bump(S.results, r.result)
       if (r.kind === 'clash') S.clashes++
       if (r.kind === 'defences') S.twoDef++
+      if (r.throwCash) { S.throwCashes++; S.throwCash += r.throwCash }
+      if (r.result === 'blocked') S.guardGrey += r.grey[0] + r.grey[1]
       const h = r.init[0], m = 1 - h
       S.minus++
       if (r.play[m] === 'G') S.minusGuard++
@@ -196,6 +228,8 @@ export function finishStats(S, fa, fb) {
     linkersPerCombo: S.combos ? S.linkersLanded / S.combos : null,
     revealsPerHit: S.combos ? S.neutral / S.combos : null,
     medianPeakPile: median(S.maxPiles),
+    readFocus: S.read.nf ? S.read.focus / S.read.nf : null,
+    readShift: S.read.ns ? S.read.shift / S.read.ns : null,
     fighters: [fa, fb],
   }
 }

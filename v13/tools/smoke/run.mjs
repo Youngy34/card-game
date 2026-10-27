@@ -43,7 +43,7 @@ const button = label => {
 }
 async function click(label) {
   const b = typeof label === 'string' ? button(label) : label
-  if (!b) throw new Error(`no enabled button "${label}"\n${text().slice(0, 800)}`)
+  if (!b) throw new Error(`no enabled button "${label}"\n${errors.slice(0, 3).join("\n")}\n${text().slice(0, 300)}`)
   b.dispatch('click'); await wait()
 }
 async function setValue(el, v, ev = 'input') { el.value = v; el.checked = v; el.dispatch(ev); await wait() }
@@ -158,6 +158,24 @@ await wait(300)
 ok(/Game over/.test(text()), `the timed hot-seat match ends (${hs} reveals)`)
 ok(text().includes('Saved to the playtest log'), 'the hot-seat game is logged')
 
+// ---- the grey-in-neutral and evade-cooldown experiments ----
+await click('Settings')
+await setValue(byId('s-gd'), 'card', 'change')
+await setValue(byId('s-cash'), true, 'change')
+await setValue(byId('s-evade'), true, 'change')
+await click('Save settings')
+await wait(200)
+await click('Play')
+if (button('New match')) await click('New match')
+ok(text().includes('guard damage per card') && text().includes('throws cash the pile') && text().includes('Duck and Step cool down'), 'setup lists the new experiments')
+await click('You vs sparring partner')
+await click('Start the match')
+ok(text().includes('Guard damage: '), 'card faces show their guard damage')
+let sawEvadeCd = false
+const gm = await playOut(40, () => { if (text().includes('Cooldown · back next reveal') && /Duck|Step/.test(text())) sawEvadeCd = true })
+ok(gm > 0, `played ${gm} reveals with grey in neutral`)
+await click('Leave this match')
+
 // ---- the Lab, with the timer on so it runs quickly ----
 await click('Lab')
 await click('50')
@@ -166,6 +184,7 @@ for (let i = 0; i < 300 && !text().includes('Linkers per combo'); i++) await wai
 ok(text().includes('Linkers per combo'), 'the Lab report appears')
 ok(text().includes('Two defences') && text().includes('Damage by source'), 'the report shows the playtest targets')
 ok(text().includes('experiments: round timer of 30 reveals'), 'the report records the experiment')
+ok(text().includes('Read focus') && text().includes('Read shift'), 'the report shows read strength')
 
 await click('Settings')
 await click('Turn all off')

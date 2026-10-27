@@ -162,5 +162,27 @@ const game = init => newGame(vex, atlas, {}, init)
   eq([r.G.over, r.G.result, r.ev.ko], [true, 1, true], 'A throw that takes Atlas to 0 ends the game')
 }
 
+// ---- experiments: grey in neutral, evade cooldown ----
+{
+  const gd = rules => newGame(vex, atlas, rules, 0)
+  let r = reveal(gd({ guardDamage: 'card' }), 'G', A('Overhead Smash'))
+  eq([r.ev.result, r.G.A.pile, r.ev.grey], ['blocked', 3, [3, 0]], 'Guard damage per card: blocking Overhead Smash puts its 3 Block grey on Vex')
+  r = reveal(gd({ guardDamage: 'flat', blockGrey: 2 }), 'G', A('Overhead Smash'))
+  eq(r.G.A.pile, 2, 'Guard damage flat: 2 grey whatever the card')
+  r = reveal(gd({}), 'G', A('Overhead Smash'))
+  eq(r.G.A.pile, 0, 'Guard damage off by default')
+  let G = gd({ throwCashes: true })
+  G = { ...G, A: { ...G.A, pile: 6 } }
+  r = reveal(G, 'G', A('Titan Grip'))
+  eq([r.ev.throwCash, r.ev.dmg[0], r.G.A.hp, r.G.A.pile], [6, 10, 20, 3], 'A throw cashes the pile (6) on top of its Hit (4), then adds its own grey (3)')
+  r = reveal({ ...G, R: { ...G.R, throwCashes: false } }, 'G', A('Titan Grip'))
+  eq([r.G.A.hp, r.G.A.pile], [26, 9], 'Without the switch the pile stays and grows')
+  G = gd({ evadeCooldown: true })
+  r = reveal(G, 'D', 'S')
+  eq([options(r.G, 0).slice(-2), options(r.G, 1).slice(-2)], [['G', 'S'], ['G', 'D']], 'After Duck and Step, each is out for the next reveal')
+  r = reveal(r.G, 'G', 'G')
+  eq([options(r.G, 0).slice(-3), options(r.G, 1).slice(-3)], [['G', 'D', 'S'], ['G', 'D', 'S']], 'and back after it; Guard never cools down')
+}
+
 console.log(`${checks - fails} / ${checks} checks passed`)
 if (fails) process.exit(1)

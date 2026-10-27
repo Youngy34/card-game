@@ -13,12 +13,14 @@
 // 'BL' / 'BM' / 'BH' Break Light / Medium / Heavy.
 //
 // Cooldown spaces are bit masks of card indices: cd1 comes back after the next
-// reveal, cd2 after the one after that. brk holds Breaks locked by a feint.
+// reveal, cd2 after the one after that. brk holds Breaks locked by a feint (or,
+// experimentally, a wrong guess); dcd holds Duck (1) and Step (2) under the
+// experimental evade cooldown.
 
-import { VS_DEFENCE, BREAK_IDS, BREAK_BIT, UNIVERSAL, DEFAULT_RULES } from './rules.js'
+import { VS_DEFENCE, BREAK_IDS, BREAK_BIT, EVADE_BIT, UNIVERSAL, DEFAULT_RULES } from './rules.js'
 
 export function newPlayer(f) {
-  return { f, hp: f.hp, pile: 0, cd1: 0, cd2: 0, brk: 0 }
+  return { f, hp: f.hp, pile: 0, cd1: 0, cd2: 0, brk: 0, dcd: 0 }
 }
 
 // init: who holds the initiative at the start, 0 (A) or 1 (B)
@@ -37,7 +39,7 @@ export const player = (G, side) => (side ? G.B : G.A)
 // What `side` may play this reveal, in display order.
 export function options(G, side) {
   const X = side ? G.B : G.A
-  if (G.mode === 'neutral') return [...bits(avail(X)), 'G', 'D', 'S']
+  if (G.mode === 'neutral') return [...bits(avail(X)), 'G', ...['D', 'S'].filter(id => !(X.dcd & EVADE_BIT[id]))]
   const c = G.combo
   if (c.att === side) {
     const open = c.links < G.R.comboCap
@@ -79,15 +81,22 @@ function neutral(G, a, b, counter) {
   const P = [G.A, G.B], picks = [a, b], bonus = G.R.initiativeBonus
   const atk = picks.map((p, k) => (typeof p === 'number' ? P[k].f.cards[p] : null))
   const hp = [P[0].hp, P[1].hp], pile = [P[0].pile, P[1].pile]
-  const played = [[], []]
-  for (const k of [0, 1]) if (atk[k]) played[k].push(picks[k])
+  const played = [[], []], evaded = [null, null]
+  for (const k of [0, 1]) {
+    if (atk[k]) played[k].push(picks[k])
+    else if (G.R.evadeCooldown && EVADE_BIT[picks[k]]) evaded[k] = picks[k]   // experimental: Duck and Step cool down
+  }
   let init = G.init, combo = null
   const ev = { phase: 'neutral', n: G.n, picks: [a, b], init0: G.init, kind: 'defences', result: 'none', by: null, dmg: [0, 0], grey: [0, 0] }
 
   // a strike that lands starts a combo; a throw that lands deals its Hit and grey
+  // (and, experimentally, first cashes the thrown player's whole pile)
   const land = (k, c) => {
     hp[1 - k] -= c.hit; ev.dmg[1 - k] += c.hit
-    if (c.dir === 'T') { pile[1 - k] += c.grey; ev.grey[1 - k] += c.grey; init = k; return 'thrown' }
+    if (c.dir === 'T') {
+      if (G.R.throwCashes && pile[1 - k] > 0) { ev.throwCash = pile[1 - k]; hp[1 - k] -= pile[1 - k]; ev.dmg[1 - k] += pile[1 - k]; pile[1 - k] = 0 }
+      pile[1 - k] += c.grey; ev.grey[1 - k] += c.grey; init = k; return 'thrown'
+    }
     combo = { att: k, links: 0, landed: 0, beat: 0 }
     ev.combo = k
     return 'hit'
@@ -106,7 +115,8 @@ function neutral(G, a, b, counter) {
     else if (r === 'blocked') {
       ev.result = 'blocked'; ev.onBlock = c.ob
       if (c.ob > 0) init = k; else if (c.ob < 0) init = 1 - k
-      if (G.R.blockGrey) { pile[1 - k] += G.R.blockGrey; ev.grey[1 - k] += G.R.blockGrey }
+      const gd = guardDamage(G.R, c)                     // experimental: guarding isn't free
+      if (gd) { pile[1 - k] += gd; ev.grey[1 - k] += gd }
     } else if (r === 'evaded') {
       ev.result = 'evaded'; init = 1 - k
     } else {
@@ -123,7 +133,12 @@ function neutral(G, a, b, counter) {
   } else if (G.R.waitPasses) {
     init = 1 - init                                    // experimental: waiting hands over the turn
   }
-  return finish(G, hp, pile, played, [null, null], init, combo, ev)
+  return finish(G, hp, pile, played, [null, null], init, combo, ev, evaded)
+}
+
+// Grey a blocked strike puts on the blocker, under the experimental guard damage
+export function guardDamage(R, c) {
+  return R.guardDamage === 'card' ? c.bg : R.guardDamage === 'flat' ? R.blockGrey : 0
 }
 
 // ---- combos ---------------------------------------------------------------------
@@ -160,17 +175,17 @@ function comboBeat(G, a, b) {
 }
 
 // ---- end of every reveal: KO check, cooldown step, blowouts, the reveal limit ----
-function tick(X, hp, pile, played, lockedBreak) {
+function tick(X, hp, pile, played, lockedBreak, evade) {
   // 1. space 1 returns to hand; 2. space 2 slides to space 1; 3. played cards go on
   //    the space matching their Cooldown. A feinted Break goes on space 1.
   let cd1 = X.cd2, cd2 = 0
   for (const i of played) { if (X.f.cards[i].cd === 2) cd2 |= 1 << i; else cd1 |= 1 << i }
-  return { f: X.f, hp, pile, cd1, cd2, brk: lockedBreak ? BREAK_BIT[lockedBreak] : 0 }
+  return { f: X.f, hp, pile, cd1, cd2, brk: lockedBreak ? BREAK_BIT[lockedBreak] : 0, dcd: evade ? EVADE_BIT[evade] : 0 }
 }
 
-function finish(G, hp, pile, played, locked, init, combo, ev) {
+function finish(G, hp, pile, played, locked, init, combo, ev, evaded = [null, null]) {
   const N = {
-    R: G.R, A: tick(G.A, hp[0], pile[0], played[0], locked[0]), B: tick(G.B, hp[1], pile[1], played[1], locked[1]),
+    R: G.R, A: tick(G.A, hp[0], pile[0], played[0], locked[0], evaded[0]), B: tick(G.B, hp[1], pile[1], played[1], locked[1], evaded[1]),
     init, startInit: G.startInit, mode: combo ? 'combo' : 'neutral', combo, n: G.n + 1, over: false, result: null,
   }
   if (hp[0] <= 0 || hp[1] <= 0) {

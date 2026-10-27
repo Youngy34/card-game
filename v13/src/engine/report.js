@@ -14,6 +14,8 @@ export function reportLines(r) {
   lines.push(`Length: median ${r.median} reveals (10–90%: ${Math.round(r.p10)}–${Math.round(r.p90)}) · ${num(r.neutral / r.games)} neutral, ${num(r.beats / r.games)} combo beats per game`)
   lines.push(`Neutral results: hit ${pct(res('hit') / N)} · blocked ${pct(res('blocked') / N)} · thrown ${pct(res('thrown') / N)} · evaded ${pct(res('evaded') / N)} · exposed ${pct(res('exposed') / N)} · two defences ${pct(res('none') / N)}  (clashes ${pct(r.clashes / N)})`)
   lines.push(`Counters after Exposed: hit ${r.counters.hit}, throw ${r.counters.thrown}, declined ${r.counters.declined}, none possible ${r.counters.none}`)
+  lines.push(`Read strength: focus ${pct(r.readFocus)} (an even spread over six kinds is 17%) · shift ${pct(r.readShift)} per reveal (0% = the same guess every time)`)
+  if (r.guardGrey || r.throwCashes) lines.push(`Grey in neutral: ${num(r.guardGrey / r.games)} guard damage per game · ${r.throwCashes} throws cashed a pile (${num(r.throwCash / Math.max(r.throwCashes, 1))} each)`)
   lines.push(`Initiative: minus player guards ${pct(r.minusGuard / Math.max(r.minus, 1))} (target under ~50%), defends ${pct(r.minusDefend / Math.max(r.minus, 1))}; holder attacks ${pct(r.holderAttack / Math.max(r.minus, 1))} · average streak ${num(r.avgStreak)} neutral reveals`)
   lines.push(`Reveals per landed hit: ${num(r.revealsPerHit)} · combos ${num(r.combos / r.games)} per game`)
   lines.push(`Combos: ${num(r.linkersPerCombo, 2)} linkers landed each (target ~2) · ${num(r.comboDamage / C)} damage each incl. opener · end by ender ${pct(r.comboEnds.ender / C)}, broken ${pct(r.comboEnds.broken / C)}, dropped ${pct(r.comboEnds.dropped / C)}, blowout ${pct(r.comboEnds.blowout / C)}, KO ${pct(r.comboEnds.ko / C)}`)

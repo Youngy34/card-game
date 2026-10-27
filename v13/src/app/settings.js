@@ -47,15 +47,29 @@ export function Settings() {
       <p class="small muted">Rules v13 as written: +3 initiative, a cap of 3, random first initiative. The reveal limit isn't a rule; it stops a stalled game.</p>
     </fieldset>
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
-      <div class="spread"><h3>Experiments</h3><button class="link" type="button" onClick=${() => setD({ ...d, rules: { ...d.rules, clock: 0, counterCheck: 'after', blockGrey: 0, waitPasses: false, wrongBreakLocks: false } })}>Turn all off</button></div>
-      <p class="small muted">Not in the rules. Off by default; each is a candidate fix for waiting in neutral or short combos, to test in the Lab and at the table.</p>
+      <div class="spread"><h3>Experiments</h3><button class="link" type="button" onClick=${() => setD({ ...d, rules: { ...d.rules, clock: 0, counterCheck: 'after', guardDamage: 'off', throwCashes: false, evadeCooldown: false, waitPasses: false, wrongBreakLocks: false } })}>Turn all off</button></div>
+      <p class="small muted">Not in the rules. Off by default; each is a candidate fix for waiting in neutral, reads with nothing to go on, or short combos, to test in the Lab and at the table.</p>
+      <div class="stack" style=${{ gap: '10px' }}>
+        <span class="label">Grey in neutral</span>
+        <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+          <label class="field"><span>Guard damage: a blocked strike puts grey on the blocker</span>
+            <select id="s-gd" value=${d.rules.guardDamage} onChange=${e => R('guardDamage', e.target.value)}>
+              <option value="off">Off (as written)</option>
+              <option value="card">Each strike's own Block grey</option>
+              <option value="flat">The same on every strike</option>
+            </select>
+            <span class="small muted">Block grey is set per card in Move lists (1 if a card doesn't set one).</span></label>
+          ${d.rules.guardDamage === 'flat' ? html`<label class="field"><span>Grey on every blocked strike</span>
+            <input id="s-bgrey" type="number" min="0" max="5" value=${d.rules.blockGrey} onInput=${e => R('blockGrey', int(e.target.value, 0, 5, 1))} /></label>` : null}
+        </div>
+        <label class="check"><input id="s-cash" type="checkbox" checked=${!!d.rules.throwCashes} onChange=${e => R('throwCashes', e.target.checked)} /> Throws cash the pile: a throw that lands first cashes the thrown player's whole pile, as well as dealing its Hit</label>
+        <p class="small muted">Together these bring v12's read back: your pile shows how much you've guarded, so the bigger it is, the more the opponent wants to throw you.</p>
+      </div>
+      <label class="check"><input id="s-evade" type="checkbox" checked=${!!d.rules.evadeCooldown} onChange=${e => R('evadeCooldown', e.target.checked)} /> Duck and Step go on cooldown 1 (Guard never does), so after an evade the defender has one fewer option</label>
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
         <label class="field"><span>Round timer, in reveals (0 = off)</span>
           <input id="s-clock" type="number" min="0" max="200" value=${d.rules.clock} onInput=${e => R('clock', int(e.target.value, 0, 200, 0))} />
           <span class="small muted">When it runs out, at the end of a neutral reveal or a combo, more HP wins.</span></label>
-        <label class="field"><span>Grey a blocked strike puts on the blocker</span>
-          <input id="s-bgrey" type="number" min="0" max="5" value=${d.rules.blockGrey} onInput=${e => R('blockGrey', int(e.target.value, 0, 5, 0))} />
-          <span class="small muted">Guard damage: guarding isn't free.</span></label>
         <label class="field"><span>Countering an exposed attack</span>
           <select id="s-counter" value=${d.rules.counterCheck} onChange=${e => R('counterCheck', e.target.value)}>
             <option value="after">The defender counts their new +${d.rules.initiativeBonus} (as written)</option>

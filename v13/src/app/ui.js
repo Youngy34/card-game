@@ -4,7 +4,7 @@
 import { html, cx, useState, useEffect } from './lib.js'
 import { Mini } from './card.js'
 import { bits } from '../engine/engine.js'
-import { UNIVERSAL, BREAK_IDS, BREAK_BIT } from '../engine/rules.js'
+import { UNIVERSAL, BREAK_IDS, BREAK_BIT, EVADE_BIT } from '../engine/rules.js'
 
 export function Tokens({ n, max = 60 }) {
   const fives = Math.floor(Math.min(n, max) / 5), ones = Math.min(n, max) - fives * 5
@@ -34,6 +34,7 @@ export function Hud({ G, side, who }) {
   const holds = G.init === side
   const role = combo ? (combo.att === side ? 'Attacking' : 'Defending') : holds ? 'Initiative' : 'Minus'
   const locked = BREAK_IDS.filter(id => X.brk & BREAK_BIT[id])
+  const evades = ['D', 'S'].filter(id => X.dcd & EVADE_BIT[id])
   return html`<section class=${cx('hud', !combo && holds && 'holds')} aria-label=${`${X.f.name}'s side`}>
     <div class="hud-head">
       <span class="hud-name">${X.f.name}</span>
@@ -54,7 +55,8 @@ export function Hud({ G, side, who }) {
         return html`<div class="cdslot"><b>${s}</b><span class="minis">
           ${ids.map(i => html`<${Mini} c=${X.f.cards[i]} />`)}
           ${brk.map(id => html`<span class="mini" data-d="B"><span>${UNIVERSAL[id].name}</span></span>`)}
-          ${!ids.length && !brk.length ? html`<span class="empty">${s === 1 ? 'Back after next reveal' : 'Back in 2'} · empty</span>` : null}
+          ${s === 1 ? evades.map(id => html`<span class="mini" data-d="D"><span>${UNIVERSAL[id].name}</span></span>`) : null}
+          ${!ids.length && !brk.length && !(s === 1 && evades.length) ? html`<span class="empty">${s === 1 ? 'Back after next reveal' : 'Back in 2'} · empty</span>` : null}
         </span></div>`
       })}
     </div>

@@ -110,12 +110,14 @@ function Report({ r }) {
       <${Tile} label="Linkers per combo" value=${fx(lpc, 2)} sub="landed · target about 2" state=${lpc === null ? null : lpc >= 1.5 && lpc <= 3 ? 'ok' : 'off'} />
       <${Tile} label="Reveals per hit" value=${fx(r.revealsPerHit)} sub=${`neutral reveals per combo · ${fx(r.combos / n)} combos a game`} />
       <${Tile} label="Starting initiative" value=${pct(r.startRate, 1)} sub="win rate of whoever started with it" />
+      <${Tile} label="Read focus" value=${pct(r.readFocus)} sub="share of the best mix on its likeliest kind of move · an even spread is 17%" />
+      <${Tile} label="Read shift" value=${pct(r.readShift)} sub="how far the best mix moves each neutral reveal · 0% is the same guess every time" />
     </div>
     <div class="pickers">
       <div class="panel stack" style=${{ gap: '10px' }}>
         <h3>Neutral</h3>
         <${Bars} rows=${[['Hit', res('hit')], ['Blocked', res('blocked')], ['Thrown', res('thrown')], ['Evaded', res('evaded')], ['Exposed', res('exposed')], ['Both defend', res('none')]]} />
-        <p class="small muted">Clashes ${pct(r.clashes / N)} of neutral reveals. After Exposed: ${r.counters.hit} counter hits, ${r.counters.thrown} counter throws, ${r.counters.declined} declined, ${r.counters.none} with nothing fast enough.</p>
+        <p class="small muted">Clashes ${pct(r.clashes / N)} of neutral reveals. After Exposed: ${r.counters.hit} counter hits, ${r.counters.thrown} counter throws, ${r.counters.declined} declined, ${r.counters.none} with nothing fast enough.${r.guardGrey || r.throwCashes ? ` Guard damage ${fx(r.guardGrey / n)} grey a game; ${r.throwCashes} throws cashed a pile (${fx(r.throwCash / Math.max(r.throwCashes, 1))} each).` : ''}</p>
       </div>
       <div class="panel stack" style=${{ gap: '10px' }}>
         <h3>Combos</h3>
