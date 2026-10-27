@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 3,
+  "rules": 13,
+  "id": "atlas",
+  "name": "Atlas",
+  "epithet": "the Mountain",
+  "concept": "Hammer. Loses most speed clashes and most swings are minus on block, but has the biggest combos and throw. Big swing or grab.",
+  "hp": 30,
+  "cards": [
+    { "name": "Pommel Jab", "direction": "horizontal", "speed": 7, "hit": 1, "onBlock": "+", "linker": "light", "grey": 2, "cooldown": 1 },
+    { "name": "Wide Swing", "direction": "horizontal", "speed": 4, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "cooldown": 1 },
+    { "name": "Home Run", "direction": "horizontal", "speed": 3, "hit": 3, "onBlock": "-", "ender": true, "bonus": 3, "cooldown": 2 },
+    { "name": "Rising Haft", "direction": "vertical", "speed": 5, "hit": 2, "onBlock": "-", "linker": "medium", "grey": 3, "cooldown": 1 },
+    { "name": "Overhead Smash", "direction": "vertical", "speed": 3, "hit": 4, "onBlock": "+", "linker": "heavy", "grey": 5, "cooldown": 2 },
+    { "name": "Crater", "direction": "vertical", "speed": 2, "hit": 3, "onBlock": "-", "ender": true, "keepInitiative": true, "cooldown": 2 },
+    { "name": "Titan Grip", "direction": "throw", "speed": 4, "hit": 4, "grey": 3, "cooldown": 2 }
+  ],
+  "notes": "Draft from character-atlas v13.md (26 Oct 2026, Crater revised to minus on block 27 Oct). Core rules only. All numbers are placeholders."
+}
