@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 4,
+  "rules": 14,
+  "id": "atlas",
+  "name": "Atlas",
+  "epithet": "the Mountain",
+  "concept": "Hammer and grappler. His Strike builds the most grey but hands it all back if blocked; Titan Grip is the big guard break.",
+  "hp": 19,
+  "cards": [
+    { "name": "Haft Bash", "type": "strike", "grey": 4, "chip": 1, "cooldown": 1 },
+    { "name": "Overhead Smash", "type": "heavy", "chip": 2, "cooldown": 1 },
+    { "name": "Titan Grip", "type": "grab", "chip": 3, "cooldown": 2 },
+    { "name": "Stand Firm", "type": "focus", "cooldown": 1 },
+    { "name": "Haft Guard", "type": "block", "cooldown": 1 }
+  ],
+  "notes": "Draft from rules-overview 14.md (28 Oct 2026, swapped wheel, rebuilt around Titan Grip). Base game: one card of each type. All numbers are placeholders."
+}

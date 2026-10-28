@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 4,
+  "rules": 14,
+  "id": "benchmark",
+  "name": "Benchmark",
+  "epithet": "the reference",
+  "concept": "Not a character: the standard numbers, no edges and no weaknesses, to measure other fighters against.",
+  "hp": 20,
+  "cards": [
+    { "name": "Strike", "type": "strike", "grey": 3, "chip": 1, "cooldown": 1 },
+    { "name": "Heavy", "type": "heavy", "chip": 2, "cooldown": 1 },
+    { "name": "Grab", "type": "grab", "chip": 2, "cooldown": 1 },
+    { "name": "Focus", "type": "focus", "cooldown": 1 },
+    { "name": "Block", "type": "block", "cooldown": 1 }
+  ],
+  "notes": "From rules-overview 14.md (28 Oct 2026). Change its numbers only if the standard itself changes."
+}
