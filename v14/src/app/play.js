@@ -7,7 +7,7 @@ import { roster, settings, saveGame, newId } from './store.js'
 import * as M from './match.js'
 import { describe, deltaLine } from './narrate.js'
 import { player } from '../engine/engine.js'
-import { CODES, TYPE_LABEL, WHEELS, beats, beatsList, losesTo, DEFAULT_RULES } from '../engine/rules.js'
+import { CODES, TYPE_LABEL, WHEELS, beats, beatsList, losesTo, mirrorActs, DEFAULT_RULES } from '../engine/rules.js'
 import { LEVELS, depthOf } from '../engine/ai.js'
 
 const MODES = [['ai', 'You vs sparring partner'], ['hotseat', 'Two players, one device'], ['watch', 'Watch the sparring partner']]
@@ -24,8 +24,10 @@ export function experimentsOn(rules) {
   if (R.wheel === 'first') on.push('the first-draft wheel (a blocked Focus doubles its pile)')
   if (R.wheel === 'alt') on.push('the alternative wheel (Heavy and Grab swapped; a blocked Focus fizzles)')
   if (R.mirrors === 'all') on.push('mirrors take effect')
+  if (R.mirrors === 'nograb') on.push('Strike, Heavy and Focus mirrors take effect; Grabs tech')
   if (R.mirrors === 'focus') on.push('Focus mirrors take effect')
   if (R.blockedHeavyGrey) on.push(`a blocked Heavy puts ${R.blockedHeavyGrey} grey on its owner`)
+  if (R.focusMeter) on.push(`Focus gains ${R.focusMeter} meter (up to ${R.meterMax ?? 3}; no meter cards yet)`)
   return on
 }
 
@@ -308,7 +310,7 @@ function MoveList({ m, side, title }) {
 
 const CELL = { hit: 'Builds', cash: 'Cashes', clear: 'Clears', turnback: 'Turns back', stopped: 'Stops it', double: 'Doubles', fizzle: 'Fizzles' }
 function cellWord(R, x, y) {
-  if (x === y) return R.mirrors === 'all' || (R.mirrors === 'focus' && x === 'F') ? 'Both' : 'Cancel'
+  if (x === y) return mirrorActs(R, x) && x !== 'B' ? 'Both' : x === 'G' && R.mirrors === 'nograb' ? 'Tech' : 'Cancel'
   if (!beats(R.wheel, x, y)) return null
   if (x === 'S') return CELL.hit
   if (x === 'H' || x === 'G') return CELL.cash
@@ -329,7 +331,7 @@ function Reference({ rules }) {
           ${order.map(y => { const w = cellWord(R, x, y); return html`<td class=${w && x !== y ? 'good' : x === y ? '' : 'bad'}>${w || 'Loses'}</td>` })}
         </tr>`)}</tbody>
       </table></div>
-      <p class="small muted">Strike: its Grey on their pile, then its Chip. Heavy and Grab: cash their whole pile as damage, then Chip. Focus: clear your own pile. Block: a blocked Strike's Grey goes on its owner's pile; ${R.blockedHeavyGrey ? `a blocked Heavy puts ${R.blockedHeavyGrey} grey on its owner` : 'a blocked Heavy is simply stopped'}. Every card goes on cooldown when played.${experimentsOn(R).length ? html` <span class="exp">Experiments on: ${experimentsOn(R).join('; ')}.</span>` : ''}</p>
+      <p class="small muted">Strike: its Grey on their pile, then its Chip. Heavy and Grab: cash their whole pile as damage, then Chip. Focus: clear your own pile${R.focusMeter ? ` and gain ${R.focusMeter} meter (up to ${R.meterMax ?? 3})` : ''}. Block: a blocked Strike's Grey goes on its owner's pile; ${R.blockedHeavyGrey ? `a blocked Heavy puts ${R.blockedHeavyGrey} grey on its owner` : 'a blocked Heavy is simply stopped'}. Every card goes on cooldown when played.${experimentsOn(R).length ? html` <span class="exp">Experiments on: ${experimentsOn(R).join('; ')}.</span>` : ''}</p>
     </div>` : null}
   </details>`
 }

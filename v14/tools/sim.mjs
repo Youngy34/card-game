@@ -5,7 +5,8 @@
 //   node v14/tools/sim.mjs vex vex --levels hard,easy
 //   node v14/tools/sim.mjs vex atlas --depth 1          (the 28 Oct rough-check bot)
 //   node v14/tools/sim.mjs vex atlas --json             (the full report as JSON)
-//   Experiments: --wheel first|alt, --mirrors all|focus, --blocked-heavy 2
+//   Experiments: --wheel first|alt, --mirrors all|nograb|focus, --blocked-heavy 2,
+//   --focus-meter 1 (with --meter-max 3, and --meter-value 1.5 for what the partner thinks a pip is worth)
 //
 // A fighter is an id from data/fighters/ or a path to a fighter JSON file.
 
@@ -33,7 +34,7 @@ function load(id) {
 }
 
 if (ids.length < 2) {
-  console.log('Usage: node v14/tools/sim.mjs <fighter> <fighter> [-n 200] [--seed 1] [--levels hard,hard] [--depth 2] [--wheel v14|first|alt] [--mirrors none|all|focus] [--blocked-heavy 0] [--json]')
+  console.log('Usage: node v14/tools/sim.mjs <fighter> <fighter> [-n 200] [--seed 1] [--levels hard,hard] [--depth 2] [--wheel v14|first|alt] [--mirrors none|all|nograb|focus] [--blocked-heavy 0] [--focus-meter 0] [--meter-max 3] [--meter-value 1.5] [--json]')
   console.log('Fighters:', fs.readdirSync(path.join(root, 'data/fighters')).map(f => f.replace('.json', '')).join(', '))
   process.exit(0)
 }
@@ -44,8 +45,10 @@ const rules = {
   ...(flag('--mirrors') ? { mirrors: flag('--mirrors') } : {}),
   ...(flag('--blocked-heavy') ? { blockedHeavyGrey: Number(flag('--blocked-heavy')) } : {}),
   ...(flag('--max') ? { maxReveals: Number(flag('--max')) } : {}),
+  ...(flag('--focus-meter') ? { focusMeter: Number(flag('--focus-meter')) } : {}),
+  ...(flag('--meter-max') ? { meterMax: Number(flag('--meter-max')) } : {}),
 }
-const W = { ...DEFAULT_WEIGHTS, ...settings.ai, ...(flag('--depth') ? { depth: Number(flag('--depth')) } : {}) }
+const W = { ...DEFAULT_WEIGHTS, ...settings.ai, ...(flag('--depth') ? { depth: Number(flag('--depth')) } : {}), ...(flag('--meter-value') ? { meter: Number(flag('--meter-value')) } : {}) }
 const n = Number(flag('-n', 200)), seed = Number(flag('--seed', 1))
 const levels = (flag('--levels', 'hard,hard')).split(',')
 const [fa, fb] = [load(ids[0]), load(ids[1])]
@@ -56,6 +59,6 @@ if (args.includes('--json')) {
   const { fighters, ...rest } = r
   console.log(JSON.stringify({ fighters: [fa.name, fb.name], rules, W, levels, seed, ...rest }, null, 1))
 } else {
-  console.log(`${fa.name} vs ${fb.name} · ${r.games} games · seed ${seed} · levels ${levels.join(' vs ')} · depth ${W.depth} · wheel ${rules.wheel}, mirrors ${rules.mirrors}${rules.blockedHeavyGrey ? `, blocked Heavy ${rules.blockedHeavyGrey}` : ''} · ${secs.toFixed(1)} s`)
+  console.log(`${fa.name} vs ${fb.name} · ${r.games} games · seed ${seed} · levels ${levels.join(' vs ')} · depth ${W.depth} · wheel ${rules.wheel}, mirrors ${rules.mirrors}${rules.blockedHeavyGrey ? `, blocked Heavy ${rules.blockedHeavyGrey}` : ''}${rules.focusMeter ? `, Focus meter ${rules.focusMeter} (max ${rules.meterMax}, worth ${W.meter})` : ''} · ${secs.toFixed(1)} s`)
   for (const line of reportLines(r)) console.log(line)
 }

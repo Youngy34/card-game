@@ -105,6 +105,39 @@ const after = r => [r.G.A.hp, r.G.A.pile, r.G.B.hp, r.G.B.pile]
   eq([r.G.A.hp, r.G.B.hp, r.G.result], [-3, -2, 0], 'Double KO: whoever ends least below 0 wins')
 }
 
+// ---- Strike, Heavy and Focus mirrors take effect; Grabs tech ----
+{
+  const R = { mirrors: 'nograb' }
+  let r = reveal(board(4, 6, R), B('S'), B('S'))
+  eq([r.ev.result, after(r)], ['trade', [19, 7, 19, 9]], 'Grab-tech rule: two Strikes both land')
+  r = reveal(board(4, 6, R), B('H'), B('H'))
+  eq([r.ev.result, after(r)], ['trade', [14, 0, 12, 0]], 'Grab-tech rule: two Heavies both cash')
+  r = reveal(board(4, 6, R), B('F'), B('F'))
+  eq([r.ev.result, after(r)], ['trade', [20, 0, 20, 0]], 'Grab-tech rule: two Focuses both clear')
+  r = reveal(board(4, 6, R), B('G'), B('G'))
+  eq([r.ev.result, after(r)], ['cancel', [20, 4, 20, 6]], 'Grab-tech rule: two Grabs tech, nothing lands')
+}
+
+// ---- Focus gains meter ----
+{
+  const R = { focusMeter: 1, meterMax: 3 }
+  let r = reveal(board(4, 6, R), B('F'), B('S'))
+  eq([r.ev.result, r.G.A.meter, r.G.B.meter, r.ev.meter], ['clear', 1, 0, [1, 0]], 'Focus meter: a winning Focus clears and gains 1 meter')
+  r = reveal(board(4, 6, R), B('F'), B('H'))
+  eq([r.ev.result, r.G.A.meter], ['cash', 0], 'Focus meter: a beaten Focus gains nothing')
+  const G = board(4, 6, R); G.A = { ...G.A, meter: 3 }
+  r = reveal(G, B('F'), B('B'))
+  eq([r.G.A.meter, r.ev.meter[0]], [3, 0], 'Focus meter: capped at the most a player can hold')
+  r = reveal(board(4, 6, { ...R, mirrors: 'nograb' }), B('F'), B('F'))
+  eq([r.G.A.meter, r.G.B.meter], [1, 1], 'Focus meter: a Focus mirror that takes effect gives both players meter')
+  r = reveal(board(), B('F'), B('S'))
+  eq(r.G.A.meter, 0, 'No Focus meter by default')
+  eq(cardText(VEX.cards[3], R)[0], 'Wins: clears your own pile and gains 1 meter.', 'Focus card text with meter on')
+  const low = mixes(board(0, 0, R), newContext({ meter: 0 })), high = mixes(board(0, 0, R), newContext({ meter: 3 }))
+  const fShare = mx => mx.x[mx.oa.indexOf(B('F'))]
+  eq(fShare(high) > fShare(low), true, 'The partner plays Focus more when it values meter more')
+}
+
 // ---- other wheels and the blocked-Heavy experiment ----
 {
   let r = reveal(board(4, 6, { wheel: 'first' }), B('F'), B('B'))

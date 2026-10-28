@@ -107,6 +107,7 @@ function Report({ r }) {
       <${Tile} label="Peak pile" value=${r.medianPeak ?? '–'} sub=${`median per game · highest ${r.maxPeak ?? '–'}`} />
       <${Tile} label="Cash size" value=${fx(r.meanCash)} sub=${`grey per cash · ${pct(r.emptyCashes / Math.max(r.cashes, 1))} cashed an empty pile`} />
       ${r.doubleKOs ? html`<${Tile} label="Double KOs" value=${pct(r.doubleKOs / n, 1)} sub="of games" />` : null}
+      ${r.metered ? html`<${Tile} label="Meter gained" value=${fx(r.meterGained / n)} sub=${`per game, both players · ${pct(r.maxedGames / n)} of players fill it${r.medianMaxedAt ? ` (median reveal ${r.medianMaxedAt})` : ''}`} />` : null}
     </div>
     <div class="pickers">
       <div class="panel stack" style=${{ gap: '10px' }}>

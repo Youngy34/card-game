@@ -44,8 +44,17 @@ export const DEFAULT_RULES = {
   wheel: 'v14',               // 'v14' | 'first' | 'alt' (see WHEELS)
   mirrors: 'none',            // 'none': two cards of a type cancel (as written)
                               // 'all': both take effect (a double KO is then possible)
+                              // 'nograb': Strike, Heavy and Focus mirrors take effect; two Grabs tech (neither lands)
                               // 'focus': only two Focuses take effect (both clear), the one mirror the rule strains on
   blockedHeavyGrey: 0,        // grey a blocked Heavy puts on its owner's own pile (as written: 0, it's simply stopped)
+  focusMeter: 0,              // meter a Focus gains whenever it takes effect (0 = no meter). No meter cards yet:
+                              //   meter only builds, up to meterMax, and the sparring partner values each pip
+  meterMax: 3,
+}
+
+// Does a mirror of this type take effect under these rules?
+export function mirrorActs(R, t) {
+  return R.mirrors === 'all' || (R.mirrors === 'nograb' && t !== 'G') || (R.mirrors === 'focus' && t === 'F')
 }
 
 // ---- card text -------------------------------------------------------------
@@ -59,7 +68,7 @@ export function winText(c, rules = DEFAULT_RULES) {
   const R = { ...DEFAULT_RULES, ...rules }
   if (t === 'S') return `Wins: ${c.grey ?? 0} grey on their pile, then ${c.chip ?? 0} chip.`
   if (t === 'H' || t === 'G') return `Wins: cashes their pile, then ${c.chip ?? 0} chip.`
-  if (t === 'F') return 'Wins: clears your own pile.'
+  if (t === 'F') return R.focusMeter ? `Wins: clears your own pile and gains ${R.focusMeter} meter.` : 'Wins: clears your own pile.'
   // Block: it turns back the attack's Grey
   const parts = []
   for (const x of beatsList(R.wheel, 'B')) {

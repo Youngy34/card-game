@@ -27,6 +27,7 @@ export function revealRecord(G, ev, N) {
     dmg: ev.dmg, chip: ev.chip, grey: ev.grey, cashed: ev.cashed, cleared: ev.cleared,
     after: [{ hp: N.A.hp, pile: N.A.pile }, { hp: N.B.hp, pile: N.B.pile }],
   }
+  if (G.R.focusMeter) { r.meter = ev.meter; r.meterMax = G.R.meterMax ?? 3; r.after[0].meter = N.A.meter; r.after[1].meter = N.B.meter }
   if (ev.ko) r.ko = true
   if (ev.doubleKO) r.doubleKO = true
   if (ev.limit) r.limit = true
@@ -74,7 +75,7 @@ export function emptyStats() {
     squeeze: byType(() => byType(0)),
     damage: byType(0), cashed: 0, chip: 0, cashes: 0, emptyCashes: 0, clears: 0, cleared: 0,
     turnbacks: 0, turnbackGrey: 0, stopped: 0, doubles: 0, doubleGrey: 0, fizzles: 0,
-    peaks: [], routes: {}, doubleKOs: 0,
+    peaks: [], routes: {}, doubleKOs: 0, meterGained: 0, endMeter: 0, maxedGames: 0, maxedAt: [], metered: false,
     sides: [0, 1].map(() => ({ plays: byType(0), won: byType(0), lost: byType(0), mirror: byType(0), cards: {}, wins: 0 })),
   }
 }
@@ -107,7 +108,7 @@ export function addGame(S, g) {
       // effects this card had
       const e = r.effects?.[k]
       if (e === 'cash') { S.cashes++; if (!r.cashed[1 - k]) S.emptyCashes++ }
-      if (e === 'clear') { S.clears++; S.cleared += r.cleared[k] }
+      if (e === 'clear') { S.clears++; S.cleared += r.cleared[k]; S.meterGained += r.meter?.[k] || 0; side.meter = (side.meter || 0) + (r.meter?.[k] || 0) }
       if (e === 'turnback') { S.turnbacks++; S.turnbackGrey += r.grey[1 - k] }
       if (e === 'stopped') S.stopped++
       if (e === 'double') { S.doubles++; S.doubleGrey += r.grey[1 - k] }
@@ -118,6 +119,14 @@ export function addGame(S, g) {
     }
   }
   S.peaks.push(peak)
+  if (last?.after[0].meter !== undefined) {
+    S.metered = true
+    S.endMeter += last.after[0].meter + last.after[1].meter
+    for (const k of [0, 1]) {
+      const at = g.reveals.findIndex(r => r.after[k].meter >= r.meterMax)
+      if (at >= 0) { S.maxedGames += 0.5; S.maxedAt.push(at + 1) }
+    }
+  }
   if (g.result === 1) S.sides[0].wins++; else if (g.result === 0) S.sides[1].wins++
   return S
 }
@@ -132,6 +141,7 @@ export function finishStats(S, fa, fb) {
     mirrorRate: S.reveals ? S.mirrors / S.reveals : null,
     medianPeak: median(S.peaks), maxPeak: S.peaks.length ? Math.max(...S.peaks) : null,
     meanCash: S.cashes ? S.cashed / S.cashes : null,
+    medianMaxedAt: median(S.maxedAt),
     fighters: [fa, fb],
   }
 }

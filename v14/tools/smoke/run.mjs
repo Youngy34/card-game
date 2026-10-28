@@ -157,6 +157,26 @@ await wait(300)
 ok(/Game over/.test(text()), `the hot-seat match ends (${hs} reveals)`)
 ok(text().includes('Saved to the playtest log'), 'the hot-seat game is logged')
 
+// ---- Grab-tech mirrors and Focus meter ----
+await click('Settings')
+await click('Turn all off')
+await setValue(byId('s-mirrors'), 'nograb', 'change')
+await setValue(byId('s-fmeter'), '1')
+await click('Save settings')
+await wait(200)
+await click('Play')
+if (button('New match')) await click('New match')
+ok(text().includes('Grabs tech') && text().includes('Focus gains 1 meter'), 'setup lists the mirror rule and Focus meter')
+await click('You vs sparring partner')
+await click('Start the match')
+ok(text().includes('Meter') && find(app, n => n.attributes['aria-label'] === 'Meter 0 of 3'), 'the HUD shows an empty meter')
+ok(text().includes('Wins: clears your own pile and gains 1 meter.'), "Focus's face says it gains meter")
+let sawMeter = false
+await playOut(60, () => { if (find(app, n => /^Meter [1-3] of 3$/.test(n.attributes['aria-label'] || ''))) sawMeter = true })
+ok(sawMeter, 'someone gains meter during a match')
+if (button('Leave this match')) await click('Leave this match')
+else if (button('New match')) await click('New match')
+
 // ---- the Lab ----
 await click('Settings')
 await click('Turn all off')

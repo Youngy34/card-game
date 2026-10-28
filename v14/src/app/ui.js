@@ -46,6 +46,8 @@ export function Hud({ G, side, who }) {
     <${LifeBar} X=${X} />
     <div class="hud-row">
       <div class="pile"><span class="label">Grey</span><span class="pile-n">${X.pile}</span><${Tokens} n=${X.pile} /></div>
+      ${G.R.focusMeter ? html`<div class="meter" aria-label=${`Meter ${X.meter || 0} of ${G.R.meterMax ?? 3}`}><span class="label">Meter</span>
+        ${Array.from({ length: G.R.meterMax ?? 3 }, (_, i) => html`<span class=${cx('pip', i < (X.meter || 0) && 'on')} key=${i}></span>`)}</div>` : null}
     </div>
     <div class="cdtrack" aria-label="Cooldown track">
       ${[2, 1].map(s => {

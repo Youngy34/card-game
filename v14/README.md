@@ -24,6 +24,7 @@ node v14/tools/test-engine.mjs                         # hand-checked rules case
 node v14/tools/sim.mjs vex atlas -n 300 --seed 7       # the simulator
 node v14/tools/sim.mjs vex atlas --depth 1             # the 28 Oct rough-check bot
 node v14/tools/sim.mjs vex atlas --wheel alt --mirrors all --blocked-heavy 2
+node v14/tools/sim.mjs vex atlas --mirrors nograb --focus-meter 1 --meter-value 1.5
 node v14/tools/build-artifact.mjs                      # -> v14/dist/yomi-playtest-v14.html
 node --import ./tools/smoke/register.mjs v14/tools/smoke/run.mjs <vendor dir>
 ```
@@ -59,15 +60,16 @@ The base game is one card of each type; more cards of a type are allowed for tes
 
 ## The sparring partner
 
-Each reveal it plays every pairing of the two players' available cards and solves the grid as a zero-sum game. With lookahead 2 (the default), each pairing is valued by solving the next reveal's grid too, so it sees what comes back off cooldown and what the opponent will be missing. Boards are scored as HP minus 0.5 per grey on your pile (grey past lethal counts as lethal), turned into a win chance. Lookahead 1 is the throwaway bot of the 28 October rough check; 3 is slow in the Lab. Easy and Medium use the v11 app's quantal-response levels.
+Each reveal it plays every pairing of the two players' available cards and solves the grid as a zero-sum game. With lookahead 2 (the default), each pairing is valued by solving the next reveal's grid too, so it sees what comes back off cooldown and what the opponent will be missing. Boards are scored as HP minus 0.5 per grey on your pile (grey past lethal counts as lethal), plus 1.5 per pip of meter, turned into a win chance. Lookahead 1 is the throwaway bot of the 28 October rough check; 3 is slow in the Lab. Easy and Medium use the v11 app's quantal-response levels.
 
 ## Experiments (Settings, all off by default)
 
 | Switch | What it does |
 |---|---|
 | Wheel (`wheel`) | `first`: the first draft, Strike → Heavy → Grab → Block → Focus, where a blocked Focus doubles its pile. `alt`: Focus → Strike → Grab → Heavy → Block (Heavy and Grab swapped), where a blocked Focus fizzles |
-| Mirrors (`mirrors`) | `all`: two cards of a type both take effect (a double KO is possible: whoever ends least below 0 wins). `focus`: only two Focuses take effect |
+| Mirrors (`mirrors`) | `all`: two cards of a type both take effect (a double KO is possible: whoever ends least below 0 wins). `nograb`: Strike, Heavy and Focus mirrors take effect; two Grabs tech. `focus`: only two Focuses take effect |
 | Blocked Heavy grey (`blockedHeavyGrey`) | Grey a blocked Heavy puts on its owner's pile (as written, 0) |
+| Focus meter (`focusMeter`, `meterMax`) | A Focus that takes effect gains this much meter, up to `meterMax` (default 3). No meter cards yet: meter is never spent, and the sparring partner values each pip at its `meter` weight (default 1.5 HP) |
 
 `maxReveals` (default 100) is a safety net, not a rule: a game still going is a draw.
 

@@ -9,6 +9,7 @@ import { toast } from './ui.js'
 
 const WEIGHTS = [
   ['alpha', 'A grey token on your pile costs (HP)', 'A cash turns it into damage, or a Focus clears it.'],
+  ['meter', 'A pip of meter is worth (HP)', 'Only matters when Focus gains meter. There are no meter cards yet, so this is what tells the partner to want it.'],
   ['k', 'How sharply an HP lead turns into a win', 'Steepness of the win-chance curve.'],
 ]
 const int = (v, lo, hi, d) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d }
@@ -37,7 +38,7 @@ export function Settings() {
       <p class="small muted">Rules v14 as written have no dials: the wheel decides every reveal. The reveal limit isn't a rule; it stops a stalled game.</p>
     </fieldset>
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
-      <div class="spread"><h3>Experiments</h3><button class="link" type="button" onClick=${() => setD({ ...d, rules: { ...d.rules, wheel: 'v14', mirrors: 'none', blockedHeavyGrey: 0 } })}>Turn all off</button></div>
+      <div class="spread"><h3>Experiments</h3><button class="link" type="button" onClick=${() => setD({ ...d, rules: { ...d.rules, wheel: 'v14', mirrors: 'none', blockedHeavyGrey: 0, focusMeter: 0 } })}>Turn all off</button></div>
       <p class="small muted">Not in the rules. Off by default; each is an open question from rules-overview 14.md, to test at the table and in the Lab.</p>
       <label class="field"><span>The wheel</span>
         <select id="s-wheel" value=${d.rules.wheel} onChange=${e => R('wheel', e.target.value)}>
@@ -48,12 +49,20 @@ export function Settings() {
         <select id="s-mirrors" value=${d.rules.mirrors} onChange=${e => R('mirrors', e.target.value)}>
           <option value="none">Cancel: neither takes effect (as written)</option>
           <option value="all">Both take effect (two Grabs both land; a double KO is possible)</option>
+          <option value="nograb">Strike, Heavy and Focus mirrors take effect; two Grabs tech</option>
           <option value="focus">Only two Focuses take effect (both clear)</option>
         </select>
         <span class="small muted">Focus is the mirror the rule strains on: it beats Block because nobody's hitting you, so two Focuses arguably both recover.</span></label>
       <label class="field"><span>Grey a blocked Heavy puts on its owner</span>
         <input id="s-bheavy" type="number" min="0" max="5" value=${d.rules.blockedHeavyGrey} onInput=${e => R('blockedHeavyGrey', int(e.target.value, 0, 5, 0))} />
         <span class="small muted">As written, 0: a Heavy prints no Grey, so a Block simply stops it. Above 0 makes every Heavy unsafe on block, the rider idea applied to everyone.</span></label>
+      <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+        <label class="field"><span>Meter a Focus gains when it takes effect (0 = off)</span>
+          <input id="s-fmeter" type="number" min="0" max="3" value=${d.rules.focusMeter ?? 0} onInput=${e => R('focusMeter', int(e.target.value, 0, 3, 0))} /></label>
+        <label class="field"><span>Most meter a player can hold</span>
+          <input id="s-mmax" type="number" min="1" max="9" value=${d.rules.meterMax ?? 3} onInput=${e => R('meterMax', int(e.target.value, 1, 9, 3))} /></label>
+      </div>
+      <p class="small muted">The first step towards a meter layer: Focus builds meter, shown on each side of the table. There are no meter cards yet, so meter is never spent; the sparring partner values each pip at the weight below, which is what makes it want meter.</p>
     </fieldset>
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
       <div class="spread"><h3>Sparring partner</h3><button class="link" type="button" onClick=${() => setD({ ...d, ai: { ...DEFAULT_WEIGHTS } })}>Use the defaults</button></div>

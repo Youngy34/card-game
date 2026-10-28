@@ -18,6 +18,7 @@ export function reportLines(r) {
   lines.push(`Reveals won by: ${CODES.map(t => `${TYPE_LABEL[t]} ${pct(r.wonBy[t] / N)}`).join(' · ')}`)
   lines.push(`Results: Strike hits ${res('hit')}, cashes ${res('cash')} (${num(r.meanCash)} grey each; ${r.emptyCashes} on an empty pile), Focus clears ${r.clears} (${num(r.cleared / Math.max(r.clears, 1))} each), Strikes blocked ${r.turnbacks} (${num(r.turnbackGrey / Math.max(r.turnbacks, 1))} grey back), Heavies blocked ${r.stopped}${r.doubles ? `, doubles ${r.doubles} (+${num(r.doubleGrey / r.doubles)} each)` : ''}${r.fizzles ? `, fizzles ${r.fizzles}` : ''}`)
   lines.push(`Piles: median peak ${r.medianPeak} · highest ${r.maxPeak}`)
+  if (r.metered) lines.push(`Meter: ${num(r.meterGained / n)} gained per game (both players) · ${pct(r.maxedGames / n)} of players fill it (median reveal ${r.medianMaxedAt ?? '–'}) · ${num(r.endMeter / n / 2)} each at the end`)
   lines.push(`Damage by type: ${CODES.filter(t => r.damage[t]).map(t => `${TYPE_LABEL[t]} ${pct(r.damage[t] / dmgTotal)}`).join(' · ')} · cashed grey ${pct(r.cashed / dmgTotal)}, chip ${pct(r.chip / dmgTotal)}`)
   lines.push(`Game ends: ${Object.entries(r.routes).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pct(v / n)}`).join(', ')}`)
   for (const k of [0, 1]) {

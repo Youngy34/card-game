@@ -13,7 +13,11 @@ function effectLine(G0, ev, k, names) {
     case 'cash': return ev.cashed[d]
       ? `${c.name} cashes ${names[d]}'s pile of ${ev.cashed[d]}, then ${c.chip} chip: ${ev.dmg[d]} damage.`
       : `${c.name} catches ${names[d]} with an empty pile: just ${c.chip} chip.`
-    case 'clear': return ev.cleared[k] ? `${c.name} clears ${names[k]}'s pile of ${ev.cleared[k]}.` : `${c.name} has nothing to clear: ${names[k]}'s pile was empty.`
+    case 'clear': {
+      const cleared = ev.cleared[k] ? `${c.name} clears ${names[k]}'s pile of ${ev.cleared[k]}` : `${c.name} has nothing to clear`
+      if (!G0.R.focusMeter) return ev.cleared[k] ? `${cleared}.` : `${cleared}: ${names[k]}'s pile was empty.`
+      return ev.meter?.[k] ? `${cleared}${ev.cleared[k] ? ' and' : ', but'} gains ${ev.meter[k]} meter.` : `${cleared}; ${names[k]}'s meter is already full.`
+    }
     case 'turnback': return `${names[d]}'s ${other.name} is blocked: its ${other.grey} grey goes back on ${names[d]}'s own pile.`
     case 'stopped': return ev.grey[d] ? `${names[d]}'s ${other.name} is blocked and leaves them open: ${ev.grey[d]} grey on their own pile.` : `${names[d]}'s ${other.name} is blocked and simply stopped.`
     case 'double': return `${names[d]}'s ${other.name} is blocked: their pile doubles (+${ev.grey[d]}).`
@@ -42,8 +46,8 @@ export function describe(G0, ev, N, names) {
   const ca = cardOf(G0, 0, ev.picks[0]), cb = cardOf(G0, 1, ev.picks[1])
   if (ev.kind === 'mirror') {
     if (ev.result === 'cancel') {
-      title = `${TYPE_LABEL[ta]} mirror · cancel`
-      sub = `${ca.name} and ${cb.name} cancel out: nothing happens, and both go on cooldown.`
+      title = `${TYPE_LABEL[ta]} mirror · ${ta === 'G' && G0.R.mirrors === 'nograb' ? 'tech' : 'cancel'}`
+      sub = ta === 'G' && G0.R.mirrors === 'nograb' ? `${ca.name} and ${cb.name} tech: neither throw lands, and both go on cooldown.` : `${ca.name} and ${cb.name} cancel out: nothing happens, and both go on cooldown.`
     } else {
       title = `${TYPE_LABEL[ta]} mirror · both take effect`
       sub = `${ca.name} and ${cb.name} both land.`

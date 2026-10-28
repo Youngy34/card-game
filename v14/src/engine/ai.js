@@ -9,7 +9,7 @@
 // throwaway bot of the 28 October rough check.
 //
 // A board is valued by a score per player, turned into a win chance:
-//   HP − alpha × grey on your pile (grey past lethal counts as lethal)
+//   HP − alpha × grey on your pile (grey past lethal counts as lethal) + meter × pips
 // Payoffs are win chances in [0, 1], so the difficulty levels and the solver
 // carry over from the v11 app unchanged.
 
@@ -18,13 +18,14 @@ import { maximin } from './lp.js'
 
 export const DEFAULT_WEIGHTS = {
   alpha: 0.5,   // a grey token on your pile costs 0.5 HP (a cash turns it into damage; a Focus clears it)
+  meter: 1.5,   // each pip of meter is worth 1.5 HP (only matters when Focus gains meter)
   k: 0.2,       // steepness of the score-difference -> win-chance curve
   depth: 2,     // reveals looked ahead: 1, 2 or 3 (3 is slow in the Lab)
 }
 
 export function score(G, side, W) {
   const X = side ? G.B : G.A
-  return X.hp - W.alpha * Math.min(X.pile, Math.max(X.hp, 0))
+  return X.hp - W.alpha * Math.min(X.pile, Math.max(X.hp, 0)) + (W.meter || 0) * (X.meter || 0)
 }
 
 // Estimated chance that A wins from a board (or the result, if over)
@@ -41,7 +42,7 @@ export function newContext(W = DEFAULT_WEIGHTS) {
 
 const key = (G, d) => {
   const a = G.A, b = G.B
-  return `${d}|${a.hp},${a.pile},${a.cd1},${a.cd2}|${b.hp},${b.pile},${b.cd1},${b.cd2}`
+  return `${d}|${a.hp},${a.pile},${a.cd1},${a.cd2},${a.meter}|${b.hp},${b.pile},${b.cd1},${b.cd2},${b.meter}`
 }
 
 export const depthOf = W => Math.min(3, Math.max(1, Math.round(W.depth || 1)))
