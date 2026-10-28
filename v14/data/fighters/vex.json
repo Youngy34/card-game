@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 4,
+  "rules": 14,
+  "id": "vex",
+  "name": "Vex",
+  "epithet": "Twin Fang",
+  "concept": "Fast duellist. Her damage is chip, which can't be cleared, and a Block hands back only 1 grey. Small cashes.",
+  "hp": 21,
+  "cards": [
+    { "name": "Flick Cut", "type": "strike", "grey": 1, "chip": 2, "cooldown": 1 },
+    { "name": "Crescent", "type": "heavy", "chip": 1, "cooldown": 1 },
+    { "name": "Hilt Hook", "type": "grab", "chip": 2, "cooldown": 1 },
+    { "name": "Poise", "type": "focus", "cooldown": 1 },
+    { "name": "Cross Guard", "type": "block", "cooldown": 1 }
+  ],
+  "notes": "Draft from rules-overview 14.md (28 Oct 2026, swapped wheel). Base game: one card of each type. All numbers are placeholders."
+}

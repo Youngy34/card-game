@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 4,
+  "rules": {"wheel": "v14", "mirrors": "none", "blockedHeavyGrey": 0, "maxReveals": 100},
+  "ai": {"alpha": 0.5, "k": 0.2, "depth": 2}
+}

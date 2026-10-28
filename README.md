@@ -1,6 +1,6 @@
 # Yomi Playtest
 
-**Rules v13** has its own app in [`v13/`](v13/README.md), published as a separate page. This one plays rules v11 and v12.
+**Rules v13** and **rules v14** have their own apps in [`v13/`](v13/README.md) and [`v14/`](v14/README.md), each published as a separate page. This one plays rules v11 and v12.
 
 The digital playtest table for *Yomi*, the 1v1 fighting-game card game. The signed-off fighters play rules v11 (move lists, cooldown, single-use Supers). Drafts play **rules v12** (kinds of move, speed, Guard and Counter turn-backs, Setups), from `rules-overview 12.md` in the Claude project; a fighter's file says which rules it plays, and a matchup needs both fighters on the same rules.
 
