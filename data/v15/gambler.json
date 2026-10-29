@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2, "id": "gambler-15", "name": "The Gambler", "epithet": "v15 port", "rules": 15,
+  "concept": "v11 Gambler ported to rules v15: kinds and speeds added, Ante becomes a Projectile, Recovers lose their chip. No retuning.",
+  "hp": 21, "passive": null, "ai": { "ownGreyValue": 0.3 },
+  "cards": [
+    { "name": "Let It Ride", "type": "pressure", "kind": "strike", "speed": 14, "build": 5, "chip": 0, "cooldown": 1, "buildIfOppHas": { "tokens": 4, "build": 2 } },
+    { "name": "Press", "type": "pressure", "kind": "strike", "speed": 16, "build": 4, "chip": 1, "cooldown": 1 },
+    { "name": "Raise", "type": "pressure", "kind": "strike", "speed": 17, "build": 3, "chip": 0, "cooldown": 1, "chipPerOwnTokens": 3 },
+    { "name": "Ante", "type": "pressure", "kind": "projectile", "speed": 12, "build": 1, "chip": 3, "cooldown": 1, "selfAdd": 2 },
+    { "name": "Bloodprice", "type": "convert", "kind": "grab", "speed": 7, "chip": 2, "cooldown": 1, "chipPerOwnTokens": 2 },
+    { "name": "All In", "type": "convert", "kind": "heavy", "speed": 2, "chip": 4, "cooldown": 1, "chipPerOwnTokens": 1, "lockout": true },
+    { "name": "Second Wind", "type": "recover", "kind": "dodge", "chip": 0, "cooldown": 1 },
+    { "name": "Fold", "type": "recover", "kind": "block", "chip": 0, "cooldown": 1 }
+  ],
+  "super": { "name": "Brink", "type": "recover", "kind": "dodge", "chip": 2, "chipPerCleared": 1 }
+}

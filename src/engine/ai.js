@@ -151,3 +151,15 @@ export function sample(p, rng) {
   for (let i = 0; i < p.length; i++) { c += p[i]; if (r < c) return i }
   return p.length - 1
 }
+
+// Rules v15: a Recover that beats a Pressure may follow up with an attack. The
+// engine picks it with this: the follow-up (or none) that leaves the board the
+// Recover's owner rates best, with the same one-round-ahead value function.
+export function withFollowScore(rules, W = DEFAULT_WEIGHTS) {
+  return {
+    ...rules,
+    followScore: (s, side) => side === 0
+      ? value(s.A, s.B, s.result, s.A, W)
+      : 1 - value(s.A, s.B, s.result, s.B, W),
+  }
+}

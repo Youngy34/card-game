@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2, "id": "bastion-15", "name": "Bastion", "epithet": "v15 port", "rules": 15,
+  "concept": "v11 Bastion ported to rules v15: kinds and speeds added, Sonic Cutter becomes a Projectile, Recovers lose their chip (and Riot Guard its lockout, which paid for the chip). No retuning.",
+  "hp": 21, "passive": null,
+  "cards": [
+    { "name": "Knee Bash", "type": "pressure", "kind": "strike", "speed": 15, "build": 4, "chip": 0, "cooldown": 1, "lock": true },
+    { "name": "Shield Bash", "type": "pressure", "kind": "strike", "speed": 17, "build": 3, "chip": 1, "cooldown": 1 },
+    { "name": "Rim Shot", "type": "pressure", "kind": "strike", "speed": 16, "build": 3, "chip": 0, "cooldown": 1, "stagger": "convert", "lockout": true },
+    { "name": "Sonic Cutter", "type": "pressure", "kind": "projectile", "speed": 13, "build": 1, "chip": 3, "cooldown": 1 },
+    { "name": "Shoulder Ram", "type": "convert", "kind": "heavy", "speed": 5, "chip": 3, "cooldown": 1 },
+    { "name": "Lockdown", "type": "convert", "kind": "grab", "speed": 8, "chip": 2, "cooldown": 1, "lock": true },
+    { "name": "Vigilance", "type": "recover", "kind": "block", "chip": 0, "cooldown": 1 },
+    { "name": "Riot Guard", "type": "recover", "kind": "block", "chip": 0, "cooldown": 1 }
+  ],
+  "super": { "name": "Final Bastion", "type": "recover", "kind": "block", "chip": 3, "chipPerHpLost": 3, "chipOnWin": 2, "lock": true }
+}

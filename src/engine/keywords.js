@@ -26,9 +26,11 @@ export const KINDS = {
   grab:       { t: 'C', label: 'Grab', line: 'Two Grabs tech.' },
   guard:      { t: 'R', label: 'Guard', line: "If it beats a Pressure, that Pressure's Build goes on its owner's own pile." },
   counter:    { t: 'R', label: 'Counter', line: "If it beats a Pressure, that Pressure's chip hits its owner." },
+  block:      { t: 'R', label: 'Block' },                  // rules v15: a label only
+  dodge:      { t: 'R', label: 'Dodge' },                  // rules v15: a label only
   setup:      { t: 'T', label: 'Setup', line: 'Interrupted if the opponent attacks.' },
 }
-export const KINDS_OF = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['guard', 'counter'], T: ['setup'] }
+export const KINDS_OF = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['guard', 'counter', 'block', 'dodge'], T: ['setup'] }
 // Speed bands: higher is faster, and every Pressure is faster than every Convert
 export const SPEED_BAND = { P: [11, 20], C: [1, 10] }
 export const DEFAULT_SPEED = { strike: 17, projectile: 13, heavy: 3, grab: 7 }

@@ -1,0 +1,93 @@
+{
+ "schemaVersion": 2,
+ "id": "atlas-15",
+ "name": "Atlas",
+ "epithet": "v15 port, even speeds",
+ "rules": 15,
+ "concept": "v11 Atlas ported to rules v15: kinds and speeds added (the slowest attacks, bar a quick Knee Strike), Ground Smash becomes a Projectile, Recovers lose their chip. No retuning.",
+ "hp": 22,
+ "passive": null,
+ "cards": [
+  {
+   "name": "Knee Strike",
+   "type": "pressure",
+   "kind": "strike",
+   "speed": 17,
+   "build": 3,
+   "chip": 1,
+   "cooldown": 1,
+   "chipIfMirror": 2
+  },
+  {
+   "name": "Lariat",
+   "type": "pressure",
+   "kind": "strike",
+   "speed": 14,
+   "build": 4,
+   "chip": 0,
+   "cooldown": 1,
+   "chipOnWin": 2
+  },
+  {
+   "name": "Ground Smash",
+   "type": "pressure",
+   "kind": "projectile",
+   "speed": 12,
+   "build": 1,
+   "chip": 3,
+   "cooldown": 1
+  },
+  {
+   "name": "Overhead",
+   "type": "convert",
+   "kind": "heavy",
+   "speed": 8,
+   "chip": 2,
+   "cooldown": 1,
+   "chipOnWin": 2
+  },
+  {
+   "name": "Hammer Spin",
+   "type": "convert",
+   "kind": "heavy",
+   "speed": 5,
+   "chip": 1,
+   "cooldown": 2,
+   "chipPerCashed": 2,
+   "chipOnWin": 2
+  },
+  {
+   "name": "Earthsplitter",
+   "type": "convert",
+   "kind": "heavy",
+   "speed": 2,
+   "chip": 4,
+   "cooldown": 1,
+   "chipOnWin": 2,
+   "lockout": true
+  },
+  {
+   "name": "Counterweight",
+   "type": "recover",
+   "kind": "block",
+   "chip": 0,
+   "cooldown": 1
+  },
+  {
+   "name": "Payback",
+   "type": "recover",
+   "kind": "block",
+   "chip": 0,
+   "cooldown": 1
+  }
+ ],
+ "super": {
+  "name": "Avalanche",
+  "type": "convert",
+  "kind": "heavy",
+  "speed": 5,
+  "chip": 4,
+  "chipPerHpLost": 3,
+  "chipOnWin": 2
+ }
+}

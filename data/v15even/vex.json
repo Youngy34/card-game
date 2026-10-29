@@ -1,0 +1,97 @@
+{
+ "schemaVersion": 2,
+ "id": "vex-15",
+ "name": "Vex",
+ "epithet": "v15 port, even speeds",
+ "rules": 15,
+ "concept": "v11 Vex ported to rules v15: kinds and speeds added (the fastest Strikes), Flying Fang becomes a Projectile, Recovers lose their chip. No retuning.",
+ "hp": 23,
+ "passive": {
+  "flow": true
+ },
+ "cards": [
+  {
+   "name": "Twin Fang",
+   "type": "pressure",
+   "kind": "strike",
+   "speed": 16,
+   "build": 3,
+   "chip": 1,
+   "cooldown": 1,
+   "flowCard": true
+  },
+  {
+   "name": "Flurry",
+   "type": "pressure",
+   "kind": "strike",
+   "speed": 18,
+   "build": 2,
+   "chip": 0,
+   "cooldown": 1,
+   "flowCard": true,
+   "flowBuild": 3
+  },
+  {
+   "name": "Eviscerate",
+   "type": "pressure",
+   "kind": "strike",
+   "speed": 14,
+   "build": 6,
+   "chip": 1,
+   "cooldown": 1,
+   "flowCard": true,
+   "onLossSelf": 3
+  },
+  {
+   "name": "Flying Fang",
+   "type": "pressure",
+   "kind": "projectile",
+   "speed": 12,
+   "build": 1,
+   "chip": 2,
+   "cooldown": 1,
+   "flowChip": 2
+  },
+  {
+   "name": "Undercut",
+   "type": "convert",
+   "kind": "heavy",
+   "speed": 7,
+   "chip": 2,
+   "cooldown": 1
+  },
+  {
+   "name": "Pommel Strike",
+   "type": "convert",
+   "kind": "heavy",
+   "speed": 3,
+   "chip": 1,
+   "cooldown": 1,
+   "flowChip": 5
+  },
+  {
+   "name": "Parry Riposte",
+   "type": "recover",
+   "kind": "block",
+   "chip": 0,
+   "cooldown": 1
+  },
+  {
+   "name": "Passing Cut",
+   "type": "recover",
+   "kind": "dodge",
+   "chip": 0,
+   "cooldown": 1,
+   "flowCard": true
+  }
+ ],
+ "super": {
+  "name": "Hundred Fang",
+  "type": "pressure",
+  "kind": "strike",
+  "speed": 20,
+  "build": 6,
+  "chip": 3,
+  "chipPerOppTokens": 2
+ }
+}
