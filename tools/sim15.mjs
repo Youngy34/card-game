@@ -27,10 +27,11 @@ const json = args.includes('--json'); if (json) args.splice(args.indexOf('--json
 const mode = args[0]
 const settings = JSON.parse(fs.readFileSync(`${root}/data/settings.json`, 'utf8'))
 const W = { ...DEFAULT_WEIGHTS, ...settings.ai }
-const rules = withFollowScore({ maxRounds, recoverPayoff: payoff, fixedDamage, projectileSafe }, W)
+const counterChip = opt('--counter', 'always')
+const rules = withFollowScore({ maxRounds, recoverPayoff: payoff, fixedDamage, projectileSafe, counterChip }, W)
 
 export function load(name) {
-  const p = name.endsWith('.json') ? name : `${root}/${dir}/${name}.json`
+  const p = name.endsWith(".json") ? name : dir.startsWith("/") ? `${dir}/${name}.json` : `${root}/${dir}/${name}.json`
   const f = JSON.parse(fs.readFileSync(p, 'utf8'))
   const v = validateFighter(f)
   if (v.errors.length) { console.error(name, v.errors); process.exit(1) }
