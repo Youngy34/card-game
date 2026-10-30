@@ -26,11 +26,20 @@ export const KINDS = {
   grab:       { t: 'C', label: 'Grab', line: 'Two Grabs tech.' },
   guard:      { t: 'R', label: 'Guard', line: "If it beats a Pressure, that Pressure's Build goes on its owner's own pile." },
   counter:    { t: 'R', label: 'Counter', line: "If it beats a Pressure, that Pressure's chip hits its owner." },
-  block:      { t: 'R', label: 'Block' },                  // rules v15: a label only
-  dodge:      { t: 'R', label: 'Dodge' },                  // rules v15: a label only
+  block:      { t: 'R', label: 'Block' },                  // rules v15
+  dodge:      { t: 'R', label: 'Dodge' },                  // rules v15
   setup:      { t: 'T', label: 'Setup', line: 'Interrupted if the opponent attacks.' },
 }
-export const KINDS_OF = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['guard', 'counter', 'block', 'dodge'], T: ['setup'] }
+export const KINDS_OF = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['guard', 'counter'], T: ['setup'] }
+// Rules v15: kinds are labels that change no rules (rules-overview 15)
+export const KINDS_OF15 = { P: ['strike', 'projectile'], C: ['heavy', 'grab'], R: ['block', 'dodge'], T: [] }
+export const kindsOf = (t, rules) => (rules === 15 ? KINDS_OF15 : KINDS_OF)[t] || []
+// The rules line a card face prints for its kind
+export const RECOVER_LINE15 = 'If it beats a Pressure, you may follow up with an attack from your hand.'
+export function kindLine(card, rules) {
+  if (rules === 15) return TYPE_CODE[card.type] === 'R' ? RECOVER_LINE15 : null
+  return KINDS[card.kind]?.line || null
+}
 // Speed bands: higher is faster, and every Pressure is faster than every Convert
 export const SPEED_BAND = { P: [11, 20], C: [1, 10] }
 export const DEFAULT_SPEED = { strike: 17, projectile: 13, heavy: 3, grab: 7 }

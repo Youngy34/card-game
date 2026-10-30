@@ -4,25 +4,32 @@
 import { html, render } from './app/lib.js'
 import { initData, connect } from './app/store.js'
 import { App } from './app/app.js'
+import { EDITIONS } from './editions.js'
 
-const ORDER = ['gambler', 'bastion', 'vex', 'atlas']
-const REFERENCE = ['dummy']                 // benchmark fighters, from data/reference/
-const DRAFTS = ['clarence']                 // rules v12 drafts, from data/drafts/
-
+// Running locally: the edition comes from the address (index.html?edition=v15)
 async function loadData() {
   if (globalThis.__YOMI_DATA__) return globalThis.__YOMI_DATA__
+  const key = new URLSearchParams(globalThis.location?.search || '').get('edition') || 'v11'
+  const E = EDITIONS[key] || EDITIONS.v11
   const get = p => fetch(p).then(r => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.json() })
-  const fighters = {}
-  for (const id of ORDER) fighters[id] = await get(`data/fighters/${id}.json`)
-  for (const id of REFERENCE) fighters[id] = await get(`data/reference/${id}.json`)
-  for (const id of DRAFTS) fighters[id] = await get(`data/drafts/${id}.json`)
-  return { fighters, order: [...ORDER, ...REFERENCE, ...DRAFTS], reference: REFERENCE, drafts: DRAFTS, settings: await get('data/settings.json') }
+  const fighters = {}, ids = {}
+  for (const group of ['fighters', 'reference', 'drafts']) {
+    ids[group] = []
+    for (const [dir, file] of E[group]) { const f = await get(`data/${dir}/${file}.json`); fighters[f.id] = f; ids[group].push(f.id) }
+  }
+  return {
+    fighters, order: [...ids.reference.filter(() => key !== 'v11'), ...ids.fighters, ...ids.reference.filter(() => key === 'v11'), ...ids.drafts],
+    reference: ids.reference, drafts: ids.drafts, settings: await get(`data/${E.settings}`),
+    edition: { key, title: E.title, subtitle: E.subtitle, labels: E.labels, defaultSides: E.defaultSides },
+  }
 }
 
 function start(boot) {
   loadData().then(data => {
     initData(data)
-    render(html`<${App} boot=${boot || {}} />`, document.getElementById('app'))
+    const el = document.getElementById('app')
+    el.textContent = ''                      // drop the loading line, which Preact would otherwise leave behind
+    render(html`<${App} boot=${boot || {}} />`, el)
     connect()
   }, e => {
     document.getElementById('app').textContent = `Couldn't load the fighters: ${e.message}`

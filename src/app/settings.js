@@ -1,7 +1,7 @@
 // Settings: rule variants and the sparring partner's weights.
 
 import { html, useState, useEffect } from './lib.js'
-import { settings, saveSettings, resetSettings, getState } from './store.js'
+import { settings, saveSettings, resetSettings, getState, roster } from './store.js'
 import { DEFAULT_WEIGHTS } from '../engine/ai.js'
 import { toast } from './ui.js'
 
@@ -25,6 +25,9 @@ export function Settings() {
   const changed = JSON.stringify(d) !== JSON.stringify(cur)
   const isDefault = !st.settings
   const save = () => saveSettings(d).then(() => toast('Saved'), e => toast(e.message))
+  const rs = roster()
+  const hasV11 = rs.some(r => r.rules === 11), hasV15 = rs.some(r => r.rules === 15)
+  const rule = p => setD({ ...d, rules: { ...d.rules, ...p } })
 
   return html`<div class="stack" style=${{ gap: '24px', maxWidth: '760px' }}>
     <div class="stack"><h1>Settings</h1>
@@ -32,13 +35,26 @@ export function Settings() {
     ${readOnly ? html`<div class="banner">Only editors of this page can change settings.</div>` : null}
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
       <h3>Rules</h3>
-      <label class="field"><span>When a Recover's chip lands (rules v11 fighters only; under v12, Recovers never chip)</span>
+      ${hasV15 ? html`
+      <label class="field"><span>When a Recover beats a Pressure (rules v15)</span>
+        <select id="s-payoff" value=${d.rules.recoverPayoff} onChange=${e => rule({ recoverPayoff: e.target.value })}>
+          <option value="any">Its owner may follow up with any attack from hand (as written)</option>
+          <option value="pressure">Its owner may follow up with a Pressure only (simmed, rejected)</option>
+          <option value="fixed">The attacker takes fixed damage (simmed, partly works)</option>
+          <option value="none">Nothing beyond clearing (simmed, rejected: mindless attacking wins)</option>
+        </select>
+      </label>
+      ${d.rules.recoverPayoff === 'fixed' ? html`<label class="field" style=${{ maxWidth: '220px' }}><span>Fixed damage</span>
+        <input id="s-fixed" type="number" min="1" max="10" value=${d.rules.fixedDamage} onInput=${e => rule({ fixedDamage: Math.max(1, Math.trunc(Number(e.target.value)) || 2) })} />
+      </label>` : null}
+      <label class="check"><input id="s-projsafe" type="checkbox" checked=${!!d.rules.projectileSafe} onChange=${e => rule({ projectileSafe: e.target.checked })} /> Experiment: a Projectile that's Recovered gives no payoff (thrown from range, it leaves nothing to punish)</label>` : null}
+      ${hasV11 ? html`<label class="field"><span>When a Recover's chip lands (rules v11 fighters only; under v12, Recovers never chip)</span>
         <select id="s-counter" value=${d.rules.counterChip} onChange=${e => setD({ ...d, rules: { ...d.rules, counterChip: e.target.value } })}>
           <option value="always">Whenever it resolves (current rule)</option>
           <option value="attack">Only against an attack: a Pressure it beats, or a typeless card that chips (tested, not adopted)</option>
           <option value="strict">Only when it beats a Pressure (tested, not adopted)</option>
         </select>
-      </label>
+      </label>` : null}
       <label class="field" style=${{ maxWidth: '220px' }}><span>Round limit (counts as a draw)</span>
         <input id="s-max" type="number" min="10" max="200" value=${d.rules.maxRounds} onInput=${e => setD({ ...d, rules: { ...d.rules, maxRounds: Math.max(10, Math.trunc(Number(e.target.value)) || 60) } })} />
       </label>

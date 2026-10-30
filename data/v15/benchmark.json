@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "id": "benchmark",
+  "name": "Benchmark",
+  "epithet": "Reference",
+  "rules": 15,
+  "concept": "The plain rules v15 fighter: two of each type, no card text, no Super. A fast Strike and a slow, bigger one; a quick Grab and a slow, harder Heavy; a Block and a Dodge.",
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    { "name": "Jab", "type": "pressure", "kind": "strike", "speed": 17, "build": 3, "chip": 1, "cooldown": 1 },
+    { "name": "Slash", "type": "pressure", "kind": "strike", "speed": 14, "build": 5, "chip": 1, "cooldown": 1 },
+    { "name": "Throw", "type": "convert", "kind": "grab", "speed": 7, "chip": 2, "cooldown": 1 },
+    { "name": "Big Swing", "type": "convert", "kind": "heavy", "speed": 3, "chip": 3, "cooldown": 1 },
+    { "name": "Block", "type": "recover", "kind": "block", "cooldown": 1 },
+    { "name": "Dodge", "type": "recover", "kind": "dodge", "cooldown": 1 }
+  ],
+  "super": null,
+  "notes": "Added 30 Oct 2026. HP 22 sits in the middle of the ported fighters (21-23). In its own mirror (Hard vs Hard, any-attack follow-up, 1,000 games): median 15 rounds, quiet rounds 18%, Throw 29% and Block 26% of plays, Big Swing 11%, Slash 11%, Dodge 9%. A Pressure-only bot beats Hard 2% of the time; a random bot 41%."
+}

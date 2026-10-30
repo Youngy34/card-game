@@ -143,7 +143,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--ink-2); outline:
   font-family: var(--font-display); font-weight: 800; font-size: 1.45em; line-height: 0.95; text-transform: uppercase;
   letter-spacing: 0.02em; padding: 0.35em 1.4em 0.2em 0.5em; text-wrap: balance;
 }
-.card-stats { display: flex; gap: 0.35em; padding: 0.1em 0.5em 0.35em; }
+.card-stats { display: flex; flex-wrap: wrap; gap: 0.3em 0.35em; padding: 0.1em 0.5em 0.35em; }
 .stat { display: flex; align-items: baseline; gap: 0.25em; padding: 0.05em 0.4em 0.1em; background: var(--ground); border-left: 3px solid var(--tc); }
 .stat b { font-family: var(--font-display); font-weight: 900; font-size: 1.55em; line-height: 1; font-variant-numeric: tabular-nums; }
 .stat i { font-style: normal; font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); }
@@ -322,3 +322,12 @@ button.card:hover:not(:disabled) { transform: translateY(-3px); }
 .details summary::-webkit-details-marker { display: none; }
 .game-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 pre.json { background: var(--ground); padding: 12px; overflow-x: auto; font-family: var(--font-mono); font-size: 12px; max-height: 360px; margin: 0; }
+
+/* ---- rules v15: board notes and the follow-up ---- */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2); }
+.notes li { padding: 5px 10px; background: var(--ground); border-left: 3px solid var(--line-2); }
+.notes li.bad { border-left-color: var(--bad); color: var(--ink); }
+.notes li.good { border-left-color: var(--good); color: var(--ink); }
+.followup { display: grid; justify-items: center; gap: 6px; }
+.followup .card { --w: 140px; }
+.followup-ask { margin: 0; font-weight: 600; text-align: center; }

@@ -10,6 +10,23 @@ The digital playtest table for *Yomi*, the 1v1 fighting-game card game. The sign
 
 The live version is published on claude.ai. Card edits, variants, settings and the log are saved in that page's own database, so they follow you across devices and Claude can read them back.
 
+## Editions
+
+Each published page is an **edition**: its own fighters, settings and log (`src/editions.js`).
+
+| Edition | Page | Fighters | Build |
+|---|---|---|---|
+| `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
+| `v15` | Yomi Playtest v15 | The v15 Benchmark and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
+
+Locally, open `index.html?edition=v15` for the v15 edition.
+
+### Rules v15 in the engine
+
+For a fighter with `"rules": 15` (see `rules-overview 15.md`): the v11 triangle; two attacks of the same type are settled by speed, and a tie cancels; two Recovers both clear and deal no damage; Recovers never chip (a Recover Super may). When a Recover beats a Pressure, the payoff is set by `recoverPayoff` in the rules: `any` (its owner may follow up with any attack from hand, unopposed: the rule as written), `pressure`, `fixed` (the attacker takes `fixedDamage`), or `none`. `projectileSafe` is an experiment: a Recovered Projectile gives no payoff. Kinds are labels (Strike, Projectile, Heavy, Grab, Block, Dodge) and change no rules. Setups (typeless cards) aren't run yet, so v15 move lists have none.
+
+At the table, a person whose Recover beats a Pressure chooses the follow-up (or none) before the round resolves; the sparring partner chooses its own with its value function. Board notes, on by default, sum up lethal range, missing types, speed duels and what a Recover would cost. `tools/sim15.mjs` runs v15 round-robins and the mindless-bot exploit tests; `tools/smoke/browser15.cjs` clicks through the built v15 page in Chromium.
+
 ## Running it locally
 
 There's nothing to install or build. Serve the folder with any static server and open it:

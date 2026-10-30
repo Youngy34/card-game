@@ -67,12 +67,12 @@ export function Lab({ state, setState }) {
         <label class="field"><span>Seed</span><input id="lab-seed" type="number" value=${seed} onInput=${e => upd({ seed: Math.trunc(Number(e.target.value)) || 0 })} /></label>
       </div>
       <div class="row"><span class="label">Games per matchup</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games per matchup" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (Recover chip for v11 fighters: ${s.rules.counterChip}). Use Hard for balance checks; pitting a level against Hard measures how much skill matters. The full round-robin always uses Hard, and only pairs fighters on the same rules.</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and weights come from Settings (${list.every(r => r.rules === 15) ? `Recover payoff: ${s.rules.recoverPayoff}${s.rules.recoverPayoff === 'fixed' ? ` ${s.rules.fixedDamage}` : ''}${s.rules.projectileSafe ? ', Projectiles safe' : ''}` : `Recover chip for v11 fighters: ${s.rules.counterChip}`}). Use Hard for balance checks; pitting a level against Hard measures how much skill matters. The full round-robin always uses Hard, and only pairs fighters on the same rules.</p>
       ${mixed ? html`<p class="small msg-w">${ra0.fighter.name} plays rules v${ra0.rules} and ${rb0.fighter.name} plays rules v${rb0.rules}. Pick two fighters on the same rules.</p>` : null}
       <div class="actions">
         <button class="btn" disabled=${!!running || mixed} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${all}>Run every matchup</button>
-        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants, drafts and the Dummy</label>
+        <label class="check small"><input type="checkbox" checked=${!!state.withVariants} onChange=${e => upd({ withVariants: e.target.checked })} /> Include variants, drafts and reference fighters</label>
       </div>
       ${running ? html`<div class="stack" style=${{ gap: '6px' }}>
         <div class="spread small"><span>${running.label}</span><span class="num">${running.done} / ${running.n} games</span></div>
@@ -89,15 +89,20 @@ function Report({ r, list }) {
   const [fa, fb] = r.fighters
   const n = r.games
   return html`<section class="stack" style=${{ gap: '16px' }}>
-    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · ${fa.v12 ? 'rules v12' : `Recover chip ${r.rules.counterChip}`}${r.levels && r.levels.join() !== 'hard,hard' ? ` · ${LEVELS[r.levels[0]].label} vs ${LEVELS[r.levels[1]].label}` : ''}</span></div>
+    <div class="spread"><h2>${fa.name} vs ${fb.name}</h2><span class="small muted">${n} games · seed ${r.seed} · ${fa.v15 ? `rules v15, Recover payoff ${r.rules.recoverPayoff}${r.rules.projectileSafe ? ', Projectiles safe' : ''}` : fa.v12 ? 'rules v12' : `Recover chip ${r.rules.counterChip}`}${r.levels && r.levels.join() !== 'hard,hard' ? ` · ${LEVELS[r.levels[0]].label} vs ${LEVELS[r.levels[1]].label}` : ''}</span></div>
     <div class="row">${r.statuses.map((st, k) => html`<span class="small">${r.fighters[k].name} <${StatusChip} status=${st} /></span>`)}</div>
     <${WinBar} a=${fa.name} b=${fb.name} win=${r.win} margin=${r.margin} />
     <div class="stats">
       <div class="stat-tile"><span class="label">${fa.name} wins</span><b>${pct(r.win, 1)}</b><span class="small muted">±${Math.round(100 * r.margin)} points</span></div>
-      <div class="stat-tile"><span class="label">Double KOs</span><b>${pct(r.doubleKO / n, 1)}</b><span class="small muted">${pct(r.draws / n, 1)} drawn · target ≤ 25%</span></div>
+      ${fa.v15 ? null : html`<div class="stat-tile"><span class="label">Double KOs</span><b>${pct(r.doubleKO / n, 1)}</b><span class="small muted">${pct(r.draws / n, 1)} drawn · target ≤ 25%</span></div>`}
       <div class="stat-tile"><span class="label">Median length</span><b>${r.median}</b><span class="small muted">rounds · 10–90%: ${Math.round(r.p10)}–${Math.round(r.p90)}</span></div>
       <div class="stat-tile"><span class="label">Quiet rounds</span><b>${pct(r.quiet / r.totalRounds, 1)}</b><span class="small muted">no HP or pile change</span></div>
       <div class="stat-tile"><span class="label">Recover mirrors</span><b>${pct(r.recoverMirrors / r.totalRounds, 1)}</b><span class="small muted">of rounds</span></div>
+      ${r.v15 ? html`
+        <div class="stat-tile"><span class="label">Same-type attacks</span><b>${pct(r.v15.sameType / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${pct(r.v15.ties / Math.max(r.v15.sameType, 1))} tied and cancelled</span></div>
+        <div class="stat-tile"><span class="label">Recover beats Pressure</span><b>${pct(r.v15.recoverWins / r.totalRounds, 1)}</b><span class="small muted">of rounds${r.v15.followP + r.v15.followC ? ` · follow-up ${pct(r.v15.followP / r.v15.recoverWins)} Pressure, ${pct(r.v15.followC / r.v15.recoverWins)} Convert, ${(r.v15.followHp / Math.max(r.v15.followP + r.v15.followC, 1)).toFixed(1)} HP each` : r.v15.fixed ? ` · ${(r.v15.fixedHp / r.v15.fixed).toFixed(1)} damage each` : ''}</span></div>
+        <div class="stat-tile"><span class="label">Quiet rounds by cause</span><b>${pct((r.v15.quietBy.recovers + r.v15.quietBy.tie) / r.totalRounds, 1)}</b><span class="small muted">two Recovers ${pct(r.v15.quietBy.recovers / r.totalRounds, 1)}, speed ties ${pct(r.v15.quietBy.tie / r.totalRounds, 1)}</span></div>
+        <div class="stat-tile"><span class="label">How games end</span><span class="small">${Object.entries(r.routes).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${pct(v / n)}`).join(', ')}</span></div>` : null}
       ${r.v12 ? html`
         <div class="stat-tile"><span class="label">Same-type attacks</span><b>${pct(r.v12.sameType / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${pct(r.v12.bySpeed / Math.max(r.v12.sameType, 1))} by speed, ${pct(r.v12.trades / Math.max(r.v12.sameType, 1))} trades, ${pct(r.v12.cancels / Math.max(r.v12.sameType, 1))} cancels, ${pct(r.v12.techs / Math.max(r.v12.sameType, 1))} techs</span></div>
         <div class="stat-tile"><span class="label">Guard turn-backs</span><b>${pct(r.v12.guarded / r.totalRounds, 1)}</b><span class="small muted">of rounds · ${(r.v12.guardBuild / Math.max(r.v12.guarded, 1)).toFixed(1)} Build each</span></div>

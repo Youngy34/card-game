@@ -4,6 +4,7 @@ import { html, cx, useState, useEffect } from './lib.js'
 import { Mini } from './card.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
 import { typesOpen, lethalTo, flowing } from './match.js'
+import { getState } from './store.js'
 
 export function Tokens({ n, max = 60 }) {
   const fives = Math.floor(Math.min(n, max) / 5), ones = Math.min(n, max) - fives * 5
@@ -47,7 +48,7 @@ export function Hud({ X, Y, who, staggered }) {
       </div>
     </div>
     <div class="cdtrack" aria-label="Cooldown track">
-      ${[1, 2].map(s => {
+      ${[2, 1].map(s => {
         const ids = s === 1 ? X.cd1 : X.cd2
         return html`<div class="cdslot"><b>${s}</b><span class="minis">
           ${ids.length ? ids.map(i => html`<${Mini} c=${X.f.cards[i]} hasFlow=${X.f.flow} />`) : html`<span class="empty">${s === 1 ? 'Back next round' : 'Back in 2'} · empty</span>`}
@@ -89,6 +90,7 @@ export function Seg({ value, options, onChange, label }) {
 }
 
 export function StatusChip({ status }) {
-  const label = { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference', draft: 'Draft' }[status] || status
+  const custom = getState().edition?.labels?.[status]
+  const label = custom || { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference', draft: 'Draft' }[status] || status
   return html`<span class=${cx('chip', status)}>${label}</span>`
 }

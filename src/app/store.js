@@ -30,7 +30,8 @@ function set(patch) { S = { ...S, ...patch }; listeners.forEach(f => f()) }
 
 // ---- boot ----------------------------------------------------------------
 export function initData(data) {
-  set({ bundled: data.fighters, order: data.order, reference: data.reference || [], drafts: data.drafts || [], defaults: data.settings, settings: null })
+  set({ bundled: data.fighters, order: data.order, reference: data.reference || [], drafts: data.drafts || [], defaults: data.settings, settings: null,
+        edition: data.edition || { title: 'Yomi Playtest', subtitle: 'rules v11 and v12', labels: {} } })
 }
 
 const LS = {
@@ -80,7 +81,7 @@ export function settings() {
   const d = S.defaults || { rules: {}, ai: {} }
   const s = S.settings || {}
   return {
-    rules: { counterChip: 'always', maxRounds: 60, ...d.rules, ...(s.rules || {}) },
+    rules: { counterChip: 'always', maxRounds: 60, recoverPayoff: 'any', fixedDamage: 2, projectileSafe: false, ...d.rules, ...(s.rules || {}) },
     ai: { ...DEFAULT_WEIGHTS, ...d.ai, ...(s.ai || {}) },
   }
 }
@@ -101,7 +102,7 @@ export function roster() {
     const baseHash = base ? fighterHash(base) : null
     const reference = S.reference.includes(id), draft = S.drafts.includes(id)
     const status = !base ? 'variant' : hash !== baseHash ? 'edited' : reference ? 'reference' : draft ? 'draft' : 'signed-off'
-    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: fighter.rules === 12 ? 12 : 11 }
+    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: fighter.rules === 12 || fighter.rules === 15 ? fighter.rules : 11 }
   }
   for (const id of S.order) out.push(entry(id, S.docs[id]?.fighter, S.bundled[id]))
   const variants = Object.keys(S.docs).filter(id => !S.bundled[id]).sort()

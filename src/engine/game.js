@@ -1,7 +1,7 @@
 // Whole games, logs and balance reports.
 
 import { newPlayer, step, card, options, outcome, DEFAULT_RULES } from './engine.js'
-import { mixes, levelMixes, sample, availableTypes, DEFAULT_WEIGHTS } from './ai.js'
+import { mixes, levelMixes, sample, availableTypes, withFollowScore, DEFAULT_WEIGHTS } from './ai.js'
 
 export function mulberry32(seed) {
   let a = seed >>> 0
@@ -28,6 +28,11 @@ export function roundRecord(n, A, B, a, b, s) {
     quiet: s.quiet,
     // rules v12: each card's kind and speed, and what Guards and Counters turned back
     ...(s.turn ? { kinds: [ca.kind, cb.kind], speeds: [ca.speed, cb.speed], turn: s.turn } : {}),
+    // rules v15: kinds and speeds, and what a Recover that beat a Pressure did next
+    ...(s.recoverWin !== undefined ? {
+      v15: true, kinds: [ca.kind, cb.kind], speeds: [ca.speed, cb.speed], recoverWin: s.recoverWin, fixed: s.fixed || 0,
+      followed: s.followed ? { side: s.followed.side, name: s.followed.name, t: s.followed.t, hp: s.followed.hp, cashed: s.followed.t === 'C' ? s.followed.pileBefore : 0 } : null,
+    } : {}),
   }
 }
 
@@ -37,6 +42,10 @@ export function winRoute(last, result) {
   if (last.after[0].hp <= 0 && last.after[1].hp <= 0) return 'double KO'
   const loser = result === 1 ? 1 : 0
   const winner = 1 - loser
+  if (last.v15) {
+    if (last.followed && last.followed.side === winner) return last.followed.t === 'C' ? 'follow-up Convert' : 'follow-up Pressure'
+    if (last.fixed && last.recoverWin === winner) return 'fixed punish'
+  }
   const cashed = last.resolved[winner] && last.types[winner] === 'C' && last.before[loser].pile > 0
   if (cashed) return 'Convert cash'
   if (last.turn && last.turn[loser].chip > 0) return 'turn-back (Counter)'
@@ -44,6 +53,7 @@ export function winRoute(last, result) {
 }
 
 export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGHTS, levels = ['hard', 'hard']) {
+  if ((fa.v15 || fb.v15) && !rules.followScore) rules = withFollowScore(rules, W)
   let A = newPlayer(fa), B = newPlayer(fb)
   const rounds = []
   const hard = levels[0] === 'hard' && levels[1] === 'hard'
@@ -94,12 +104,32 @@ function tally12(out, rd) {
   }
 }
 
+// Rules v15: same-type attacks, ties, Recover wins and their follow-ups.
+function tally15(out, rd) {
+  const V = (out.v15 ??= {
+    sameType: 0, bySpeed: 0, ties: 0, recoverWins: 0, followP: 0, followC: 0, noFollow: 0, followHp: 0, fixed: 0, fixedHp: 0,
+    quietBy: { recovers: 0, tie: 0, other: 0 },
+  })
+  if (rd.types[0] === rd.types[1] && (rd.types[0] === 'P' || rd.types[0] === 'C')) {
+    V.sameType++
+    if (rd.outcome === 'cancel') V.ties++; else V.bySpeed++
+  }
+  if (rd.recoverWin >= 0) {
+    V.recoverWins++
+    if (rd.followed) { if (rd.followed.t === 'C') V.followC++; else V.followP++; V.followHp += rd.followed.hp }
+    else if (rd.fixed) { V.fixed++; V.fixedHp += rd.fixed }
+    else V.noFollow++
+  }
+  if (rd.quiet) V.quietBy[rd.outcome === 'recovers' ? 'recovers' : rd.outcome === 'cancel' ? 'tie' : 'other']++
+}
+
 // games: [{ result, rounds }], with side 0 = fighter A.
 export function summarise(games, fa, fb) {
   const n = games.length
   const out = {
     games: n, win: 0, doubleKO: 0, draws: 0, lengths: [], quiet: 0, recoverMirrors: 0, totalRounds: 0,
     v12: null,       // rules v12 clash counts, when the fighters play v12
+    v15: null,       // rules v15 clash and follow-up counts
     routes: {}, sides: [0, 1].map(k => ({
       plays: {}, resolved: {}, types: { P: 0, C: 0, R: 0, T: 0 }, superRounds: [], superUnused: 0, lockedOut: 0,
     })),
@@ -117,7 +147,8 @@ export function summarise(games, fa, fb) {
       out.totalRounds++
       if (rd.quiet) out.quiet++
       if (rd.types[0] === 'R' && rd.types[1] === 'R') out.recoverMirrors++
-      if (rd.kinds) tally12(out, rd)
+      if (rd.v15) tally15(out, rd)
+      else if (rd.kinds) tally12(out, rd)
       for (const k of [0, 1]) {
         const S = out.sides[k], nm = rd.cards[k]
         S.plays[nm] = (S.plays[nm] || 0) + 1

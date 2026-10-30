@@ -297,6 +297,16 @@ export function clash15(ca, cb) {
   return { res: [false, false], beaten: [false, false], outcome: 'cancel' }
 }
 
+// The side whose Recover beat a Pressure this round (and so earns the payoff),
+// or -1. Experiment: a Projectile thrown from range leaves nothing to punish.
+export function recoverWinner15(ca, cb, rules = {}) {
+  const cl = clash15(ca, cb)
+  let w = (cl.outcome === 'A' && ca.t === 'R' && cb.t === 'P') ? 0
+        : (cl.outcome === 'B' && cb.t === 'R' && ca.t === 'P') ? 1 : -1
+  if (w >= 0 && rules.projectileSafe && (w === 0 ? cb : ca).kind === 'projectile') w = -1
+  return w
+}
+
 // The attacks a Recover's owner may follow up with: any available attack in
 // hand (or the Super) other than the card just played, of an allowed type.
 export function followCandidates(X, played, payoff) {
@@ -317,10 +327,7 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
   const payoff = rules.recoverPayoff || 'any'
   const ca = card(A0, a), cb = card(B0, b)
   const cl = clash15(ca, cb)
-  let w = (cl.outcome === 'A' && ca.t === 'R' && cb.t === 'P') ? 0
-        : (cl.outcome === 'B' && cb.t === 'R' && ca.t === 'P') ? 1 : -1
-  // Experiment: a Projectile thrown from range leaves nothing to punish
-  if (w >= 0 && rules.projectileSafe && (w === 0 ? cb : ca).kind === 'projectile') w = -1
+  const w = recoverWinner15(ca, cb, rules)
   if (w >= 0 && (payoff === 'any' || payoff === 'pressure') && follow[w] === undefined) {
     const X = w === 0 ? A0 : B0, played = w === 0 ? a : b
     const cands = [null, ...followCandidates(X, played, payoff)]
@@ -412,7 +419,7 @@ function greedyFollow(s, A0, B0, w) {
 }
 
 function clashEvents15(ca, cb, cl, ev) {
-  if (cl.outcome === 'cancel') for (const side of [0, 1]) ev.push({ side, kind: 'cancel' })
+  if (cl.outcome === 'cancel') for (const side of [0, 1]) ev.push({ side, kind: 'tie', n: ca.speed })
   else if ((cl.outcome === 'A' || cl.outcome === 'B') && ca.t === cb.t) {
     const w = cl.outcome === 'A' ? 0 : 1
     ev.push({ side: w, kind: 'faster', n: [ca.speed, cb.speed][w], m: [ca.speed, cb.speed][1 - w] })

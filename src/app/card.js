@@ -2,9 +2,10 @@
 // A card with `art` (a full card-design image) shows that image instead.
 
 import { html, cx } from './lib.js'
-import { cardLines, TYPE_CODE, TYPE_LABEL, KINDS } from '../engine/keywords.js'
+import { cardLines, TYPE_CODE, TYPE_LABEL, KINDS, kindLine } from '../engine/keywords.js'
 
-export function CardFace({ card, isSuper = false, hasFlow = false, cls = '', stamp = null, why = null, as = 'div', onClick, disabled, label, style }) {
+// rules: the fighter's rules version (11, 12 or 15), for the line its kind prints
+export function CardFace({ card, isSuper = false, hasFlow = false, cls = '', stamp = null, why = null, as = 'div', onClick, disabled, label, style, rules }) {
   if (!card) return null
   const t = TYPE_CODE[card.type] || 'T'
   const { text, cost } = cardLines(card, { isSuper })
@@ -30,7 +31,7 @@ export function CardFace({ card, isSuper = false, hasFlow = false, cls = '', sta
           ${t === 'P' ? html`<div class="stat"><b>${build}</b><i>Build</i></div>` : null}
           ${showChip ? html`<div class="stat"><b>${chip}</b><i>Chip</i></div>` : null}
         </div>
-        <div class="card-text">${K?.line ? html`<p class="card-kind">${K.line}</p>` : null}${text.map(l => html`<p>${l}</p>`)}</div>
+        <div class="card-text">${(rules ? kindLine(card, rules) : K?.line) ? html`<p class="card-kind">${rules ? kindLine(card, rules) : K.line}</p>` : null}${text.map(l => html`<p>${l}</p>`)}</div>
         ${isSuper && card.flavour && !cost.length ? html`<div class="card-flavour">${card.flavour}</div>` : null}
         ${cost.length ? html`<div class="card-cost"><b>Cost</b>${cost.map(l => html`<p>${l}</p>`)}</div>` : null}
       `}

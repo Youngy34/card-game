@@ -4,8 +4,8 @@
 // device), 'watch' (the sparring partner against itself).
 // Phases: 'pick' -> ('pass' between hot-seat picks) -> 'reveal' -> 'pick' ... 'over'
 
-import { newPlayer, step, options, card, blocked, flowing, convertChip } from '../engine/engine.js'
-import { mixes, levelMixes, LEVELS } from '../engine/ai.js'
+import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverWinner15, followCandidates, pressureNumbers } from '../engine/engine.js'
+import { mixes, levelMixes, LEVELS, withFollowScore } from '../engine/ai.js'
 import { roundRecord, winRoute } from '../engine/game.js'
 import { toEngineFighter, fighterHash } from '../engine/fighters.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
@@ -25,7 +25,7 @@ export function startMatch({ fighters, statuses, mode, settings, levels = ['hard
   const f = fighters.map(toEngineFighter)
   const m = {
     id, mode, humans: HUMANS[mode], levels, json: fighters, statuses: statuses || ['', ''],
-    f, rules: settings.rules, W: settings.ai, settingsUsed: settings,
+    f, rules: withFollowScore(settings.rules, settings.ai), W: settings.ai, settingsUsed: settings,
     A: newPlayer(f[0]), B: newPlayer(f[1]),
     round: 1, picks: [null, null], phase: 'pick', picker: 0,
     history: [], result: null, seed, rng: seed, startedAt: Date.now(), mix: null,
@@ -49,7 +49,33 @@ function beginRound(m) {
     picks[side] = (side === 0 ? mix.oa : mix.ob)[k]
   }
   const picker = m.humans[0] ? 0 : m.humans[1] ? 1 : null
-  return { ...m, mix, play, rng, picks, phase: 'pick', picker }
+  return { ...m, mix, play, rng, picks, phase: 'pick', picker, follow: null, pending: null, follower: null }
+}
+
+// ---- rules v15: the follow-up ------------------------------------------------
+// When a person's Recover beats a Pressure, the round waits for them to choose
+// a follow-up attack (or none). A sparring partner's follow-up is chosen by the
+// engine, with the partner's own value function.
+const payoffOf = m => m.rules.recoverPayoff || 'any'
+export function humanFollowSide(m, a, b) {
+  const ca = card(m.A, a), cb = card(m.B, b)
+  if (!(ca.v15 || cb.v15) || !['any', 'pressure'].includes(payoffOf(m))) return -1
+  const w = recoverWinner15(ca, cb, m.rules)
+  if (w < 0 || !m.humans[w]) return -1
+  const X = w === 0 ? m.A : m.B, played = w === 0 ? a : b
+  return followCandidates(X, played, payoffOf(m)).length ? w : -1
+}
+
+export function chooseFollow(m, pick) {
+  const follow = [undefined, undefined]
+  follow[m.follower] = pick
+  return resolveRound({ ...m, follow, pending: null })
+}
+
+// The cards a person may follow up with
+export function followView(m) {
+  const w = m.follower, X = w === 0 ? m.A : m.B, played = m.picks[w]
+  return followCandidates(X, played, payoffOf(m)).map(i => ({ i, c: card(X, i), sup: i === 'S' }))
 }
 
 // A human locks in a card
@@ -65,8 +91,17 @@ export const continueAfterPass = m => ({ ...m, phase: 'pick' })
 
 export function resolveRound(m) {
   const [a, b] = m.picks
+  const follow = m.follow || [undefined, undefined]
+  const fw = humanFollowSide(m, a, b)
+  if (fw >= 0 && follow[fw] === undefined) {
+    // show the clash, then wait for the follow-up choice
+    const events = [], none = [undefined, undefined]
+    none[fw] = null
+    const s = step(m.A, m.B, a, b, m.rules, events, none)
+    return { ...m, phase: 'follow', follower: fw, picker: fw, pending: { a, b, s, events } }
+  }
   const events = []
-  const s = step(m.A, m.B, a, b, m.rules, events)
+  const s = step(m.A, m.B, a, b, m.rules, events, follow)
   const record = roundRecord(m.round, m.A, m.B, a, b, s)
   const mixInfo = {
     a: m.mix.oa.map((o, i) => [card(m.A, o).name, round2(m.mix.x[i])]),
@@ -76,12 +111,13 @@ export function resolveRound(m) {
   for (const [k, key, opts, X] of [[0, 'playedA', m.mix.oa, m.A], [1, 'playedB', m.mix.ob, m.B]]) {
     if (!m.humans[k] && m.levels[k] !== 'hard') mixInfo[key] = opts.map((o, i) => [card(X, o).name, round2(m.play[k][i])])
   }
-  const entry = { ...record, picks: [a, b], events, mix: mixInfo, humans: m.humans }
+  const humanFollow = fw >= 0 ? { side: fw, pick: follow[fw] ?? null } : null
+  const entry = { ...record, picks: [a, b], ...(humanFollow ? { humanFollow } : {}), events, mix: mixInfo, humans: m.humans }
   let result = s.result
   if (result === null && m.round >= m.rules.maxRounds) result = 0.5
   return {
     ...m, A: s.A, B: s.B, history: [...m.history, entry], phase: result === null ? 'reveal' : 'over',
-    result, last: { before: [m.A, m.B], a, b, s, events },
+    result, last: { before: [m.A, m.B], a, b, s, events }, follow: null, pending: null, follower: null,
   }
 }
 
@@ -143,6 +179,7 @@ export function gameRecord(m) {
     settings: m.settingsUsed,
     result: m.result, route: last ? winRoute(last, m.result) : null,
     rounds: m.history.map(({ events, humans, ...r }) => r),
+    rules: m.f[0].v15 ? 15 : m.f[0].v12 ? 12 : 11,
     final: [{ hp: m.A.hp, pile: m.A.pile }, { hp: m.B.hp, pile: m.B.pile }],
   }
 }
@@ -152,8 +189,10 @@ export function replay(saved) {
   let m = startMatch({ fighters: saved.json, statuses: saved.statuses, mode: saved.mode, levels: saved.levels,
                        settings: saved.settingsUsed, seed: saved.seed, id: saved.id })
   m = { ...m, startedAt: saved.startedAt }
-  for (const [a, b] of saved.picks) {
-    m = resolveRound({ ...m, picks: [a, b] })
+  for (const [i, [a, b]] of saved.picks.entries()) {
+    const hf = saved.follows?.[i]
+    const follow = hf ? Object.assign([undefined, undefined], { [hf.side]: hf.pick }) : null
+    m = resolveRound({ ...m, picks: [a, b], follow })
     if (m.phase === 'over') return m
     m = nextRound(m)
   }
@@ -162,5 +201,59 @@ export function replay(saved) {
 
 export function snapshot(m) {
   return { id: m.id, mode: m.mode, levels: m.levels, json: m.json, statuses: m.statuses, settingsUsed: m.settingsUsed,
-           seed: m.seed, rng: m.rng, startedAt: m.startedAt, picks: m.history.map(h => h.picks) }
+           seed: m.seed, rng: m.rng, startedAt: m.startedAt, picks: m.history.map(h => h.picks), follows: m.history.map(h => h.humanFollow || null) }
+}
+
+// ---- rules v15: reading the board ------------------------------------------
+// A few plain lines for the player about to pick: who's in lethal range, which
+// of the opponent's types are missing, who wins a speed duel, and what being
+// read would cost. Everything here is open information; it only saves the sums.
+export function boardNotes(m, side) {
+  const X = side === 0 ? m.A : m.B, Y = side === 0 ? m.B : m.A
+  if (!X.f.v15) return []
+  const notes = []
+  const name = Y.f.name
+  const avail = P => options(P).map(i => ({ i, c: card(P, i) }))
+  const mine = avail(X), theirs = avail(Y)
+  const has = (list, t) => list.some(o => o.c.t === t)
+  const fastest = (list, t) => list.filter(o => o.c.t === t).sort((p, q) => q.c.speed - p.c.speed)[0]?.c
+
+  const deadMe = lethalTo(X, Y), deadThem = lethalTo(Y, X)
+  if (deadMe !== null) notes.push({ tone: 'bad', text: `You're dead to a Convert: your ${X.pile} grey plus their best Convert's ${deadMe} chip is at least your ${X.hp} HP. That includes a follow-up Convert if they Recover your Pressure.` })
+  if (deadThem !== null) notes.push({ tone: 'good', text: `${name} is dead to your Convert: their ${Y.pile} grey plus your best Convert's ${deadThem} chip is at least their ${Y.hp} HP.` })
+
+  if (!has(theirs, 'P')) notes.push({ text: `${name} has no Pressure available: your Converts can only lose a speed duel with theirs.` })
+  if (!has(theirs, 'R')) notes.push({ text: `${name} has no Recover available: your Pressures can only lose a speed duel, and can't be followed up on.` })
+  if (!has(theirs, 'C')) notes.push({ text: `${name} has no Convert available: your Recovers can't lose this round.` })
+
+  for (const t of ['P', 'C']) {
+    const a = fastest(mine, t), b = fastest(theirs, t)
+    if (!a || !b) continue
+    const label = t === 'P' ? 'Pressure' : 'Convert'
+    if (a.speed > b.speed) notes.push({ text: `${label} duel: your ${a.name} (${a.speed}) outspeeds their fastest, ${b.name} (${b.speed}).` })
+    else if (a.speed < b.speed) notes.push({ text: `${label} duel: their ${b.name} (${b.speed}) outspeeds your fastest, ${a.name} (${a.speed}).` })
+    else notes.push({ text: `${label} duel: your ${a.name} and their ${b.name} are both speed ${a.speed}, so they'd cancel.` })
+  }
+
+  // what a Recover would make you pay for a Pressure
+  const payoff = m.rules.recoverPayoff || 'any'
+  if (has(theirs, 'R') && has(mine, 'P') && deadMe === null) {
+    if (payoff === 'fixed') notes.push({ text: `If ${name} Recovers your Pressure, you take ${m.rules.fixedDamage ?? 2}.` })
+    else if (payoff === 'any' || payoff === 'pressure') {
+      let best = null
+      for (const o of theirs) {
+        if (o.c.t === 'C' && payoff === 'any') {
+          const v = X.pile + convertChip(o.c, Y, X.pile)
+          if (!best || v > best.v) best = { v, text: X.pile ? `${o.c.name} for ${v} (your ${X.pile} grey plus ${v - X.pile} chip)` : `${o.c.name} for ${v} chip` }
+        } else if (o.c.t === 'P') {
+          const { build, chip } = pressureNumbers(o.c, Y, X, { t: null })
+          const v = chip + 0.6 * build
+          if (!best || v > best.v) best = { v, text: `${o.c.name}: ${build} grey on you${chip ? ` and ${chip} chip` : ''}` }
+        }
+      }
+      if (best) notes.push({ text: `If ${name} Recovers your Pressure, their biggest follow-up is ${best.text}.` + (m.rules.projectileSafe ? ' Projectiles are safe from it.' : '') })
+    }
+  }
+  if (Y.pile > 0 && deadThem === null) notes.push({ text: `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
+  return notes
 }

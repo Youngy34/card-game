@@ -73,6 +73,10 @@ export function Log() {
 }
 
 const OUTCOME_WORD = { mirror: 'Mirror', typeless: 'Typeless', trade: 'Trade', cancel: 'Cancel', tech: 'Tech', recovers: 'Both defend', setup: 'Setup' }
+const outcomeWord = r => {
+  const base = r.outcome === 'A' ? `${TYPE_LABEL[r.types[0]]} wins` : r.outcome === 'B' ? `${TYPE_LABEL[r.types[1]]} wins` : (r.v15 && r.outcome === 'cancel' ? 'Same speed' : OUTCOME_WORD[r.outcome] || r.outcome)
+  return r.followed ? `${base}, follow-up ${r.followed.name}` : r.fixed ? `${base}, punish ${r.fixed}` : base
+}
 
 function GameRow({ g, current, onDelete, canDelete }) {
   const [open, setOpen] = useState(false)
@@ -100,7 +104,7 @@ function GameRow({ g, current, onDelete, canDelete }) {
         <td>${r.n}</td>
         <td><span class="tdot" data-t=${r.types[0]}></span> ${r.cards[0]}${r.lockedOut[0] ? ' ·' : ''}</td>
         <td><span class="tdot" data-t=${r.types[1]}></span> ${r.cards[1]}${r.lockedOut[1] ? ' ·' : ''}</td>
-        <td>${r.outcome === 'A' ? `${TYPE_LABEL[r.types[0]]} wins` : r.outcome === 'B' ? `${TYPE_LABEL[r.types[1]]} wins` : OUTCOME_WORD[r.outcome] || r.outcome}</td>
+        <td>${outcomeWord(r)}</td>
         <td class="r num">${r.after[0].hp} · ${r.after[0].pile}</td>
         <td class="r num">${r.after[1].hp} · ${r.after[1].pile}</td>
       </tr>`)}</tbody>

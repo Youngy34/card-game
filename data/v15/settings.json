@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "rules": {
+    "recoverPayoff": "any",
+    "fixedDamage": 2,
+    "projectileSafe": false,
+    "maxRounds": 100
+  },
+  "ai": {
+    "alpha": 0.6,
+    "beta": 2.0,
+    "opt": 0.4,
+    "gap": 1.5,
+    "lethal": 2.0,
+    "flowv": 1.5,
+    "followv": 0.5,
+    "k": 0.28
+  }
+}

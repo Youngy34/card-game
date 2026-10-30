@@ -126,7 +126,7 @@ if (mode === 'game') {
   const r = runMatch(args[1], args[2], n, seed)
   console.log(JSON.stringify(r, null, 1))
 } else if (mode === 'rr') {
-  const names = ['atlas', 'bastion', 'gambler', 'vex']
+  const names = opt('--names', 'atlas,bastion,gambler,vex').split(',')
   const out = []
   for (let i = 0; i < names.length; i++) for (let j = i; j < names.length; j++) {
     const r = runMatch(names[i], names[j], n, seed + i * 10 + j)
@@ -135,7 +135,7 @@ if (mode === 'game') {
   }
   if (json) console.log(JSON.stringify(out))
 } else if (mode === 'exploit') {
-  const names = ['atlas', 'bastion', 'gambler', 'vex']
+  const names = opt('--names', 'atlas,bastion,gambler,vex').split(',')
   const out = []
   for (const bot of ['attack', 'pressure', 'random']) for (const nm of names) {
     const r = runMatch(nm, nm, n, seed + names.indexOf(nm), [bot, 'hard'])

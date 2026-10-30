@@ -12,6 +12,13 @@ import { PASSIVES } from '../engine/keywords.js'
 import { LEVELS } from '../engine/ai.js'
 
 const MODES = [['ai', 'You vs sparring partner'], ['hotseat', 'Two players, one device'], ['watch', 'Watch the sparring partner']]
+const rulesOf = f => (f.v15 ? 15 : f.v12 ? 12 : 11)
+const PAYOFF = {
+  any: 'a Recover that beats a Pressure earns a free follow-up attack',
+  pressure: 'a Recover that beats a Pressure earns a free follow-up Pressure',
+  fixed: 'a Recover that beats a Pressure deals fixed damage to the attacker',
+  none: 'a Recover that beats a Pressure only clears its own pile',
+}
 const WHO = {
   ai: ['You', 'Sparring partner'],
   hotseat: ['Player 1', 'Player 2'],
@@ -29,6 +36,8 @@ export function Setup({ onStart, prefs, setPrefs }) {
   const picked = sides.map(id => list.find(r => r.id === id))
   const mixed = picked[0] && picked[1] && picked[0].rules !== picked[1].rules
   const v12 = picked.every(r => r?.rules === 12)
+  const v15 = picked.every(r => r?.rules === 15)
+  const v15Edition = list.every(r => r.rules === 15)
   const start = () => {
     const rs = sides.map(id => list.find(r => r.id === id))
     if (rs[0].rules !== rs[1].rules) return
@@ -38,7 +47,9 @@ export function Setup({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">Pick two fighters and play a full game. The signed-off fighters play rules v11; drafts such as Clarence play rules v12, with kinds and speed. Both move lists are open information; only the card you choose is hidden until the reveal.</p>
+      <p class="lede">${v15Edition
+        ? 'Pick two fighters and play a full game under rules v15. Pressure beats Convert, Convert beats Recover, and Recover beats Pressure. Speed settles two attacks of the same type, and a tie cancels. Both move lists are open information; only the card you choose is hidden until the reveal.'
+        : 'Pick two fighters and play a full game. The signed-off fighters play rules v11; drafts such as Clarence play rules v12, with kinds and speed. Both move lists are open information; only the card you choose is hidden until the reveal.'}</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -64,22 +75,26 @@ export function Setup({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${WHO[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP${r.rules === 12 ? ' · rules v12' : ''}${r.fighter.epithet ? ` · ${r.fighter.epithet}` : ''}${r.fighter.passive ? ` · ${Object.keys(r.fighter.passive).map(p => PASSIVES[p]?.label).join(', ')}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP${r.rules === 12 && !v15Edition ? ' · rules v12' : ''}${r.rules === 15 && !v15Edition ? ' · rules v15' : ''}${r.fighter.epithet ? ` · ${r.fighter.epithet}` : ''}${r.fighter.passive ? ` · ${Object.keys(r.fighter.passive).map(p => PASSIVES[p]?.label).join(', ')}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
     </div>
     <div class="stack">
       <label class="check"><input type="checkbox" checked=${prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the unexploitable mix after each reveal</label>
+      ${v15 ? html`<label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you pick (lethal range, missing types, speed duels, what a Recover would cost you)</label>` : null}
       ${mixed ? html`<p class="small msg-w">${picked[0].fighter.name} plays rules v${picked[0].rules} and ${picked[1].fighter.name} plays rules v${picked[1].rules}. Pick two fighters on the same rules.</p>` : null}
-      <p class="small muted">${v12 ? 'Rules v12: Recovers never chip; Guards and Counters turn the attacker\'s Build or chip back.' : `Recover chip lands ${ruleNote}.`} Change rules and the sparring partner's weights in Settings.</p>
+      <p class="small muted">${v15 ? `Rules v15: ${PAYOFF[s.rules.recoverPayoff] || PAYOFF.any}${s.rules.recoverPayoff === 'fixed' ? ` (${s.rules.fixedDamage ?? 2})` : ''}${s.rules.projectileSafe ? ', except against a Projectile' : ''}.` : v12 ? 'Rules v12: Recovers never chip; Guards and Counters turn the attacker\'s Build or chip back.' : `Recover chip lands ${ruleNote}.`} Change rules and the sparring partner's weights in Settings.</p>
       <div class="actions"><button class="btn" disabled=${mixed} onClick=${start}>Start the match</button></div>
     </div>
   </div>`
 }
 
+const SHORT = { ai: ['you', 'partner'], hotseat: ['player 1', 'player 2'], watch: ['partner 1', 'partner 2'] }
+
 export function Table({ m, setM, prefs, onEnd }) {
-  const names = m.f.map(f => f.name)
+  // in a mirror, say whose card is whose
+  const names = m.f[0].name === m.f[1].name ? m.f.map((f, k) => `${f.name} (${SHORT[m.mode][k]})`) : m.f.map(f => f.name)
   const who = WHO[m.mode].map((w, k) => (!m.humans[k] && m.mode === 'ai' && m.levels?.[k] ? `${w} · ${LEVELS[m.levels[k]].label}` : w))
   const [sel, setSel] = useState(null)
   const [saveState, setSaveState] = useState(null)
@@ -105,8 +120,15 @@ export function Table({ m, setM, prefs, onEnd }) {
   }, [auto, m.phase, m.round, m.mode])
 
   const picking = m.phase === 'pick' && m.picker !== null
-  const P = picking ? m.picker : null
+  const following = m.phase === 'follow'
+  const P = picking || following ? m.picker : null
   const lockIn = () => { if (sel !== null) setM(M.lockIn(m, P, sel)) }
+  const follow = pick => setM(M.chooseFollow(m, pick))
+  const notes = picking && prefs.hints !== false ? M.boardNotes(m, P) : []
+  const fw = following ? (() => {
+    const pa = card(m.A, m.picks[0]), pb = card(m.B, m.picks[1])
+    return m.follower === 0 ? [pa, pb] : [pb, pa]
+  })() : null
 
   return html`<div class="table">
     <div class="board">
@@ -121,11 +143,27 @@ export function Table({ m, setM, prefs, onEnd }) {
               <button class="btn" disabled=${sel === null} onClick=${lockIn}>Lock in</button>
             </div>
           </div>
+          ${notes.length ? html`<ul class="notes" aria-label="Board notes">${notes.map(n => html`<li class=${n.tone || ''}>${n.text}</li>`)}</ul>` : null}
           <div class="hand">
             ${M.handView(X[P]).map(v => html`<div key=${v.i}>
-              <${CardFace} as="button" card=${v.c.src} isSuper=${!!v.sup} hasFlow=${X[P].f.flow}
+              <${CardFace} as="button" card=${v.c.src} isSuper=${!!v.sup} hasFlow=${X[P].f.flow} rules=${rulesOf(X[P].f)}
                 cls=${cx(!v.ok && 'off', sel === v.i && 'selected')} why=${v.why} disabled=${!v.ok}
                 onClick=${() => v.ok && setSel(v.i)} />
+            </div>`)}
+          </div>` : null}
+        ${following ? html`
+          <div class="spread">
+            <h3>${m.mode === 'ai' ? 'Your follow-up' : `${who[P]}'s follow-up`} · Round ${m.round}</h3>
+            <div class="actions">
+              <button class="btn" disabled=${sel === null} onClick=${() => follow(sel)}>Follow up</button>
+              <button class="btn ghost" onClick=${() => follow(null)}>No follow-up</button>
+            </div>
+          </div>
+          <p class="small">${fw[0].name} beat ${fw[1].name}, so ${m.mode === 'ai' ? 'you' : who[P]} may play one attack from hand, unopposed. It resolves in full and goes on cooldown too. ${(m.rules.recoverPayoff || 'any') === 'pressure' ? 'Under the current setting it must be a Pressure.' : ''}</p>
+          <div class="hand">
+            ${M.followView(m).map(v => html`<div key=${v.i}>
+              <${CardFace} as="button" card=${v.c.src} isSuper=${!!v.sup} hasFlow=${X[P].f.flow} rules=${rulesOf(X[P].f)}
+                cls=${cx(sel === v.i && 'selected')} onClick=${() => setSel(v.i)} />
             </div>`)}
           </div>` : null}
         ${m.phase === 'reveal' ? html`<div class="actions">
@@ -148,7 +186,7 @@ export function Table({ m, setM, prefs, onEnd }) {
       </section>
     </div>
     <aside class="side">
-      <${RoundLog} m=${m} />
+      <${RoundLog} m=${m} names=${names} />
       <${MoveList} X=${m.B} title=${`${names[1]}'s move list`} />
       <${MoveList} X=${m.A} title=${`${names[0]}'s move list`} />
       <div class="actions"><button class="link" onClick=${() => onEnd('quit')}>Leave this match</button></div>
@@ -165,7 +203,7 @@ export function Table({ m, setM, prefs, onEnd }) {
 }
 
 function Clash({ m, names, prefs, sel }) {
-  const shown = m.phase === 'reveal' || m.phase === 'over'
+  const shown = m.phase === 'reveal' || m.phase === 'over' || m.phase === 'follow'
   if (!shown) {
     // before the reveal: show who has locked in, face down
     const ready = [m.picks[0] !== null || (m.picker === 0 && sel !== null), m.picks[1] !== null || (m.picker === 1 && sel !== null)]
@@ -178,8 +216,11 @@ function Clash({ m, names, prefs, sel }) {
       <p class="small muted">Round ${m.round}. ${m.mode === 'ai' ? 'The sparring partner has picked.' : 'Both cards reveal together.'}</p>
     </section>`
   }
-  const L = m.last
+  const pend = m.phase === 'follow' ? m.pending : null
+  const L = pend ? { before: [m.A, m.B], a: pend.a, b: pend.b, s: pend.s, events: pend.events } : m.last
   const ca = card(L.before[0], L.a), cb = card(L.before[1], L.b)
+  const fu = L.s.followed
+  const fuCard = fu ? card(L.before[fu.side], fu.i) : null
   const o = outcomeLine(ca, cb)
   const ev = eventLines(L, names)
   const over = m.phase === 'over'
@@ -191,18 +232,23 @@ function Clash({ m, names, prefs, sel }) {
       <span>${L.s.A.hp <= 0 && L.s.B.hp <= 0 && res !== 0.5 ? `Double KO: ${names[res === 1 ? 0 : 1]} ends less far below 0 (${L.s.A.hp} vs ${L.s.B.hp}). ` : ''}Round ${m.round}.</span>
     </div>` : null}
     <div class="clash-cards">
-      <${CardFace} card=${cb.src} isSuper=${cb.sup} hasFlow=${m.f[1].flow} cls=${cx(o.winner === 1 && 'won', ev[1].beaten && 'beaten')} stamp=${ev[1].beaten ? 'Beaten' : null} />
+      <${CardFace} card=${cb.src} isSuper=${cb.sup} hasFlow=${m.f[1].flow} rules=${rulesOf(m.f[1])} cls=${cx(o.winner === 1 && 'won', ev[1].beaten && 'beaten')} stamp=${ev[1].beaten ? 'Beaten' : null} />
       <span class="vs">VS</span>
-      <${CardFace} card=${ca.src} isSuper=${ca.sup} hasFlow=${m.f[0].flow} cls=${cx(o.winner === 0 && 'won', ev[0].beaten && 'beaten')} stamp=${ev[0].beaten ? 'Beaten' : null} />
+      <${CardFace} card=${ca.src} isSuper=${ca.sup} hasFlow=${m.f[0].flow} rules=${rulesOf(m.f[0])} cls=${cx(o.winner === 0 && 'won', ev[0].beaten && 'beaten')} stamp=${ev[0].beaten ? 'Beaten' : null} />
     </div>
     <div class="outcome"><b>${o.title}</b><span>${o.sub}</span></div>
+    ${fuCard ? html`<div class="followup">
+      <span class="label">${names[fu.side]} follows up</span>
+      <${CardFace} card=${fuCard.src} isSuper=${fuCard.sup} hasFlow=${m.f[fu.side].flow} rules=${rulesOf(m.f[fu.side])} cls="won" />
+    </div>` : null}
+    ${pend ? html`<p class="followup-ask">${m.mode === 'ai' ? 'You' : names[m.follower]} may follow up: choose an attack below, or skip it.</p>` : null}
     <div class="narr">
       ${[1, 0].map(k => html`<div>
         <b>${names[k]}</b>
         <span>${ev[k].card} ${ev[k].text}. <em>${deltaLine(L.before[k], k === 0 ? L.s.A : L.s.B)}</em></span>
       </div>`)}
     </div>
-    ${prefs.odds ? html`<${Mixes} entry=${m.history[m.history.length - 1]} names=${names} f=${m.f} levels=${m.levels} />` : null}
+    ${prefs.odds && !pend ? html`<${Mixes} entry=${m.history[m.history.length - 1]} names=${names} f=${m.f} levels=${m.levels} />` : null}
   </section>`
 }
 
@@ -221,7 +267,7 @@ function Mixes({ entry, names, f, levels }) {
   </div>`
 }
 
-function RoundLog({ m }) {
+function RoundLog({ m, names }) {
   if (!m.history.length) return html`<div class="panel stack"><h3>Rounds</h3><p class="small muted">Each round's cards and the board after it appear here.</p></div>`
   return html`<div class="panel stack">
     <h3>Rounds</h3>
@@ -229,8 +275,8 @@ function RoundLog({ m }) {
       ${[...m.history].reverse().map(r => html`<div class="log-row" key=${r.n}>
         <b>${r.n}</b>
         <div>
-          <div class="vsline"><span class="tdot" data-t=${r.types[0]}></span>${r.cards[0]} <span class="muted">vs</span> <span class="tdot" data-t=${r.types[1]}></span>${r.cards[1]}</div>
-          <div class="small muted num">${m.f[0].name} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${m.f[1].name} ${r.after[1].hp} HP · ${r.after[1].pile} grey</div>
+          <div class="vsline"><span class="tdot" data-t=${r.types[0]}></span>${r.cards[0]} <span class="muted">vs</span> <span class="tdot" data-t=${r.types[1]}></span>${r.cards[1]}${r.followed ? html`<span class="muted">· ${names[r.followed.side]} follows up:</span><span class="tdot" data-t=${r.followed.t}></span>${r.followed.name}` : null}</div>
+          <div class="small muted num">${names[0]} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${names[1]} ${r.after[1].hp} HP · ${r.after[1].pile} grey</div>
         </div>
       </div>`)}
     </div>

@@ -7,6 +7,11 @@ const kindOf = c => KINDS[c.kind]?.label || TYPE_LABEL[c.t]
 
 export function outcomeLine(ca, cb) {
   const o = outcome(ca, cb)
+  // rules v15
+  if (ca.v15 || cb.v15) {
+    if (o === 'cancel') return { title: 'Same speed', sub: `${ca.name} and ${cb.name} are both speed ${ca.speed}: they cancel, and neither lands` }
+    if (o === 'recovers') return { title: 'Both defend', sub: 'Each clears their own pile' }
+  }
   // rules v12
   if (o === 'trade') return { title: `${kindOf(ca)} trade`, sub: `Same speed (${ca.speed}): both land` }
   if (o === 'cancel') return { title: 'Projectiles cancel', sub: 'They collide: neither lands' }
@@ -49,6 +54,10 @@ export function eventLines(last, names) {
       case 'return': L.push(`returns a card from cooldown`); break
       // rules v12
       case 'faster': L.push(`is faster (speed ${e.n} to ${e.m})`); break
+      // rules v15
+      case 'tie': L.push(`meets the same speed (${e.n}) and cancels`); break
+      case 'followUp': L.push(`follows up with ${e.name}`); break
+      case 'punish': L.push(`punishes the opening: ${op} takes ${e.n}`); break
       case 'cancel': L.push('collides with the other projectile, and both cancel'); break
       case 'tech': L.push('is teched'); break
       case 'interrupted': L.push("is interrupted and doesn't finish"); break

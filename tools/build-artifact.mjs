@@ -2,7 +2,10 @@
 // artifact: styles inlined, the bundled fighters inlined, and the app's own
 // modules joined into a single script. Preact and htm still load from the CDN.
 //
-//   node tools/build-artifact.mjs        -> dist/yomi-playtest.html
+//   node tools/build-artifact.mjs                -> dist/yomi-playtest.html      (rules v11 and v12)
+//   node tools/build-artifact.mjs --edition v15  -> dist/yomi-playtest-v15.html  (rules v15)
+//
+// Editions (which fighters a page bundles) are in src/editions.js.
 //
 // The modules are plain ES modules (see index.html for running them as-is).
 // This joiner handles the import/export forms the app uses: named and
@@ -13,6 +16,11 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+const { EDITIONS } = await import('../src/editions.js')
+const ei = process.argv.indexOf('--edition')
+const key = ei >= 0 ? process.argv[ei + 1] : 'v11'
+const E = EDITIONS[key]
+if (!E) { console.error(`No edition "${key}". Known: ${Object.keys(EDITIONS).join(', ')}`); process.exit(1) }
 const rel = p => path.relative(root, p).split(path.sep).join('/')
 const mods = new Map()
 
@@ -39,22 +47,26 @@ function load(file) {
 }
 
 const entry = load(path.join(root, 'src/main.js'))
-const order = [], seen = new Set()
-const visit = k => { if (seen.has(k)) return; seen.add(k); mods.get(k).deps.forEach(visit); order.push(k) }
+const modOrder = [], seen = new Set()
+const visit = k => { if (seen.has(k)) return; seen.add(k); mods.get(k).deps.forEach(visit); modOrder.push(k) }
 visit(entry)
 
-const fighters = {}
-const ORDER = ['gambler', 'bastion', 'vex', 'atlas']
-const REFERENCE = ['dummy']                 // benchmark fighters, from data/reference/
-const DRAFTS = ['clarence']                 // rules v12 drafts, from data/drafts/
-for (const id of ORDER) fighters[id] = JSON.parse(fs.readFileSync(path.join(root, `data/fighters/${id}.json`), 'utf8'))
-for (const id of REFERENCE) fighters[id] = JSON.parse(fs.readFileSync(path.join(root, `data/reference/${id}.json`), 'utf8'))
-for (const id of DRAFTS) fighters[id] = JSON.parse(fs.readFileSync(path.join(root, `data/drafts/${id}.json`), 'utf8'))
-const settings = JSON.parse(fs.readFileSync(path.join(root, 'data/settings.json'), 'utf8'))
-const data = { fighters, order: [...ORDER, ...REFERENCE, ...DRAFTS], reference: REFERENCE, drafts: DRAFTS, settings, built: new Date().toISOString() }
+const fighters = {}, ids = {}
+for (const group of ['fighters', 'reference', 'drafts']) {
+  ids[group] = []
+  for (const [dir, file] of E[group]) {
+    const f = JSON.parse(fs.readFileSync(path.join(root, `data/${dir}/${file}.json`), 'utf8'))
+    fighters[f.id] = f; ids[group].push(f.id)
+  }
+}
+const settings = JSON.parse(fs.readFileSync(path.join(root, `data/${E.settings}`), 'utf8'))
+// v11 lists the Dummy after the signed-off roster; later editions put their Benchmark first
+const order = key === 'v11' ? [...ids.fighters, ...ids.reference, ...ids.drafts] : [...ids.reference, ...ids.fighters, ...ids.drafts]
+const data = { fighters, order, reference: ids.reference, drafts: ids.drafts, settings, built: new Date().toISOString(),
+               edition: { key, title: E.title, subtitle: E.subtitle, labels: E.labels, defaultSides: E.defaultSides } }
 
 let js = `window.__YOMI_DATA__ = ${JSON.stringify(data)};\n(function () {\n'use strict';\nconst __m = {};\n`
-for (const k of order) {
+for (const k of modOrder) {
   const m = mods.get(k)
   js += `// ---- ${k}\n__m[${JSON.stringify(k)}] = (function () {\n${m.src}\nreturn { ${m.exportsList.join(', ')} };\n})();\n`
 }
@@ -66,7 +78,7 @@ const between = (a, b) => html.slice(html.indexOf(a) + a.length, html.indexOf(b)
 const css = fs.readFileSync(path.join(root, 'src/app/styles.css'), 'utf8')
 const head = between('<!--HEAD-->', '<!--/HEAD-->').replace(/<link rel="stylesheet" href="src\/app\/styles.css">\n?/, '')
 const body = between('<!--BODY-->', '<!--/BODY-->')
-const page = `<title>Yomi Playtest</title>
+const page = `<title>${E.title}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 ${head.trim()}
 <style>
@@ -77,5 +89,5 @@ ${body.trim()}
 ${js}</script>
 `
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true })
-fs.writeFileSync(path.join(root, 'dist/yomi-playtest.html'), page)
-console.log(`dist/yomi-playtest.html: ${(page.length / 1024).toFixed(0)} KB, ${order.length} modules`)
+fs.writeFileSync(path.join(root, `dist/${E.out}`), page)
+console.log(`dist/${E.out}: ${(page.length / 1024).toFixed(0)} KB, ${modOrder.length} modules`)

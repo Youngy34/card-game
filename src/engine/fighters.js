@@ -5,7 +5,7 @@
 // chips); the editor won't save a fighter with errors. Warnings are authoring
 // guidelines (8 cards, 2 of each type) that are fine to break while testing.
 
-import { KEYWORDS, KEYWORD, BASE_FIELDS, TYPES, TYPE_CODE, CODE_TYPE, PASSIVES, BEATEN_BY, KINDS, KINDS_OF, SPEED_BAND } from './keywords.js'
+import { KEYWORDS, KEYWORD, BASE_FIELDS, TYPES, TYPE_CODE, CODE_TYPE, PASSIVES, BEATEN_BY, KINDS, KINDS_OF, KINDS_OF15, SPEED_BAND } from './keywords.js'
 
 const FIGHTER_FIELDS = ['schemaVersion', 'id', 'name', 'epithet', 'concept', 'rules', 'hp', 'passive', 'ai', 'cards', 'super',
                         'variantOf', 'notes']
@@ -102,8 +102,7 @@ export function validateCard(card, { isSuper = false, hasFlow = false, v12 = fal
 // in its type's band, Recovers deal no damage of their own (a Super may, as a
 // dual verb), and typeless cards are Setups for the setup step, not yet run.
 function validateCard15(card, t, chip, isSuper, E, W) {
-  const K = KINDS[card.kind]
-  if (card.kind !== undefined && (!K || K.t !== t)) E(`Kind must be a ${KINDS_OF[t].join(' or ')} for a ${card.type} card.`)
+  if (card.kind !== undefined && !KINDS_OF15[t].includes(card.kind)) E(`Kind must be a ${KINDS_OF15[t].map(k => KINDS[k].label).join(' or ')} for a ${card.type} card.`)
   const band = SPEED_BAND[t]
   if (band) {
     if (card.speed === undefined) E(`Needs a speed from ${band[0]} to ${band[1]} (higher is faster).`)
@@ -198,6 +197,7 @@ export function validateFighter(f) {
   }
   if (hasFlow && !f.cards.some(c => c?.flowCard)) warnings.push({ where: 'Passive', msg: 'Flow needs at least one Flow card, or she can never be flowing.' })
   if (v12) warnings.push(...authoring12(f.cards))
+  if (v15) warnings.push(...authoring12(f.cards).filter(w => !w.msg.includes('Counters')))
   return { errors, warnings }
 }
 

@@ -30,7 +30,7 @@ export function App({ boot = {} }) {
     if (!boot.match) return null
     try { return M.replay(boot.match) } catch { return null }
   })
-  const [prefs, setPrefsRaw] = useState(() => ({ difficulty: 'hard', ...local.get('prefs', { mode: 'ai', sides: ['gambler', 'bastion'], odds: false }) }))
+  const [prefs, setPrefsRaw] = useState(() => ({ difficulty: 'hard', ...local.get('prefs', { mode: 'ai', sides: getState().edition?.defaultSides || ['gambler', 'bastion'], odds: false }) }))
   const setPrefs = p => { setPrefsRaw(p); local.put('prefs', p) }
   const [edSel, setEdSel] = useState(boot.edSel || null)
   const [lab, setLab] = useState({})
@@ -69,7 +69,7 @@ export function App({ boot = {} }) {
   return html`<div>
     <header class="top">
       <div class="top-inner">
-        <div class="brand"><b>YOMI</b><span>Playtest table · rules v11 and v12</span></div>
+        <div class="brand"><b>YOMI</b><span>Playtest table · ${st.edition?.subtitle || 'rules v11 and v12'}</span></div>
         <nav class="tabs" aria-label="Sections">
           ${TABS.map(([k, label]) => html`<button class="tab" aria-current=${tab === k ? 'page' : undefined} onClick=${() => setTab(k)}>${label}${k === 'play' && m && m.phase !== 'over' ? ' ·' : ''}</button>`)}
         </nav>

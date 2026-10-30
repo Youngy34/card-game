@@ -7,7 +7,7 @@ import { CardFace } from './card.js'
 import { Confirm, StatusChip, copyText, toast, Seg } from './ui.js'
 import { roster, saveFighter, removeFighter, getState, download } from './store.js'
 import { validateFighter, validateCard, stableStringify } from '../engine/fighters.js'
-import { KEYWORDS, KEYWORD, TYPES, TYPE_CODE, CODE_TYPE, BEATEN_BY, PASSIVES, cardLines, KINDS, KINDS_OF, SPEED_BAND, DEFAULT_SPEED } from '../engine/keywords.js'
+import { KEYWORDS, KEYWORD, TYPES, TYPE_CODE, CODE_TYPE, BEATEN_BY, PASSIVES, cardLines, KINDS, kindsOf, kindLine, SPEED_BAND, DEFAULT_SPEED } from '../engine/keywords.js'
 
 const clone = v => JSON.parse(JSON.stringify(v))
 const same = (a, b) => stableStringify(a) === stableStringify(b)
@@ -50,6 +50,7 @@ function FighterEditor({ entry, list, setSelected }) {
   const v = useMemo(() => validateFighter(draft), [stableStringify(draft)])
   const hasFlow = !!draft.passive?.flow
   const v12 = draft.rules === 12
+  const rv = draft.rules === 12 || draft.rules === 15 ? draft.rules : 11
   const base = entry.base
   const changes = base ? diffFighter(base, draft) : []
   const baseWord = entry.reference ? 'bundled' : 'signed-off', resetWord = entry.reference ? 'bundled' : 'signed off'
@@ -111,16 +112,16 @@ function FighterEditor({ entry, list, setSelected }) {
     ${view === 'json' ? html`<${JsonEditor} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />` : html`
       <${FighterFields} draft=${draft} setDraft=${setDraft} readOnly=${readOnly} />
       ${editing !== null && (editing === 'S' ? draft.super : draft.cards[editing]) ? html`<${CardEditor} key=${editing} card=${editing === 'S' ? draft.super : draft.cards[editing]}
-        isSuper=${editing === 'S'} hasFlow=${hasFlow} v12=${v12} readOnly=${readOnly}
+        isSuper=${editing === 'S'} hasFlow=${hasFlow} rules=${rv} readOnly=${readOnly}
         baseCard=${base ? (editing === 'S' ? base.super : base.cards[editing]) || null : null}
         onChange=${c => setCard(editing, c)} onClose=${() => setEditing(null)} />` : null}
       <div class="cards-grid">
         ${[...draft.cards.map((c, i) => [i, c]), ...(draft.super ? [['S', draft.super]] : [])].map(([i, c]) => {
           const b = base ? (i === 'S' ? base.super : base.cards[i]) || null : null
           const changed = b && !same(b, c)
-          const cv = validateCard(c, { isSuper: i === 'S', hasFlow, v12 })
+          const cv = validateCard(c, { isSuper: i === 'S', hasFlow, v12, v15: rv === 15 })
           return html`<div key=${i}>
-            <${CardFace} card=${c} isSuper=${i === 'S'} hasFlow=${hasFlow} as="button" onClick=${() => setEditing(i)}
+            <${CardFace} card=${c} isSuper=${i === 'S'} hasFlow=${hasFlow} rules=${rv} as="button" onClick=${() => setEditing(i)}
               cls=${editing === i ? 'selected' : ''} label=${`Edit ${c.name}`} />
             <div class="row" style=${{ gap: '8px' }}>
               <button class="link" onClick=${() => setEditing(i)}>${readOnly ? 'Details' : 'Edit'}</button>
@@ -140,10 +141,11 @@ function FighterFields({ draft, setDraft, readOnly }) {
   return html`<div class="panel grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
     <label class="field"><span>Name</span><input id="f-name" type="text" value=${draft.name} disabled=${readOnly} onInput=${e => upd({ name: e.target.value })} /></label>
     <label class="field"><span>Epithet</span><input id="f-epithet" type="text" value=${draft.epithet || ''} disabled=${readOnly} onInput=${e => upd({ epithet: e.target.value || undefined })} /></label>
-    <label class="field" title="Rules v12 adds kinds and speed. Switching a fighter's rules doesn't convert its cards: fix what the checks list."><span>Rules</span>
-      <select id="f-rules" value=${String(draft.rules === 12 ? 12 : 11)} disabled=${readOnly} onChange=${e => upd({ rules: e.target.value === '12' ? 12 : undefined })}>
+    <label class="field" title="Rules v12 and v15 add kinds and speed. Switching a fighter's rules doesn't convert its cards: fix what the checks list."><span>Rules</span>
+      <select id="f-rules" value=${String(draft.rules === 12 || draft.rules === 15 ? draft.rules : 11)} disabled=${readOnly} onChange=${e => upd({ rules: e.target.value === '11' ? undefined : Number(e.target.value) })}>
         <option value="11">v11 (signed-off roster)</option>
-        <option value="12">v12 (kinds and speed)</option>
+        <option value="12">v12 (kinds, speed, turn-backs)</option>
+        <option value="15">v15 (v11 core, speed, follow-ups)</option>
       </select>
     </label>
     <label class="field"><span>Base HP</span><input id="f-hp" type="number" min="1" max="99" value=${draft.hp} disabled=${readOnly} onInput=${e => upd({ hp: toInt(e.target.value) })} /></label>
@@ -176,9 +178,10 @@ function defaultValue(k, t) {
   return k.key.startsWith('chipPer') || k.key.startsWith('buildPer') ? 2 : 1
 }
 
-function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange, onClose }) {
+function CardEditor({ card, isSuper, hasFlow, rules = 11, readOnly, baseCard, onChange, onClose }) {
   const t = TYPE_CODE[card.type]
-  const v = validateCard(card, { isSuper, hasFlow, v12 })
+  const kinded = rules === 12 || rules === 15
+  const v = validateCard(card, { isSuper, hasFlow, v12: rules === 12, v15: rules === 15 })
   const [note, setNote] = useState(null)
   const set = patch => {
     const c = { ...card, ...patch }
@@ -199,8 +202,9 @@ function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange,
     }
     if (nt === 'P') c.build = c.build || 3; else delete c.build
     if (nt === 'C' && !(c.chip > 0)) c.chip = 2
-    if (v12) {                                   // a kind and speed that fit the new type
-      if (!KINDS_OF[nt].includes(c.kind)) c.kind = KINDS_OF[nt][0]
+    if (kinded) {                                // a kind and speed that fit the new type
+      if (!kindsOf(nt, rules).includes(c.kind)) c.kind = kindsOf(nt, rules)[0]
+      if (c.kind === undefined) delete c.kind
       if (SPEED_BAND[nt]) { const [lo, hi] = SPEED_BAND[nt]; if (!(c.speed >= lo && c.speed <= hi)) c.speed = DEFAULT_SPEED[c.kind] }
       else delete c.speed
       if (nt === 'R' || nt === 'T') delete c.chip
@@ -216,7 +220,7 @@ function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange,
   return html`<div class="panel stack" style=${{ gap: '16px' }} aria-label=${`Editing ${card.name}`}>
     <div class="spread"><h3>${isSuper ? 'Super' : 'Card'} · ${card.name}</h3><button class="link" onClick=${onClose}>Close</button></div>
     <div class="card-ed">
-      <${CardFace} card=${card} isSuper=${isSuper} hasFlow=${hasFlow} />
+      <${CardFace} card=${card} isSuper=${isSuper} hasFlow=${hasFlow} rules=${rules} />
       <fieldset class="stack" style=${{ border: 0, padding: 0, margin: 0 }} disabled=${readOnly}>
         <div class="grid3">
           <label class="field" style=${{ gridColumn: 'span 2' }}><span>Name</span><input id="c-name" type="text" value=${card.name} onInput=${e => set({ name: e.target.value })} /></label>
@@ -225,15 +229,15 @@ function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange,
               ${TYPES.map(x => html`<option value=${x}>${x[0].toUpperCase() + x.slice(1)}</option>`)}
             </select>
           </label>
-          ${v12 ? html`<label class="field"><span>Kind</span>
+          ${kinded && kindsOf(t, rules).length ? html`<label class="field"><span>Kind</span>
             <select id="c-kind" value=${card.kind || ''} onChange=${e => set({ kind: e.target.value })}>
-              ${!KINDS_OF[t].includes(card.kind) ? html`<option value="">Choose…</option>` : null}
-              ${KINDS_OF[t].map(k => html`<option value=${k}>${KINDS[k].label}</option>`)}
+              ${!kindsOf(t, rules).includes(card.kind) ? html`<option value="">Choose…</option>` : null}
+              ${kindsOf(t, rules).map(k => html`<option value=${k}>${KINDS[k].label}</option>`)}
             </select>
           </label>` : null}
-          ${v12 && SPEED_BAND[t] ? html`<label class="field"><span>Speed (${SPEED_BAND[t][0]}–${SPEED_BAND[t][1]}, higher is faster)</span><input id="c-speed" type="number" min=${SPEED_BAND[t][0]} max=${SPEED_BAND[t][1]} value=${card.speed ?? ''} onInput=${e => set({ speed: toInt(e.target.value) })} /></label>` : null}
+          ${kinded && SPEED_BAND[t] ? html`<label class="field"><span>Speed (${SPEED_BAND[t][0]}–${SPEED_BAND[t][1]}, higher is faster)</span><input id="c-speed" type="number" min=${SPEED_BAND[t][0]} max=${SPEED_BAND[t][1]} value=${card.speed ?? ''} onInput=${e => set({ speed: toInt(e.target.value) })} /></label>` : null}
           ${t === 'P' ? html`<label class="field"><span>Build</span><input id="c-build" type="number" min="1" value=${card.build ?? 0} onInput=${e => set({ build: toInt(e.target.value) })} /></label>` : null}
-          ${v12 && (t === 'R' || t === 'T') && !card.chip ? null : html`<label class="field"><span>Chip</span><input id="c-chip" type="number" min="0" value=${card.chip ?? 0} onInput=${e => set({ chip: toInt(e.target.value) })} /></label>`}
+          ${kinded && (t === 'R' || t === 'T') && !card.chip ? null : html`<label class="field"><span>Chip</span><input id="c-chip" type="number" min="0" value=${card.chip ?? 0} onInput=${e => set({ chip: toInt(e.target.value) })} /></label>`}
           ${!isSuper ? html`<label class="field"><span>Cooldown</span>
             <select id="c-cd" value=${String(card.cooldown ?? 1)} onChange=${e => set({ cooldown: Number(e.target.value) })}><option value="1">1 round</option><option value="2">2 rounds</option></select>
           </label>` : null}
@@ -243,7 +247,7 @@ function CardEditor({ card, isSuper, hasFlow, v12, readOnly, baseCard, onChange,
 
         <div class="stack" style=${{ gap: '8px' }}>
           <span class="label">Effects and costs</span>
-          ${v12 && KINDS[card.kind]?.line ? html`<p class="small muted">As a ${KINDS[card.kind].label}: ${KINDS[card.kind].line}</p>` : null}
+          ${kinded && kindLine(card, rules) ? html`<p class="small muted">${rules === 15 ? 'Rules v15' : `As a ${KINDS[card.kind]?.label}`}: ${kindLine(card, rules)}</p>` : null}
           ${present.length === 0 ? html`<p class="small muted">No text: the card does its type effect${t === 'T' ? ' (none, for a typeless card)' : ''} and its chip.</p>` : null}
           ${present.map(k => html`<${KeywordRow} k=${k} t=${t} value=${card[k.key]} onChange=${val => set({ [k.key]: val })} onRemove=${() => set({ [k.key]: undefined })} />`)}
           ${addable.length && !readOnly ? html`<label class="field" style=${{ maxWidth: '360px' }}><span>Add an effect or cost</span>
