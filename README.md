@@ -17,7 +17,7 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
-| `v15` | Yomi Playtest v15 | The v15 Benchmark, the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
+| `v15` | Yomi Playtest v15 | The v15 Benchmark, Benchmark C3/4 (Converts chip 3 and 4), the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
 
 Locally, open `index.html?edition=v15` for the v15 edition.
 

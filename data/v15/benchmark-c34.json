@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "id": "benchmark-c34",
+  "name": "Benchmark C3/4",
+  "epithet": "Converts chip 3 and 4",
+  "rules": 15,
+  "concept": "The Benchmark with its Converts one chip harder: Throw chips 3 and Big Swing 4. A test of whether Convert feels better at empty piles.",
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 3,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 5,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "heavy",
+      "speed": 3,
+      "chip": 4,
+      "cooldown": 1
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "block",
+      "cooldown": 1
+    },
+    {
+      "name": "Dodge",
+      "type": "recover",
+      "kind": "dodge",
+      "cooldown": 1
+    }
+  ],
+  "super": null,
+  "notes": "Added 30 Oct 2026 after the first playtest, where Convert felt the weakest type at empty piles."
+}
