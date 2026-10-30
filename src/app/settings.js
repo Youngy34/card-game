@@ -1,6 +1,6 @@
 // Settings: rule variants and the sparring partner's weights.
 
-import { html, useState, useEffect } from './lib.js'
+import { html, useState, useEffect, useRef } from './lib.js'
 import { settings, saveSettings, resetSettings, getState, roster } from './store.js'
 import { DEFAULT_WEIGHTS } from '../engine/ai.js'
 import { toast } from './ui.js'
@@ -22,7 +22,10 @@ export function Settings() {
   const [d, setD] = useState(cur)
   const st = getState()
   const readOnly = st.canEdit === false
-  useEffect(() => { setD(settings()) }, [st.settings])
+  // reload the form when the saved settings change elsewhere, but not on first
+  // render (the effect runs after paint, and would undo a change made at once)
+  const seen = useRef(st.settings)
+  useEffect(() => { if (seen.current !== st.settings) { seen.current = st.settings; setD(settings()) } }, [st.settings])
   const changed = JSON.stringify(d) !== JSON.stringify(cur)
   const isDefault = !st.settings
   const save = () => saveSettings(d).then(() => toast('Saved'), e => toast(e.message))
@@ -43,6 +46,12 @@ export function Settings() {
           <option value="pressure">Its owner may follow up with a Pressure only (simmed, rejected)</option>
           <option value="fixed">The attacker takes fixed damage (simmed, partly works)</option>
           <option value="none">Nothing beyond clearing (simmed, rejected: mindless attacking wins)</option>
+        </select>
+      </label>
+      <label class="field"><span>Speed ties (rules v15): two attacks of the same type at the same speed</span>
+        <select id="s-tie" value=${d.rules.speedTie || 'cancel'} onChange=${e => rule({ speedTie: e.target.value })}>
+          <option value="cancel">They cancel: neither lands (as first written)</option>
+          <option value="lowhp">The player on less HP wins the tie; on equal HP they cancel</option>
         </select>
       </label>
       ${d.rules.recoverPayoff === 'fixed' ? html`<label class="field" style=${{ maxWidth: '220px' }}><span>Fixed damage</span>

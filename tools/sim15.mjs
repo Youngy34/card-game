@@ -6,6 +6,7 @@
 //   node tools/sim15.mjs game vex atlas --payoff fixed        # one matchup, full report
 //
 // --payoff any | pressure | fixed | none     (--fixed 2 sets the fixed damage)
+// --tie cancel | lowhp                       (speed ties cancel, or go to the player on less HP)
 // Output is JSON on the last line when --json is given.
 
 import fs from 'fs'
@@ -21,6 +22,7 @@ const args = process.argv.slice(2)
 const opt = (name, d) => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : d }
 const n = +opt('-n', 300), seed = +opt('--seed', 5), payoff = opt('--payoff', 'any'), fixedDamage = +opt('--fixed', 2)
 const maxRounds = +opt('--max', 100)
+const speedTie = opt('--tie', 'cancel')   // 'cancel' | 'lowhp'
 const projectileSafe = args.includes('--projsafe'); if (projectileSafe) args.splice(args.indexOf('--projsafe'), 1)
 const dir = opt('--dir', 'data/v15')
 const json = args.includes('--json'); if (json) args.splice(args.indexOf('--json'), 1)
@@ -28,7 +30,7 @@ const mode = args[0]
 const settings = JSON.parse(fs.readFileSync(`${root}/data/settings.json`, 'utf8'))
 const W = { ...DEFAULT_WEIGHTS, ...settings.ai }
 const counterChip = opt('--counter', 'always')
-const rules = withFollowScore({ maxRounds, recoverPayoff: payoff, fixedDamage, projectileSafe, counterChip }, W)
+const rules = withFollowScore({ maxRounds, recoverPayoff: payoff, fixedDamage, projectileSafe, counterChip, speedTie }, W)
 
 export function load(name) {
   const p = name.endsWith(".json") ? name : dir.startsWith("/") ? `${dir}/${name}.json` : `${root}/${dir}/${name}.json`

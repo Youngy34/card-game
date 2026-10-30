@@ -81,7 +81,7 @@ export function settings() {
   const d = S.defaults || { rules: {}, ai: {} }
   const s = S.settings || {}
   return {
-    rules: { counterChip: 'always', maxRounds: 60, recoverPayoff: 'any', fixedDamage: 2, projectileSafe: false, ...d.rules, ...(s.rules || {}) },
+    rules: { counterChip: 'always', maxRounds: 60, recoverPayoff: 'any', fixedDamage: 2, projectileSafe: false, speedTie: 'cancel', ...d.rules, ...(s.rules || {}) },
     ai: { ...DEFAULT_WEIGHTS, ...d.ai, ...(s.ai || {}) },
   }
 }

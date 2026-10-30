@@ -5,15 +5,24 @@ import { TYPE_LABEL, KINDS } from '../engine/keywords.js'
 
 const kindOf = c => KINDS[c.kind]?.label || TYPE_LABEL[c.t]
 
-export function outcomeLine(ca, cb, boosts = [0, 0]) {
-  const o = outcome(ca, cb, boosts[0], boosts[1])
+// s: the round's result from the engine, when there is one (it knows how a
+// speed tie was settled); ctx: { rules, names, hp } with the players' names
+// and their HP before the round.
+export function outcomeLine(ca, cb, boosts = [0, 0], s = null, { rules = {}, names = null, hp = null } = {}) {
+  const o = s?.outcome ?? outcome(ca, cb, boosts[0], boosts[1])
   // rules v15
   if (ca.v15 || cb.v15) {
+    if (s?.tieHp) {
+      const k = o === 'A' ? 0 : 1, [w, l] = k === 0 ? [ca, cb] : [cb, ca]
+      const who = names ? `${names[k]}${hp ? `, on ${hp[k]} HP to ${hp[1 - k]}` : ''}` : 'the player on less HP'
+      const cards = names ? `${names[k]}'s ${w.name} lands and ${names[1 - k]}'s ${l.name} is beaten` : `${w.name} lands and ${l.name} is beaten`
+      return { title: 'Same speed: less HP wins', sub: `Both speed ${ca.speed}. The tie goes to ${who}: ${cards}`, winner: k }
+    }
     if ((o === 'A' || o === 'B') && ca.t === cb.t && !boosts[0] !== !boosts[1]) {
       const [w, l] = o === 'A' ? [ca, cb] : [cb, ca]
       return { title: 'Frame advantage', sub: `${w.name} wins the duel whatever the speeds; ${l.name} is beaten`, winner: o === 'A' ? 0 : 1 }
     }
-    if (o === 'cancel') return { title: 'Same speed', sub: `${ca.name} and ${cb.name} are both speed ${ca.speed}: they cancel, and neither lands` }
+    if (o === 'cancel') return { title: 'Same speed', sub: `${ca.name} and ${cb.name} are both speed ${ca.speed}${rules.speedTie === 'lowhp' ? ' and the players are level on HP' : ''}: they cancel, and neither lands` }
     if (o === 'recovers') return { title: 'Both defend', sub: 'Each clears their own pile' }
   }
   // rules v12
@@ -60,6 +69,7 @@ export function eventLines(last, names) {
       case 'faster': L.push(`is faster (speed ${e.n} to ${e.m})`); break
       // rules v15
       case 'tie': L.push(`meets the same speed (${e.n}) and cancels`); break
+      case 'tieHp': L.push(`meets the same speed (${e.n}) and wins the tie on less HP`); break
       case 'followUp': L.push(`follows up with ${e.name}`); break
       case 'punish': L.push(`punishes the opening: ${op} takes ${e.n}`); break
       case 'frame': L.push('gains frame advantage: wins any speed duel next round'); break

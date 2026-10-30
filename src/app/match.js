@@ -4,7 +4,7 @@
 // device), 'watch' (the sparring partner against itself).
 // Phases: 'pick' -> ('pass' between hot-seat picks) -> 'reveal' -> 'pick' ... 'over'
 
-import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverPayoff15, followCandidates, pressureNumbers } from '../engine/engine.js'
+import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverPayoff15, followCandidates, pressureNumbers, tieWinner15 } from '../engine/engine.js'
 import { mixes, levelMixes, LEVELS, withFollowScore } from '../engine/ai.js'
 import { readerMix, observe, eqTypes } from '../engine/reader.js'
 import { roundRecord, winRoute } from '../engine/game.js'
@@ -243,6 +243,11 @@ export function boardNotes(m, side) {
 
   if (X.boost) notes.push({ tone: 'good', text: `You have frame advantage: you win any speed duel this round, whatever the speeds.` })
   if (Y.boost) notes.push({ tone: 'bad', text: `${name} has frame advantage: they win any speed duel this round, whatever the speeds.` })
+  if (!X.boost && !Y.boost) {
+    const tw = tieWinner15(X, Y, m.rules)
+    if (tw === 0) notes.push({ tone: 'good', text: `You're on less HP, so you win any speed tie this round.` })
+    else if (tw === 1) notes.push({ tone: 'bad', text: `${name} is on less HP, so they win any speed tie this round.` })
+  }
   if (!has(theirs, 'P')) notes.push({ text: `${name} has no Pressure available: your Converts can only lose a speed duel with theirs.` })
   if (!has(theirs, 'R')) notes.push({ text: `${name} has no Recover available: your Pressures can only lose a speed duel, and can't be followed up on.` })
   if (!has(theirs, 'C')) notes.push({ text: `${name} has no Convert available: your Recovers can't lose this round.` })
@@ -253,7 +258,11 @@ export function boardNotes(m, side) {
     const label = t === 'P' ? 'Pressure' : 'Convert'
     if (a.speed > b.speed) notes.push({ text: `${label} duel: your ${a.name} (${a.speed}) outspeeds their fastest, ${b.name} (${b.speed}).` })
     else if (a.speed < b.speed) notes.push({ text: `${label} duel: their ${b.name} (${b.speed}) outspeeds your fastest, ${a.name} (${a.speed}).` })
-    else notes.push({ text: `${label} duel: your ${a.name} and their ${b.name} are both speed ${a.speed}, so they'd cancel.` })
+    else {
+      const tw = tieWinner15(X, Y, m.rules)
+      const settle = tw === 0 ? 'the tie goes to you (less HP)' : tw === 1 ? `the tie goes to ${name} (less HP)` : m.rules.speedTie === 'lowhp' ? "you're level on HP, so they'd cancel" : "they'd cancel"
+      notes.push({ text: `${label} duel: your ${a.name} and their ${b.name} are both speed ${a.speed}, so ${settle}.` })
+    }
   }
 
   // what a Recover would make you pay for a Pressure

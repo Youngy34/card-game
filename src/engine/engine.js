@@ -263,8 +263,8 @@ function removeFrom(arr, v) {
   if (i >= 0) arr.splice(i, 1)
 }
 
-export function outcome(ca, cb, ba = 0, bb = 0) {
-  if (ca.v15 || cb.v15) return clash15(ca, cb, ba, bb).outcome
+export function outcome(ca, cb, ba = 0, bb = 0, tie = -1) {
+  if (ca.v15 || cb.v15) return clash15(ca, cb, ba, bb, tie).outcome
   if (ca.kind || cb.kind) return clash12(ca, cb).outcome     // v12 cards always have a kind
   if (ca.t === 'T' || cb.t === 'T') return 'typeless'
   if (ca.t === cb.t) return 'mirror'
@@ -275,7 +275,9 @@ export function outcome(ca, cb, ba = 0, bb = 0) {
 // ---- rules v15 ----------------------------------------------------------
 // v11's triangle and grey economy with v12's kinds and speed (rules-overview 15):
 //   Different types: the triangle decides.
-//   Two attacks of one type: the faster card wins; a tie cancels (neither resolves).
+//   Two attacks of one type: the faster card wins. A speed tie is settled by
+//   rules.speedTie: 'cancel' (default; neither resolves) or 'lowhp' (the player
+//   on less HP wins it; on equal HP it cancels).
 //   Two Recovers: both clear their own piles. No damage.
 //   A Recover that beats a Pressure pays off by rules.recoverPayoff:
 //     'any'      the Recover's owner may play one attack from hand, unopposed
@@ -288,7 +290,8 @@ export function outcome(ca, cb, ba = 0, bb = 0) {
 // engine doesn't run that step yet, so v15 move lists carry no typeless cards.
 // outcome: 'A' | 'B' | 'cancel' | 'recovers'
 // ba, bb: each player's frame advantage this round (they win any speed duel).
-export function clash15(ca, cb, ba = 0, bb = 0) {
+// tie: the side that wins a speed tie (tieWinner15), or -1 if a tie cancels.
+export function clash15(ca, cb, ba = 0, bb = 0, tie = -1) {
   const ta = ca.t, tb = cb.t
   if (ta !== tb) {
     const aWins = BEATS.has(ta + tb)
@@ -299,7 +302,17 @@ export function clash15(ca, cb, ba = 0, bb = 0) {
   if (boosted) return ba ? { res: [true, false], beaten: [false, true], outcome: 'A', frame: true } : { res: [false, true], beaten: [true, false], outcome: 'B', frame: true }
   if (ca.speed > cb.speed) return { res: [true, false], beaten: [false, true], outcome: 'A' }
   if (cb.speed > ca.speed) return { res: [false, true], beaten: [true, false], outcome: 'B' }
+  if (tie === 0) return { res: [true, false], beaten: [false, true], outcome: 'A', tieHp: true }
+  if (tie === 1) return { res: [false, true], beaten: [true, false], outcome: 'B', tieHp: true }
   return { res: [false, false], beaten: [false, false], outcome: 'cancel' }
+}
+
+// The side that wins a speed tie this round, or -1 if ties cancel.
+//   rules.speedTie 'cancel' (default): every tie cancels.
+//   rules.speedTie 'lowhp': the player on less HP wins the tie; on equal HP it cancels.
+export function tieWinner15(A, B, rules = {}) {
+  if (rules.speedTie !== 'lowhp') return -1
+  return A.hp < B.hp ? 0 : B.hp < A.hp ? 1 : -1
 }
 
 // This round's payoff for a Recover that beat a Pressure: the side, and what
@@ -339,7 +352,7 @@ const NO_CARD = { t: null, kind: null, kw: {} }
 // estimate of damage dealt.
 function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
   const ca = card(A0, a), cb = card(B0, b)
-  const cl = clash15(ca, cb, A0.boost || 0, B0.boost || 0)
+  const cl = clash15(ca, cb, A0.boost || 0, B0.boost || 0, tieWinner15(A0, B0, rules))
   const { w, payoff } = recoverPayoff15(ca, cb, rules)
   if (w >= 0 && (payoff === 'any' || payoff === 'pressure') && follow[w] === undefined) {
     const X = w === 0 ? A0 : B0, played = w === 0 ? a : b
@@ -423,7 +436,7 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
       if (F.stagger) ev.push({ side, kind: F.knockdown ? 'knockdown' : 'stagger', t: F.stagger })
     }
   }
-  return { A, B, result, resolved: [resA, resB], beaten: [beatA, beatB], outcome: cl.outcome, frameDuel: !!cl.frame,
+  return { A, B, result, resolved: [resA, resB], beaten: [beatA, beatB], outcome: cl.outcome, frameDuel: !!cl.frame, tieHp: !!cl.tieHp,
            quiet, flags: [fA, fB], followed, fixed, recoverWin: w, frame: w >= 0 && payoff === 'frame' ? w : -1 }
 }
 
@@ -441,6 +454,7 @@ function clashEvents15(ca, cb, cl, ev, boosts = [0, 0]) {
   else if ((cl.outcome === 'A' || cl.outcome === 'B') && ca.t === cb.t) {
     const w = cl.outcome === 'A' ? 0 : 1
     if (cl.frame) ev.push({ side: w, kind: 'frameWin' })
+    else if (cl.tieHp) ev.push({ side: w, kind: 'tieHp', n: ca.speed })
     else ev.push({ side: w, kind: 'faster', n: [ca.speed, cb.speed][w], m: [ca.speed, cb.speed][1 - w] })
   }
 }

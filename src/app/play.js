@@ -6,7 +6,7 @@ import { Hud, Seg, StatusChip, toast } from './ui.js'
 import { roster, settings, saveGame, newId, getState } from './store.js'
 import * as M from './match.js'
 import { outcomeLine, eventLines, deltaLine } from './narrate.js'
-import { card } from '../engine/engine.js'
+import { card, tieWinner15 } from '../engine/engine.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
 import { PASSIVES } from '../engine/keywords.js'
 import { LEVELS } from '../engine/ai.js'
@@ -18,6 +18,10 @@ const PAYOFF = {
   pressure: 'a Recover that beats a Pressure earns a free follow-up Pressure',
   fixed: 'a Recover that beats a Pressure deals fixed damage to the attacker',
   none: 'a Recover that beats a Pressure only clears its own pile',
+}
+const TIE = {
+  cancel: 'speed ties cancel',
+  lowhp: 'a speed tie goes to the player on less HP (on equal HP it cancels)',
 }
 const WHO = {
   ai: ['You', 'Sparring partner'],
@@ -95,7 +99,7 @@ export function Setup({ onStart, prefs, setPrefs }) {
       <label class="check"><input type="checkbox" checked=${prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the unexploitable mix after each reveal</label>
       ${v15 ? html`<label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you pick (lethal range, missing types, speed duels, what a Recover would cost you)</label>` : null}
       ${mixed ? html`<p class="small msg-w">${picked[0].fighter.name} plays rules v${picked[0].rules} and ${picked[1].fighter.name} plays rules v${picked[1].rules}. Pick two fighters on the same rules.</p>` : null}
-      <p class="small muted">${v15 ? `Rules v15: ${PAYOFF[s.rules.recoverPayoff] || PAYOFF.any}${s.rules.recoverPayoff === 'fixed' ? ` (${s.rules.fixedDamage ?? 2})` : ''}${s.rules.projectileSafe ? ', except against a Projectile' : ''}.` : v12 ? 'Rules v12: Recovers never chip; Guards and Counters turn the attacker\'s Build or chip back.' : `Recover chip lands ${ruleNote}.`} Change rules and the sparring partner's weights in Settings.</p>
+      <p class="small muted">${v15 ? `Rules v15: ${PAYOFF[s.rules.recoverPayoff] || PAYOFF.any}${s.rules.recoverPayoff === 'fixed' ? ` (${s.rules.fixedDamage ?? 2})` : ''}${s.rules.projectileSafe ? ', except against a Projectile' : ''}; ${TIE[s.rules.speedTie] || TIE.cancel}.` : v12 ? 'Rules v12: Recovers never chip; Guards and Counters turn the attacker\'s Build or chip back.' : `Recover chip lands ${ruleNote}.`} Change rules and the sparring partner's weights in Settings.</p>
       <div class="actions"><button class="btn" disabled=${mixed} onClick=${start}>Start the match</button></div>
     </div>
   </div>`
@@ -143,9 +147,9 @@ export function Table({ m, setM, prefs, onEnd }) {
 
   return html`<div class="table">
     <div class="board">
-      <${Hud} X=${m.B} Y=${m.A} who=${who[1]} />
+      <${Hud} X=${m.B} Y=${m.A} who=${who[1]} winsTies=${!!m.A.f.v15 && tieWinner15(m.A, m.B, m.rules) === 1} />
       <${Clash} m=${m} names=${names} prefs=${prefs} sel=${sel} />
-      <${Hud} X=${m.A} Y=${m.B} who=${who[0]} />
+      <${Hud} X=${m.A} Y=${m.B} who=${who[0]} winsTies=${!!m.A.f.v15 && tieWinner15(m.A, m.B, m.rules) === 0} />
       <section class="hand-wrap" aria-label="Your move">
         ${picking ? html`
           <div class="spread">
@@ -232,7 +236,7 @@ function Clash({ m, names, prefs, sel }) {
   const ca = card(L.before[0], L.a), cb = card(L.before[1], L.b)
   const fu = L.s.followed
   const fuCard = fu ? card(L.before[fu.side], fu.i) : null
-  const o = outcomeLine(ca, cb, [L.before[0].boost || 0, L.before[1].boost || 0])
+  const o = outcomeLine(ca, cb, [L.before[0].boost || 0, L.before[1].boost || 0], L.s, { rules: m.rules, names, hp: [L.before[0].hp, L.before[1].hp] })
   const ev = eventLines(L, names)
   const over = m.phase === 'over'
   const res = m.result

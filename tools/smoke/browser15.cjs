@@ -117,6 +117,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(await page.locator('#s-payoff').count() === 1, 'payoff setting shows')
   ok(await page.locator('#s-counter').count() === 0, 'v11 counter-chip setting is hidden')
   await page.selectOption('#s-payoff', 'fixed')
+  await page.waitForTimeout(200)   // the round-robin can still be finishing
   ok(await page.locator('#s-fixed').count() === 1, 'fixed damage field appears')
   await page.locator('#s-projsafe').check()
   await page.getByRole('button', { name: 'Save settings' }).click()
@@ -209,6 +210,59 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(sawFrame, 'a Block win gives frame advantage')
   ok(sawFlag, 'the HUD flags frame advantage')
   SHOTS && await page.screenshot({ path: SHOTS + '11-frame.png', fullPage: true })
+
+  // speed ties: the player on less HP wins them
+  if (await page.getByRole('button', { name: 'Leave this match' }).count()) await page.getByRole('button', { name: 'Leave this match' }).click()
+  await page.getByRole('button', { name: 'Settings' }).click()
+  ok(await page.locator('#s-tie').count() === 1, 'speed-tie setting shows')
+  ok((await page.locator('#s-tie').inputValue()) === 'cancel', 'speed ties cancel by default')
+  await page.selectOption('#s-tie', 'lowhp')
+  await page.getByRole('button', { name: 'Save settings' }).click()
+  await page.waitForTimeout(200)
+  let sawTieFlag = false, sawTieNote = false, sawTieWin = false, tieGames = 0
+  while (tieGames < 6 && !(sawTieFlag && sawTieNote && sawTieWin)) {
+    tieGames++
+    await page.getByRole('button', { name: 'Play', exact: true }).click()
+    if (await page.getByRole('button', { name: 'New match' }).count()) await page.getByRole('button', { name: 'New match' }).click()
+    if (await page.getByRole('button', { name: 'Leave this match' }).count()) await page.getByRole('button', { name: 'Leave this match' }).click()
+    await page.getByRole('button', { name: 'Hard', exact: true }).click()
+    for (const k of [0, 1]) await page.locator('.pickers .fighters').nth(k).getByRole('button', { name: /^Benchmark/ }).first().click()
+    if (tieGames === 1) ok((await body()).includes('a speed tie goes to the player on less hp'), 'setup states the tie rule')
+    await page.getByRole('button', { name: 'Start the match' }).click()
+    await page.waitForSelector('text=Your pick')
+    for (let r = 0; r < 80; r++) {
+      const t = await body()
+      if (t.includes('k.o.') || /\bdraw\b/.test(t)) break
+      if (await page.locator('.flag.tie').count()) sawTieFlag = true
+      if (t.includes('win any speed tie this round')) sawTieNote = true
+      if (t.includes('less hp wins') && t.includes('wins the tie on less hp')) {
+        if (!sawTieWin && SHOTS) await page.screenshot({ path: SHOTS + '13-tie.png', fullPage: true })
+        sawTieWin = true
+      }
+      if (await page.getByRole('button', { name: 'No follow-up' }).count()) await page.getByRole('button', { name: 'No follow-up' }).click()
+      else if (await page.getByRole('button', { name: 'Next round' }).count()) await page.getByRole('button', { name: 'Next round' }).click()
+      else {
+        // Jab whenever it's up, to meet the partner's Jab
+        const cards = page.locator('.hand button.card:not([disabled])')
+        const labels = await cards.evaluateAll(bs => bs.map(b => b.getAttribute('aria-label') || ''))
+        const jab = labels.findIndex(l => l.startsWith('Jab'))
+        await cards.nth(jab >= 0 ? jab : r % labels.length).click()
+        await page.getByRole('button', { name: 'Lock in' }).click()
+      }
+      await page.waitForTimeout(30)
+      if (sawTieFlag && sawTieNote && sawTieWin) break
+    }
+  }
+  ok(sawTieFlag, 'the HUD flags who wins speed ties')
+  ok(sawTieNote, 'board notes say who wins a speed tie')
+  ok(sawTieWin, `a speed tie went to the player on less HP and was narrated (${tieGames} games)`)
+  if (sawTieWin) {
+    if (await page.getByRole('button', { name: 'Leave this match' }).count()) await page.getByRole('button', { name: 'Leave this match' }).click()
+  }
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Back to defaults' }).click()
+  await page.waitForTimeout(200)
+  ok((await page.locator('#s-tie').inputValue()) === 'cancel', 'defaults put ties back to cancel')
 
   // phone width
   const ph = await newPage(390, 844)

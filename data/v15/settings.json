@@ -4,6 +4,7 @@
     "recoverPayoff": "any",
     "fixedDamage": 2,
     "projectileSafe": false,
+    "speedTie": "cancel",
     "maxRounds": 100
   },
   "ai": {
