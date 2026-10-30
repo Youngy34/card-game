@@ -14,7 +14,7 @@ export const DEFAULT_RULES = { counterChip: 'always', maxRounds: 60 }
 // hand: sorted card indices; cd1/cd2: cooldown spaces (in arrival order);
 // sup: Super still in hand; tlock: a type this player can't play this round.
 export function newPlayer(f) {
-  return { f, hp: f.hp, pile: 0, hand: f.cards.map((_, i) => i), cd1: [], cd2: [], sup: !!f.sup, tlock: null }
+  return { f, hp: f.hp, pile: 0, hand: f.cards.map((_, i) => i), cd1: [], cd2: [], sup: !!f.sup, tlock: null, boost: 0 }
 }
 const clone = X => ({ ...X, hand: X.hand.slice(), cd1: X.cd1.slice(), cd2: X.cd2.slice() })
 export const card = (X, i) => (i === 'S' ? X.f.sup : X.f.cards[i])
@@ -263,8 +263,8 @@ function removeFrom(arr, v) {
   if (i >= 0) arr.splice(i, 1)
 }
 
-export function outcome(ca, cb) {
-  if (ca.v15 || cb.v15) return clash15(ca, cb).outcome
+export function outcome(ca, cb, ba = 0, bb = 0) {
+  if (ca.v15 || cb.v15) return clash15(ca, cb, ba, bb).outcome
   if (ca.kind || cb.kind) return clash12(ca, cb).outcome     // v12 cards always have a kind
   if (ca.t === 'T' || cb.t === 'T') return 'typeless'
   if (ca.t === cb.t) return 'mirror'
@@ -282,19 +282,33 @@ export function outcome(ca, cb) {
 //     'pressure' as 'any', but the follow-up must be a Pressure
 //     'fixed'    the attacker takes rules.fixedDamage (default 2) to HP
 //     'none'     nothing beyond clearing (the baseline: Recovers only defend)
+//   A Recover with frame advantage (card text) pays off differently, whatever
+//   the setting: its owner wins any speed duel next round, and doesn't follow up.
 // Typeless cards are Setups, played in a setup step before the clash; the
 // engine doesn't run that step yet, so v15 move lists carry no typeless cards.
 // outcome: 'A' | 'B' | 'cancel' | 'recovers'
-export function clash15(ca, cb) {
+// ba, bb: each player's frame advantage this round (they win any speed duel).
+export function clash15(ca, cb, ba = 0, bb = 0) {
   const ta = ca.t, tb = cb.t
   if (ta !== tb) {
     const aWins = BEATS.has(ta + tb)
     return { res: [aWins, !aWins], beaten: [!aWins, aWins], outcome: aWins ? 'A' : 'B' }
   }
   if (ta === 'R') return { res: [true, true], beaten: [false, false], outcome: 'recovers' }
+  const boosted = !ba !== !bb
+  if (boosted) return ba ? { res: [true, false], beaten: [false, true], outcome: 'A', frame: true } : { res: [false, true], beaten: [true, false], outcome: 'B', frame: true }
   if (ca.speed > cb.speed) return { res: [true, false], beaten: [false, true], outcome: 'A' }
   if (cb.speed > ca.speed) return { res: [false, true], beaten: [true, false], outcome: 'B' }
   return { res: [false, false], beaten: [false, false], outcome: 'cancel' }
+}
+
+// This round's payoff for a Recover that beat a Pressure: the side, and what
+// it earns ('any', 'pressure', 'fixed', 'none', or 'frame' for frame advantage).
+export function recoverPayoff15(ca, cb, rules = {}) {
+  const w = recoverWinner15(ca, cb, rules)
+  if (w < 0) return { w, payoff: null }
+  const rc = w === 0 ? ca : cb
+  return { w, payoff: rc.kw.frameAdvantage ? 'frame' : (rules.recoverPayoff || 'any') }
 }
 
 // The side whose Recover beat a Pressure this round (and so earns the payoff),
@@ -324,10 +338,9 @@ const NO_CARD = { t: null, kind: null, kw: {} }
 // when given (the sparring partner's value function), otherwise a greedy
 // estimate of damage dealt.
 function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
-  const payoff = rules.recoverPayoff || 'any'
   const ca = card(A0, a), cb = card(B0, b)
-  const cl = clash15(ca, cb)
-  const w = recoverWinner15(ca, cb, rules)
+  const cl = clash15(ca, cb, A0.boost || 0, B0.boost || 0)
+  const { w, payoff } = recoverPayoff15(ca, cb, rules)
   if (w >= 0 && (payoff === 'any' || payoff === 'pressure') && follow[w] === undefined) {
     const X = w === 0 ? A0 : B0, played = w === 0 ? a : b
     const cands = [null, ...followCandidates(X, played, payoff)]
@@ -344,7 +357,7 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
 
   const A = clone(A0), B = clone(B0)
   const dA = { hp: 0, pile: 0 }, dB = { hp: 0, pile: 0 }, fA = {}, fB = {}
-  if (ev) clashEvents15(ca, cb, cl, ev)
+  if (ev) clashEvents15(ca, cb, cl, ev, [A0.boost || 0, B0.boost || 0])
   const [resA, resB] = cl.res, [beatA, beatB] = cl.beaten
   if (resA) applyEffect(ca, A, B, dA, dB, fA, cb, rules, ev, 0)
   else if (beatA && ca.kw.onLossSelf) { dA.pile += ca.kw.onLossSelf; if (ev) ev.push({ side: 0, kind: 'onLoss', n: ca.kw.onLossSelf }) }
@@ -362,6 +375,8 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
       fixed = rules.fixedDamage ?? 2
       Y.hp -= fixed
       if (ev) ev.push({ side: w, kind: 'punish', n: fixed })
+    } else if (payoff === 'frame') {
+      if (ev) ev.push({ side: w, kind: 'frame' })
     } else if ((payoff === 'any' || payoff === 'pressure') && follow[w] !== null && follow[w] !== undefined) {
       const fi = follow[w], fc = card(X, fi)
       const dX = { hp: 0, pile: 0 }, dY = { hp: 0, pile: 0 }
@@ -380,6 +395,9 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
     if (A.hp <= 0 && B.hp <= 0) result = A.hp > B.hp ? 1 : B.hp > A.hp ? 0 : 0.5
     else result = B.hp <= 0 ? 1 : 0
   }
+  // frame advantage lasts one round
+  A.boost = 0; B.boost = 0
+  if (w >= 0 && payoff === 'frame') (w === 0 ? A : B).boost = 1
   // cooldown step: the played card, and a follow-up, go on cooldown
   const sides = [[A, a, ca, fA, fB, 0], [B, b, cb, fB, fA, 1]]
   for (const [X, played, c, mine, theirs, k] of sides) {
@@ -405,8 +423,8 @@ function step15(A0, B0, a, b, rules, ev, follow = [undefined, undefined]) {
       if (F.stagger) ev.push({ side, kind: F.knockdown ? 'knockdown' : 'stagger', t: F.stagger })
     }
   }
-  return { A, B, result, resolved: [resA, resB], beaten: [beatA, beatB], outcome: cl.outcome,
-           quiet, flags: [fA, fB], followed, fixed, recoverWin: w }
+  return { A, B, result, resolved: [resA, resB], beaten: [beatA, beatB], outcome: cl.outcome, frameDuel: !!cl.frame,
+           quiet, flags: [fA, fB], followed, fixed, recoverWin: w, frame: w >= 0 && payoff === 'frame' ? w : -1 }
 }
 
 // Without the sparring partner's value function: HP dealt, plus 0.6 per token
@@ -418,10 +436,11 @@ function greedyFollow(s, A0, B0, w) {
   return dealt - (s.followed ? 0.4 : 0)
 }
 
-function clashEvents15(ca, cb, cl, ev) {
+function clashEvents15(ca, cb, cl, ev, boosts = [0, 0]) {
   if (cl.outcome === 'cancel') for (const side of [0, 1]) ev.push({ side, kind: 'tie', n: ca.speed })
   else if ((cl.outcome === 'A' || cl.outcome === 'B') && ca.t === cb.t) {
     const w = cl.outcome === 'A' ? 0 : 1
-    ev.push({ side: w, kind: 'faster', n: [ca.speed, cb.speed][w], m: [ca.speed, cb.speed][1 - w] })
+    if (cl.frame) ev.push({ side: w, kind: 'frameWin' })
+    else ev.push({ side: w, kind: 'faster', n: [ca.speed, cb.speed][w], m: [ca.speed, cb.speed][1 - w] })
   }
 }

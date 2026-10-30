@@ -21,7 +21,7 @@ export function roundRecord(n, A, B, a, b, s) {
   return {
     n,
     cards: [ca.name, cb.name], types: [ca.t, cb.t], supers: [a === 'S', b === 'S'],
-    outcome: outcome(ca, cb), resolved: s.resolved,
+    outcome: s.outcome ?? outcome(ca, cb), resolved: s.resolved,
     before: [{ hp: A.hp, pile: A.pile }, { hp: B.hp, pile: B.pile }],
     after: [{ hp: s.A.hp, pile: s.A.pile }, { hp: s.B.hp, pile: s.B.pile }],
     lockedOut: [lockedOut(A), lockedOut(B)],
@@ -31,6 +31,7 @@ export function roundRecord(n, A, B, a, b, s) {
     // rules v15: kinds and speeds, and what a Recover that beat a Pressure did next
     ...(s.recoverWin !== undefined ? {
       v15: true, kinds: [ca.kind, cb.kind], speeds: [ca.speed, cb.speed], recoverWin: s.recoverWin, fixed: s.fixed || 0,
+      boost: [A.boost || 0, B.boost || 0], frameDuel: s.frameDuel, frame: s.frame,
       followed: s.followed ? { side: s.followed.side, name: s.followed.name, t: s.followed.t, hp: s.followed.hp, cashed: s.followed.t === 'C' ? s.followed.pileBefore : 0 } : null,
     } : {}),
   }
@@ -107,17 +108,18 @@ function tally12(out, rd) {
 // Rules v15: same-type attacks, ties, Recover wins and their follow-ups.
 function tally15(out, rd) {
   const V = (out.v15 ??= {
-    sameType: 0, bySpeed: 0, ties: 0, recoverWins: 0, followP: 0, followC: 0, noFollow: 0, followHp: 0, fixed: 0, fixedHp: 0,
+    sameType: 0, bySpeed: 0, ties: 0, byFrame: 0, frames: 0, recoverWins: 0, followP: 0, followC: 0, noFollow: 0, followHp: 0, fixed: 0, fixedHp: 0,
     quietBy: { recovers: 0, tie: 0, other: 0 },
   })
   if (rd.types[0] === rd.types[1] && (rd.types[0] === 'P' || rd.types[0] === 'C')) {
     V.sameType++
-    if (rd.outcome === 'cancel') V.ties++; else V.bySpeed++
+    if (rd.outcome === 'cancel') V.ties++; else if (rd.frameDuel) V.byFrame++; else V.bySpeed++
   }
   if (rd.recoverWin >= 0) {
     V.recoverWins++
     if (rd.followed) { if (rd.followed.t === 'C') V.followC++; else V.followP++; V.followHp += rd.followed.hp }
     else if (rd.fixed) { V.fixed++; V.fixedHp += rd.fixed }
+    else if (rd.frame >= 0) V.frames++
     else V.noFollow++
   }
   if (rd.quiet) V.quietBy[rd.outcome === 'recovers' ? 'recovers' : rd.outcome === 'cancel' ? 'tie' : 'other']++

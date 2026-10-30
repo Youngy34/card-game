@@ -5,10 +5,14 @@ import { TYPE_LABEL, KINDS } from '../engine/keywords.js'
 
 const kindOf = c => KINDS[c.kind]?.label || TYPE_LABEL[c.t]
 
-export function outcomeLine(ca, cb) {
-  const o = outcome(ca, cb)
+export function outcomeLine(ca, cb, boosts = [0, 0]) {
+  const o = outcome(ca, cb, boosts[0], boosts[1])
   // rules v15
   if (ca.v15 || cb.v15) {
+    if ((o === 'A' || o === 'B') && ca.t === cb.t && !boosts[0] !== !boosts[1]) {
+      const [w, l] = o === 'A' ? [ca, cb] : [cb, ca]
+      return { title: 'Frame advantage', sub: `${w.name} wins the duel whatever the speeds; ${l.name} is beaten`, winner: o === 'A' ? 0 : 1 }
+    }
     if (o === 'cancel') return { title: 'Same speed', sub: `${ca.name} and ${cb.name} are both speed ${ca.speed}: they cancel, and neither lands` }
     if (o === 'recovers') return { title: 'Both defend', sub: 'Each clears their own pile' }
   }
@@ -58,6 +62,8 @@ export function eventLines(last, names) {
       case 'tie': L.push(`meets the same speed (${e.n}) and cancels`); break
       case 'followUp': L.push(`follows up with ${e.name}`); break
       case 'punish': L.push(`punishes the opening: ${op} takes ${e.n}`); break
+      case 'frame': L.push('gains frame advantage: wins any speed duel next round'); break
+      case 'frameWin': L.push('wins on frame advantage'); break
       case 'cancel': L.push('collides with the other projectile, and both cancel'); break
       case 'tech': L.push('is teched'); break
       case 'interrupted': L.push("is interrupted and doesn't finish"); break

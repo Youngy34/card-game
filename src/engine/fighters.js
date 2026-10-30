@@ -67,6 +67,7 @@ export function validateCard(card, { isSuper = false, hasFlow = false, v12 = fal
     if (isSuper && k.superOk === false) E(`"${k.label}" does nothing on a Super, which never goes on cooldown.`)
     if (!isSuper && k.superOnly) E(`"${k.label}" is allowed only on a Super (dual verbs).`)
     if (k.needsFlow && !hasFlow) W(`"${k.label}" needs the Flow passive to ever apply.`)
+    if (k.v15 && !v15) { E(`"${k.label}" is a rules v15 effect.`); continue }
     if (k.kind === 'int') {
       if (!isInt(v) || v < (k.min ?? 1) || v > (k.max ?? 99)) E(`"${k.label}" must be a whole number from ${k.min ?? 1} to ${k.max ?? 99}.`)
     } else if (k.kind === 'bool') {

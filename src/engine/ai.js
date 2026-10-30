@@ -17,6 +17,7 @@ export const DEFAULT_WEIGHTS = {
   lethal: 2.0,   // -2 if the opponent's best Convert would kill you
   flowv: 1.5,    // +1.5 for being in Flow next round
   followv: 0.5,  // +0.5 per point of follow-up chip (e.g. Taunt), per round it stays live
+  boostv: 1.0,   // rules v15: frame advantage (win any speed duel next round) is worth 1 HP
   k: 0.28,       // steepness of the HP-difference -> win-probability curve
 }
 
@@ -40,6 +41,7 @@ export function score(X, Y, evaluator, W) {
   const pile = X.pile
   let e = X.hp - a * pile + W.opt * X.hand.length + (X.sup ? W.beta : 0)
   if (flowing(X)) e += W.flowv
+  if (X.boost) e += W.boostv ?? 1.0
   e += W.followv * followupValue(X)
   const av = availableTypes(X)
   for (const t of ['P', 'C', 'R']) if (!av.has(t)) e -= W.gap

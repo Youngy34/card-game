@@ -221,7 +221,7 @@ function Clash({ m, names, prefs, sel }) {
   const ca = card(L.before[0], L.a), cb = card(L.before[1], L.b)
   const fu = L.s.followed
   const fuCard = fu ? card(L.before[fu.side], fu.i) : null
-  const o = outcomeLine(ca, cb)
+  const o = outcomeLine(ca, cb, [L.before[0].boost || 0, L.before[1].boost || 0])
   const ev = eventLines(L, names)
   const over = m.phase === 'over'
   const res = m.result

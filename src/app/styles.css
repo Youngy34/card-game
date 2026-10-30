@@ -200,6 +200,7 @@ button.card:hover:not(:disabled) { transform: translateY(-3px); }
 .flag { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; background: var(--panel-2); color: var(--ink-2); }
 .flag.lethal { background: var(--bad); color: var(--ground); }
 .flag.flow { background: var(--pressure); color: var(--ground); }
+.flag.frame { background: var(--recover); color: var(--ground); }
 .flag.sup { border: 1px solid var(--convert); color: var(--convert); background: none; }
 .flag.sup.spent { border-color: var(--line-2); color: var(--ink-3); text-decoration: line-through; }
 .lifebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }

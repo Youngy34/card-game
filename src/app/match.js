@@ -4,7 +4,7 @@
 // device), 'watch' (the sparring partner against itself).
 // Phases: 'pick' -> ('pass' between hot-seat picks) -> 'reveal' -> 'pick' ... 'over'
 
-import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverWinner15, followCandidates, pressureNumbers } from '../engine/engine.js'
+import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverPayoff15, followCandidates, pressureNumbers } from '../engine/engine.js'
 import { mixes, levelMixes, LEVELS, withFollowScore } from '../engine/ai.js'
 import { roundRecord, winRoute } from '../engine/game.js'
 import { toEngineFighter, fighterHash } from '../engine/fighters.js'
@@ -59,9 +59,9 @@ function beginRound(m) {
 const payoffOf = m => m.rules.recoverPayoff || 'any'
 export function humanFollowSide(m, a, b) {
   const ca = card(m.A, a), cb = card(m.B, b)
-  if (!(ca.v15 || cb.v15) || !['any', 'pressure'].includes(payoffOf(m))) return -1
-  const w = recoverWinner15(ca, cb, m.rules)
-  if (w < 0 || !m.humans[w]) return -1
+  if (!(ca.v15 || cb.v15)) return -1
+  const { w, payoff } = recoverPayoff15(ca, cb, m.rules)
+  if (w < 0 || !m.humans[w] || !['any', 'pressure'].includes(payoff)) return -1
   const X = w === 0 ? m.A : m.B, played = w === 0 ? a : b
   return followCandidates(X, played, payoffOf(m)).length ? w : -1
 }
@@ -222,13 +222,15 @@ export function boardNotes(m, side) {
   if (deadMe !== null) notes.push({ tone: 'bad', text: `You're dead to a Convert: your ${X.pile} grey plus their best Convert's ${deadMe} chip is at least your ${X.hp} HP. That includes a follow-up Convert if they Recover your Pressure.` })
   if (deadThem !== null) notes.push({ tone: 'good', text: `${name} is dead to your Convert: their ${Y.pile} grey plus your best Convert's ${deadThem} chip is at least their ${Y.hp} HP.` })
 
+  if (X.boost) notes.push({ tone: 'good', text: `You have frame advantage: you win any speed duel this round, whatever the speeds.` })
+  if (Y.boost) notes.push({ tone: 'bad', text: `${name} has frame advantage: they win any speed duel this round, whatever the speeds.` })
   if (!has(theirs, 'P')) notes.push({ text: `${name} has no Pressure available: your Converts can only lose a speed duel with theirs.` })
   if (!has(theirs, 'R')) notes.push({ text: `${name} has no Recover available: your Pressures can only lose a speed duel, and can't be followed up on.` })
   if (!has(theirs, 'C')) notes.push({ text: `${name} has no Convert available: your Recovers can't lose this round.` })
 
   for (const t of ['P', 'C']) {
     const a = fastest(mine, t), b = fastest(theirs, t)
-    if (!a || !b) continue
+    if (!a || !b || X.boost || Y.boost) continue
     const label = t === 'P' ? 'Pressure' : 'Convert'
     if (a.speed > b.speed) notes.push({ text: `${label} duel: your ${a.name} (${a.speed}) outspeeds their fastest, ${b.name} (${b.speed}).` })
     else if (a.speed < b.speed) notes.push({ text: `${label} duel: their ${b.name} (${b.speed}) outspeeds your fastest, ${a.name} (${a.speed}).` })
@@ -237,7 +239,10 @@ export function boardNotes(m, side) {
 
   // what a Recover would make you pay for a Pressure
   const payoff = m.rules.recoverPayoff || 'any'
-  if (has(theirs, 'R') && has(mine, 'P') && deadMe === null) {
+  const theirRec = theirs.filter(o => o.c.t === 'R')
+  const frameRec = theirRec.filter(o => o.c.kw.frameAdvantage)
+  if (frameRec.length && has(mine, 'P')) notes.push({ text: `If ${name} Recovers your Pressure with ${frameRec.map(o => o.c.name).join(' or ')}, they get frame advantage next round instead of a follow-up.` })
+  if (theirRec.length > frameRec.length && has(mine, 'P') && deadMe === null) {
     if (payoff === 'fixed') notes.push({ text: `If ${name} Recovers your Pressure, you take ${m.rules.fixedDamage ?? 2}.` })
     else if (payoff === 'any' || payoff === 'pressure') {
       let best = null
@@ -251,7 +256,8 @@ export function boardNotes(m, side) {
           if (!best || v > best.v) best = { v, text: `${o.c.name}: ${build} grey on you${chip ? ` and ${chip} chip` : ''}` }
         }
       }
-      if (best) notes.push({ text: `If ${name} Recovers your Pressure, their biggest follow-up is ${best.text}.` + (m.rules.projectileSafe ? ' Projectiles are safe from it.' : '') })
+      const via = frameRec.length ? ` with ${theirRec.filter(o => !o.c.kw.frameAdvantage).map(o => o.c.name).join(' or ')}` : ''
+      if (best) notes.push({ text: `If ${name} Recovers your Pressure${via}, their biggest follow-up is ${best.text}.` + (m.rules.projectileSafe ? ' Projectiles are safe from it.' : '') })
     }
   }
   if (Y.pile > 0 && deadThem === null) notes.push({ text: `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })

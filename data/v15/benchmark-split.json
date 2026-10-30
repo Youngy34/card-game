@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "id": "benchmark-split",
+  "name": "Split Benchmark",
+  "epithet": "Block and Dodge",
+  "rules": 15,
+  "concept": "The Benchmark with its two Recovers split. Block gets frame advantage when it beats a Pressure (you win any speed duel next round) instead of a follow-up; Dodge keeps the follow-up but costs 2 grey on your own pile if it's beaten.",
+  "hp": 22,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 3,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 5,
+      "chip": 1,
+      "cooldown": 1
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 2,
+      "cooldown": 1
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "heavy",
+      "speed": 3,
+      "chip": 3,
+      "cooldown": 1
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "block",
+      "cooldown": 1,
+      "frameAdvantage": true
+    },
+    {
+      "name": "Dodge",
+      "type": "recover",
+      "kind": "dodge",
+      "cooldown": 1,
+      "onLossSelf": 2
+    }
+  ],
+  "super": null,
+  "notes": "Added 30 Oct 2026 to test the Block/Dodge split (rules-overview 15, Open Question 2). In the scratch sim (Benchmark mirror, 600 games): Block 14-15% of plays, Dodge 18-20%; a Pressure-only bot beat Hard 7-8% of the time; quiet rounds 23%."
+}

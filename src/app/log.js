@@ -75,7 +75,8 @@ export function Log() {
 const OUTCOME_WORD = { mirror: 'Mirror', typeless: 'Typeless', trade: 'Trade', cancel: 'Cancel', tech: 'Tech', recovers: 'Both defend', setup: 'Setup' }
 const outcomeWord = r => {
   const base = r.outcome === 'A' ? `${TYPE_LABEL[r.types[0]]} wins` : r.outcome === 'B' ? `${TYPE_LABEL[r.types[1]]} wins` : (r.v15 && r.outcome === 'cancel' ? 'Same speed' : OUTCOME_WORD[r.outcome] || r.outcome)
-  return r.followed ? `${base}, follow-up ${r.followed.name}` : r.fixed ? `${base}, punish ${r.fixed}` : base
+  const fr = r.frameDuel ? ' (frame advantage)' : ''
+  return r.followed ? `${base}${fr}, follow-up ${r.followed.name}` : r.fixed ? `${base}${fr}, punish ${r.fixed}` : r.frame >= 0 ? `${base}${fr}, frame advantage` : base + fr
 }
 
 function GameRow({ g, current, onDelete, canDelete }) {

@@ -37,7 +37,7 @@ export const kindsOf = (t, rules) => (rules === 15 ? KINDS_OF15 : KINDS_OF)[t] |
 // The rules line a card face prints for its kind
 export const RECOVER_LINE15 = 'If it beats a Pressure, you may follow up with an attack from your hand.'
 export function kindLine(card, rules) {
-  if (rules === 15) return TYPE_CODE[card.type] === 'R' ? RECOVER_LINE15 : null
+  if (rules === 15) return TYPE_CODE[card.type] === 'R' && !card.frameAdvantage ? RECOVER_LINE15 : null
   return KINDS[card.kind]?.line || null
 }
 // Speed bands: higher is faster, and every Pressure is faster than every Convert
@@ -150,6 +150,11 @@ export const KEYWORDS = [
     key: 'returnCard', kind: 'bool', zone: 'text', types: ['P', 'C', 'R', 'T'], superOk: true,
     label: 'Return a card from your cooldown to your hand',
     text: () => 'Return one card from your cooldown track to your hand.',
+  },
+  {
+    key: 'frameAdvantage', kind: 'bool', zone: 'text', types: ['R'], superOk: true, v15: true,
+    label: 'Frame advantage (rules v15): if it beats a Pressure, win any speed duel next round, instead of a follow-up',
+    text: () => 'If it beats a Pressure: frame advantage. You win any speed duel next round, instead of following up.',
   },
   // ---- costs ----
   {

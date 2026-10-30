@@ -36,6 +36,7 @@ export function Hud({ X, Y, who, staggered }) {
       <span class="hud-who">${who}</span>
       <span class="hud-flags">
         ${fl ? html`<span class="flag flow">Flowing</span>` : null}
+        ${X.boost ? html`<span class="flag frame" title="Wins any speed duel this round">Frame advantage</span>` : null}
         ${lethal !== null ? html`<span class="flag lethal" title=${`Pile ${X.pile} + a Convert chipping ${lethal} ≥ ${X.hp} HP`}>Dead to a Convert</span>` : null}
         ${X.f.sup ? html`<span class=${cx('flag sup', !X.sup && 'spent')} title=${X.f.sup.name}>Super${X.sup ? ' ready' : ' used'}</span>` : null}
       </span>

@@ -13,6 +13,7 @@ const WEIGHTS = [
   ['lethal', 'Being dead to a Convert costs (HP)', ''],
   ['flowv', 'Being in Flow next round is worth (HP)', 'Vex only.'],
   ['followv', 'Each point of follow-up chip is worth (HP per round)', 'Setup cards such as Taunt.'],
+  ['boostv', 'Frame advantage next round is worth (HP)', 'Rules v15: a Recover with frame advantage. A guess; raise it if the partner undervalues Block.'],
   ['k', 'How sharply an HP lead turns into a win', 'Steepness of the win-chance curve.'],
 ]
 

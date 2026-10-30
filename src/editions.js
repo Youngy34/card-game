@@ -19,7 +19,7 @@ export const EDITIONS = {
   v15: {
     title: 'Yomi Playtest v15', subtitle: 'rules v15', out: 'yomi-playtest-v15.html', settings: 'v15/settings.json',
     fighters: [['v15', 'vex'], ['v15', 'atlas'], ['v15', 'bastion'], ['v15', 'gambler']],
-    reference: [['v15', 'benchmark']],
+    reference: [['v15', 'benchmark'], ['v15', 'benchmark-split']],
     drafts: [],
     labels: { 'signed-off': 'Untuned port' },
     defaultSides: ['benchmark', 'benchmark'],

@@ -143,6 +143,39 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   } else ok(false, 'Benchmark Block card is editable')
   SHOTS && await page.screenshot({ path: SHOTS + '09-movelist.png', fullPage: true })
 
+  // the split Benchmark: Block gives frame advantage instead of a follow-up
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
+  if (await page.getByRole('button', { name: 'New match' }).count()) await page.getByRole('button', { name: 'New match' }).click()
+  if (await page.getByRole('button', { name: 'Leave this match' }).count()) await page.getByRole('button', { name: 'Leave this match' }).click()
+  for (const k of [0, 1]) await page.locator('.pickers .fighters').nth(k).getByRole('button', { name: /Split Benchmark/ }).click()
+  await page.getByRole('button', { name: 'Start the match' }).click()
+  await page.waitForSelector('text=Your pick')
+  ok((await body()).includes('frame advantage. you win any speed duel next round'), 'Block prints frame advantage on its face')
+  let sawFrame = false, sawFlag = false, splitFollow = 0
+  for (let r = 0; r < 80; r++) {
+    const t = await body()
+    if (t.includes('k.o.')) break
+    if (t.includes('gains frame advantage')) sawFrame = true
+    if (await page.locator('.flag.frame').count()) sawFlag = true
+    if (await page.getByRole('button', { name: 'No follow-up' }).count()) {
+      splitFollow++
+      ok((await page.locator('.followup-ask').count()) === 1, 'Dodge still earns a follow-up')
+      await page.getByRole('button', { name: 'No follow-up' }).click()
+    } else if (await page.getByRole('button', { name: 'Next round' }).count()) await page.getByRole('button', { name: 'Next round' }).click()
+    else {
+      const cards = page.locator('.hand button.card:not([disabled])')
+      const labels = await cards.evaluateAll(bs => bs.map(b => b.getAttribute('aria-label') || ''))
+      const blk = labels.findIndex(l => l.startsWith('Block'))
+      await cards.nth(blk >= 0 ? blk : r % labels.length).click()
+      await page.getByRole('button', { name: 'Lock in' }).click()
+    }
+    await page.waitForTimeout(30)
+    if (sawFrame && sawFlag) break
+  }
+  ok(sawFrame, 'a Block win gives frame advantage')
+  ok(sawFlag, 'the HUD flags frame advantage')
+  SHOTS && await page.screenshot({ path: SHOTS + '11-frame.png', fullPage: true })
+
   // phone width
   const ph = await newPage(390, 844)
   await ph.page.getByRole('button', { name: 'Start the match' }).click()

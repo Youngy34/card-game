@@ -17,13 +17,13 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
-| `v15` | Yomi Playtest v15 | The v15 Benchmark and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
+| `v15` | Yomi Playtest v15 | The v15 Benchmark, the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
 
 Locally, open `index.html?edition=v15` for the v15 edition.
 
 ### Rules v15 in the engine
 
-For a fighter with `"rules": 15` (see `rules-overview 15.md`): the v11 triangle; two attacks of the same type are settled by speed, and a tie cancels; two Recovers both clear and deal no damage; Recovers never chip (a Recover Super may). When a Recover beats a Pressure, the payoff is set by `recoverPayoff` in the rules: `any` (its owner may follow up with any attack from hand, unopposed: the rule as written), `pressure`, `fixed` (the attacker takes `fixedDamage`), or `none`. `projectileSafe` is an experiment: a Recovered Projectile gives no payoff. Kinds are labels (Strike, Projectile, Heavy, Grab, Block, Dodge) and change no rules. Setups (typeless cards) aren't run yet, so v15 move lists have none.
+For a fighter with `"rules": 15` (see `rules-overview 15.md`): the v11 triangle; two attacks of the same type are settled by speed, and a tie cancels; two Recovers both clear and deal no damage; Recovers never chip (a Recover Super may). When a Recover beats a Pressure, the payoff is set by `recoverPayoff` in the rules: `any` (its owner may follow up with any attack from hand, unopposed: the rule as written), `pressure`, `fixed` (the attacker takes `fixedDamage`), or `none`. `projectileSafe` is an experiment: a Recovered Projectile gives no payoff. A Recover with `"frameAdvantage": true` pays off differently, whatever the setting: when it beats a Pressure, its owner wins any speed duel next round (a tie included) instead of following up. Kinds are labels (Strike, Projectile, Heavy, Grab, Block, Dodge) and change no rules. Setups (typeless cards) aren't run yet, so v15 move lists have none.
 
 At the table, a person whose Recover beats a Pressure chooses the follow-up (or none) before the round resolves; the sparring partner chooses its own with its value function. Board notes, on by default, sum up lethal range, missing types, speed duels and what a Recover would cost. `tools/sim15.mjs` runs v15 round-robins and the mindless-bot exploit tests; `tools/smoke/browser15.cjs` clicks through the built v15 page in Chromium.
 
@@ -120,6 +120,7 @@ Effects and costs, added as extra fields. Any other field is reported as a probl
 | `knockdown` | "resolves" or "recover" | Convert | Knockdown: (if it beats a Recover,) the opponent can't play a Pressure next round. |
 | `offBalance` | true | Recover | If it beats a Pressure, the opponent is off-balance: they can't play a Recover next round. |
 | `returnCard` | true | Any | Return one card from your cooldown track to your hand. |
+| `frameAdvantage` | true | Recover (rules v15 only) | If it beats a Pressure: frame advantage. You win any speed duel next round, instead of following up. |
 | `selfAdd` | 2 | Any | Cost: add 2 tokens to your own pile. |
 | `onLossSelf` | 2 | Pressure, Convert, Recover | Cost: on loss, add 2 tokens to your own pile. |
 | `lockout` | true | Any (not on a Super) | Cost: on cooldown, you can't play another card of this type. |
