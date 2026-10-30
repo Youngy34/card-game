@@ -141,6 +141,12 @@ For a fighter with `"rules": 12` (see `rules-overview 12.md`):
 - **Validation:** Recovers and Setups deal no chip (a Recover Super that chips is only a warning, since it's an open question), every attack has a speed in its band, and two warnings cover the authoring guidelines: Counters need Pressures that chip, and speed is a cost (no plain card both faster and at least as big as its same-type sibling).
 - **The Settings screen's Recover-chip rule only applies to v11 fighters.**
 
+## The Reader (difficulty)
+
+`src/engine/reader.js`. A fourth sparring-partner level that learns its opponent's habits. It learns how they depart from the unexploitable mix in each situation (both piles: empty, 1–3 or 4+; and what they played last round and whether it won), predicts this round's type from that, and plays a blend of Hard's mix and its best answer, leaning further as the evidence near this situation and the size of the habit grow (at most 80%). Every round records each side's unexploitable mix by type (`eq`), which is what it compares choices with. At the table it can also remember the person's earlier logged games against the partner on the same rules (each round counts half). After each reveal the table shows what it expected.
+
+Calibrated on 30 October 2026 in the v15 Benchmark mirror: Hard beats it 49–51% (1,500 games), so it's as strong as Hard against sound play; with 30 games of memory, Recover every round beats it 0% of the time (63% against Hard), any attack 8% (29%), random 35% (41%). The Lab offers it too; there it learns within each game only.
+
 ## Difficulty
 
 Against the sparring partner you can pick Easy, Medium or Hard on the Play screen. Hard is the simulator's player, unchanged. The easier levels make mistakes that scale with their cost: each card is played with a chance that grows with how good it looks (a "quantal response" mix), so close calls become coin flips but big blunders stay rare. One number per level sets how sharply it prefers better cards (`LEVELS` in `src/engine/ai.js`: Easy 5, Medium 20).

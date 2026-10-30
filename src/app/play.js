@@ -42,8 +42,11 @@ export function Setup({ onStart, prefs, setPrefs }) {
     const rs = sides.map(id => list.find(r => r.id === id))
     if (rs[0].rules !== rs[1].rules) return
     const levels = prefs.mode === 'ai' ? ['hard', difficulty] : ['hard', 'hard']
-    onStart(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: prefs.mode, settings: s, levels, id: newId('g') }))
+    const readerPrior = levels[1] === 'reader' && prefs.readerMemory !== false ? memory.obs : null
+    onStart(M.startMatch({ fighters: rs.map(r => r.fighter), statuses: rs.map(r => r.status), mode: prefs.mode, settings: s, levels, id: newId('g'), readerPrior }))
   }
+  const rulesNow = picked[0]?.rules ?? 11
+  const memory = M.readerMemory(getState().games, rulesNow)
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
@@ -63,11 +66,19 @@ export function Setup({ onStart, prefs, setPrefs }) {
     ${prefs.mode === 'ai' ? html`<div class="stack">
       <span class="label">Difficulty</span>
       <${Seg} value=${difficulty} options=${Object.entries(LEVELS).map(([k, l]) => [k, l.label])} onChange=${d => setPrefs({ ...prefs, difficulty: d })} label="Difficulty" />
-      <p class="small muted">${LEVELS[difficulty].about} ${{
+      <p class="small muted">${LEVELS[difficulty].about} ${(v15Edition ? {
+        easy: 'In the Benchmark mirror, Hard beats it about 57 games in 100: with no card text, few plays are ever bad.',
+        medium: 'In the Benchmark mirror, Hard beats it about 52 games in 100.',
+        hard: 'Two Hard partners split games evenly. Hard never adapts, so a pattern can do well against it: playing Recover every round beats it 63% of the time.',
+        reader: 'Against sound play it is as strong as Hard. Against habits it is merciless: with 30 games of memory, Recover every round beats it 0% of the time, random play 35% (41% against Hard).',
+      } : {
         easy: 'In testing, Hard beats it about 7 games in 10.',
         medium: 'In testing, Hard beats it about 6 games in 10, and it beats Easy about 6 in 10.',
         hard: 'Two Hard partners split games evenly.',
-      }[difficulty]}</p>
+        reader: 'Calibrated on rules v15 only; on these rules it learns the same way, but its strength is untested.',
+      })[difficulty]}</p>
+      ${difficulty === 'reader' ? html`<label class="check"><input id="reader-memory" type="checkbox" checked=${prefs.readerMemory !== false} onChange=${e => setPrefs({ ...prefs, readerMemory: e.target.checked })} />
+        Let it remember my habits from earlier games (${memory.games ? `${memory.games} logged game${memory.games > 1 ? 's' : ''} against the partner on these rules` : 'none logged yet on these rules'})</label>` : null}
     </div>` : null}
     <div class="pickers">
       ${[0, 1].map(k => html`<div class="stack">
@@ -248,8 +259,21 @@ function Clash({ m, names, prefs, sel }) {
         <span>${ev[k].card} ${ev[k].text}. <em>${deltaLine(L.before[k], k === 0 ? L.s.A : L.s.B)}</em></span>
       </div>`)}
     </div>
+    ${!pend && m.history[m.history.length - 1]?.read ? html`<${ReadLine} entry=${m.history[m.history.length - 1]} names=${names} you=${m.mode === 'ai'} />` : null}
     ${prefs.odds && !pend ? html`<${Mixes} entry=${m.history[m.history.length - 1]} names=${names} f=${m.f} levels=${m.levels} />` : null}
   </section>`
+}
+
+// What the Reader predicted this round, after the reveal
+function ReadLine({ entry, names, you }) {
+  const r = entry.read, o = 1 - r.side
+  const order = ['R', 'C', 'P'].sort((a, b) => r[b] - r[a])
+  const label = { P: 'Pressure', C: 'Convert', R: 'Recover' }
+  const played = entry.types[o]
+  return html`<div class="readline">
+    <span class="label">The Reader's read</span>
+    <p>It expected ${you ? 'you' : names[o]} to play ${order.filter(t => r[t] >= 0.005).map(t => `${label[t]} ${Math.round(100 * r[t])}%`).join(', ')}${you ? '; you played' : `; ${names[o]} played`} ${label[played] || played}.${' '}<span class="muted">${r.n ? `From ${r.n} round${r.n === 1 ? '' : 's'} like this, it leaned ${Math.round(100 * r.lean)}% on that read; the rest is Hard's mix.` : 'It had nothing to go on yet, so it played Hard\'s mix.'}</span></p>
+  </div>`
 }
 
 function Mixes({ entry, names, f, levels }) {

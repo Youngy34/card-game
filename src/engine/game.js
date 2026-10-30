@@ -1,7 +1,8 @@
 // Whole games, logs and balance reports.
 
 import { newPlayer, step, card, options, outcome, DEFAULT_RULES } from './engine.js'
-import { mixes, levelMixes, sample, availableTypes, withFollowScore, DEFAULT_WEIGHTS } from './ai.js'
+import { mixes, levelMixes, sample, availableTypes, withFollowScore, DEFAULT_WEIGHTS, LEVELS } from './ai.js'
+import { readerMix, eqTypes } from './reader.js'
 
 export function mulberry32(seed) {
   let a = seed >>> 0
@@ -60,10 +61,12 @@ export function playAIGame(fa, fb, rng, rules = DEFAULT_RULES, W = DEFAULT_WEIGH
   const hard = levels[0] === 'hard' && levels[1] === 'hard'
   for (let n = 1; ; n++) {
     const m = mixes(A, B, rules, W)
-    const [px, py] = hard ? [m.x, m.y] : levelMixes(m, levels)
+    let [px, py] = hard ? [m.x, m.y] : levelMixes(m, levels)
+    if (LEVELS[levels[0]]?.reader) px = readerMix(m, rounds, 0, { A, B }).x
+    if (LEVELS[levels[1]]?.reader) py = readerMix(m, rounds, 1, { A, B }).x
     const i = sample(px, rng), j = sample(py, rng)
     const s = m.next[i][j]
-    rounds.push(roundRecord(n, A, B, m.oa[i], m.ob[j], s))
+    rounds.push({ ...roundRecord(n, A, B, m.oa[i], m.ob[j], s), eq: eqTypes(m, A, B) })
     A = s.A; B = s.B
     if (s.result !== null) return { result: s.result, rounds }
     if (n >= rules.maxRounds) return { result: 0.5, rounds }

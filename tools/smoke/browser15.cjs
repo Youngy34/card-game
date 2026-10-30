@@ -143,10 +143,44 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   } else ok(false, 'Benchmark Block card is editable')
   SHOTS && await page.screenshot({ path: SHOTS + '09-movelist.png', fullPage: true })
 
+  // the Reader: remembers earlier games and shows its read after each reveal
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
+  if (await page.getByRole('button', { name: 'New match' }).count()) await page.getByRole('button', { name: 'New match' }).click()
+  await page.getByRole('button', { name: 'Reader', exact: true }).click()
+  const memText = (await page.locator('label.check', { hasText: 'remember my habits' }).innerText()).toLowerCase()
+  ok(/\(\d+ logged games? against the partner on these rules\)/.test(memText), `Reader offers memory of logged games (${memText})`)
+  await page.getByRole('button', { name: 'Start the match' }).click()
+  await page.waitForSelector('text=Your pick')
+  ok((await body()).includes('sparring partner · reader'), 'the table names the Reader')
+  let readSeen = false, readText = ''
+  for (let r = 0; r < 120; r++) {
+    const t = await body()
+    if (t.includes('k.o.')) break
+    if (await page.locator('.readline').count()) {
+      if (!readSeen && SHOTS) await page.locator('.clash').screenshot({ path: SHOTS + '12-reader.png' })
+      readSeen = true; readText = (await page.locator('.readline').innerText()).toLowerCase()
+    }
+    if (await page.getByRole('button', { name: 'No follow-up' }).count()) await page.getByRole('button', { name: 'No follow-up' }).click()
+    else if (await page.getByRole('button', { name: 'Next round' }).count()) await page.getByRole('button', { name: 'Next round' }).click()
+    else {
+      const cards = page.locator('.hand button.card:not([disabled])')
+      const labels = await cards.evaluateAll(bs => bs.map(b => b.getAttribute('aria-label') || ''))
+      const rec = labels.findIndex(l => l.includes('Recover'))
+      await cards.nth(rec >= 0 ? rec : 0).click()
+      await page.getByRole('button', { name: 'Lock in' }).click()
+    }
+    await page.waitForTimeout(30)
+    if (readSeen && r > 6) break
+  }
+  ok(readSeen, "the Reader's read shows after a reveal")
+  ok(readText.includes('it expected you to play'), `the read names what it expected (${readText.slice(0, 120)})`)
+  await page.getByRole('button', { name: 'Leave this match' }).click()
+
   // the split Benchmark: Block gives frame advantage instead of a follow-up
   await page.getByRole('button', { name: 'Play', exact: true }).click()
   if (await page.getByRole('button', { name: 'New match' }).count()) await page.getByRole('button', { name: 'New match' }).click()
   if (await page.getByRole('button', { name: 'Leave this match' }).count()) await page.getByRole('button', { name: 'Leave this match' }).click()
+  await page.getByRole('button', { name: 'Hard', exact: true }).click()
   for (const k of [0, 1]) await page.locator('.pickers .fighters').nth(k).getByRole('button', { name: /Split Benchmark/ }).click()
   await page.getByRole('button', { name: 'Start the match' }).click()
   await page.waitForSelector('text=Your pick')

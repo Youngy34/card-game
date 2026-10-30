@@ -6,6 +6,7 @@
 
 import { newPlayer, step, options, card, blocked, flowing, convertChip, recoverPayoff15, followCandidates, pressureNumbers } from '../engine/engine.js'
 import { mixes, levelMixes, LEVELS, withFollowScore } from '../engine/ai.js'
+import { readerMix, observe, eqTypes } from '../engine/reader.js'
 import { roundRecord, winRoute } from '../engine/game.js'
 import { toEngineFighter, fighterHash } from '../engine/fighters.js'
 import { TYPE_LABEL } from '../engine/keywords.js'
@@ -21,7 +22,7 @@ export function rand(s) {
 
 const HUMANS = { ai: [true, false], hotseat: [true, true], watch: [false, false] }
 
-export function startMatch({ fighters, statuses, mode, settings, levels = ['hard', 'hard'], seed = (Math.random() * 2 ** 32) >>> 0, id }) {
+export function startMatch({ fighters, statuses, mode, settings, levels = ['hard', 'hard'], seed = (Math.random() * 2 ** 32) >>> 0, id, readerPrior = null }) {
   const f = fighters.map(toEngineFighter)
   const m = {
     id, mode, humans: HUMANS[mode], levels, json: fighters, statuses: statuses || ['', ''],
@@ -29,6 +30,7 @@ export function startMatch({ fighters, statuses, mode, settings, levels = ['hard
     A: newPlayer(f[0]), B: newPlayer(f[1]),
     round: 1, picks: [null, null], phase: 'pick', picker: 0,
     history: [], result: null, seed, rng: seed, startedAt: Date.now(), mix: null,
+    readerPrior,      // the Reader's memory of earlier games: observations of side 0
   }
   return beginRound(m)
 }
@@ -38,6 +40,12 @@ function beginRound(m) {
   // the odds each sparring partner actually plays from, at its difficulty
   const play = m.humans.every(Boolean) ? [mix.x, mix.y]
     : levelMixes(mix, m.levels.map((l, k) => (m.humans[k] ? 'hard' : l)))
+  const reads = [null, null]
+  for (const k of [0, 1]) {
+    if (m.humans[k] || !LEVELS[m.levels[k]]?.reader) continue
+    const r = readerMix(mix, m.history, k, { A: m.A, B: m.B, prior: k === 1 ? m.readerPrior : null })
+    play[k] = r.x; reads[k] = r.read
+  }
   let rng = m.rng
   const picks = [null, null]
   for (const side of [0, 1]) {
@@ -49,7 +57,8 @@ function beginRound(m) {
     picks[side] = (side === 0 ? mix.oa : mix.ob)[k]
   }
   const picker = m.humans[0] ? 0 : m.humans[1] ? 1 : null
-  return { ...m, mix, play, rng, picks, phase: 'pick', picker, follow: null, pending: null, follower: null }
+  const eq = eqTypes(mix, m.A, m.B)
+  return { ...m, mix, play, reads, eq, rng, picks, phase: 'pick', picker, follow: null, pending: null, follower: null }
 }
 
 // ---- rules v15: the follow-up ------------------------------------------------
@@ -112,7 +121,8 @@ export function resolveRound(m) {
     if (!m.humans[k] && m.levels[k] !== 'hard') mixInfo[key] = opts.map((o, i) => [card(X, o).name, round2(m.play[k][i])])
   }
   const humanFollow = fw >= 0 ? { side: fw, pick: follow[fw] ?? null } : null
-  const entry = { ...record, picks: [a, b], ...(humanFollow ? { humanFollow } : {}), events, mix: mixInfo, humans: m.humans }
+  const read = m.reads?.find(Boolean) ? { side: m.reads[1] ? 1 : 0, ...(m.reads[1] || m.reads[0]) } : null
+  const entry = { ...record, picks: [a, b], ...(humanFollow ? { humanFollow } : {}), ...(read ? { read } : {}), ...(m.eq ? { eq: m.eq } : {}), events, mix: mixInfo, humans: m.humans }
   let result = s.result
   if (result === null && m.round >= m.rules.maxRounds) result = 0.5
   return {
@@ -168,6 +178,15 @@ export function lethalTo(X, Y) {
 
 export { flowing, LEVELS }
 
+// The Reader's memory of a person: their picks in earlier logged games against
+// the sparring partner, on the same rules, most recent first.
+export function readerMemory(games, rules, max = 30) {
+  // games logged before the Reader existed don't record the unexploitable mix, so it can't learn from them
+  const same = g => g.mode === 'ai' && (g.rules ?? (g.fighters?.[0]?.json?.rules || 11)) === rules && g.rounds?.some(r => r.eq)
+  const picked = games.filter(same).slice(0, max)
+  return { games: picked.length, obs: picked.flatMap(g => observe(g.rounds, 0)) }
+}
+
 // ---- the log entry -------------------------------------------------------
 export function gameRecord(m) {
   const last = m.history[m.history.length - 1]
@@ -187,7 +206,7 @@ export function gameRecord(m) {
 // Rebuild a match from its record of picks (after the page reloads)
 export function replay(saved) {
   let m = startMatch({ fighters: saved.json, statuses: saved.statuses, mode: saved.mode, levels: saved.levels,
-                       settings: saved.settingsUsed, seed: saved.seed, id: saved.id })
+                       settings: saved.settingsUsed, seed: saved.seed, id: saved.id, readerPrior: saved.readerPrior || null })
   m = { ...m, startedAt: saved.startedAt }
   for (const [i, [a, b]] of saved.picks.entries()) {
     const hf = saved.follows?.[i]
@@ -201,7 +220,7 @@ export function replay(saved) {
 
 export function snapshot(m) {
   return { id: m.id, mode: m.mode, levels: m.levels, json: m.json, statuses: m.statuses, settingsUsed: m.settingsUsed,
-           seed: m.seed, rng: m.rng, startedAt: m.startedAt, picks: m.history.map(h => h.picks), follows: m.history.map(h => h.humanFollow || null) }
+           seed: m.seed, rng: m.rng, startedAt: m.startedAt, picks: m.history.map(h => h.picks), follows: m.history.map(h => h.humanFollow || null), readerPrior: m.readerPrior || null }
 }
 
 // ---- rules v15: reading the board ------------------------------------------

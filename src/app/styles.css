@@ -332,3 +332,5 @@ pre.json { background: var(--ground); padding: 12px; overflow-x: auto; font-fami
 .followup { display: grid; justify-items: center; gap: 6px; }
 .followup .card { --w: 140px; }
 .followup-ask { margin: 0; font-weight: 600; text-align: center; }
+.readline { width: 100%; max-width: 640px; display: grid; gap: 4px; padding: 8px 12px; background: var(--ground); border-left: 3px solid var(--line-2); }
+.readline p { margin: 0; font-size: 14px; }

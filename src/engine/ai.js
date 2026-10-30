@@ -101,6 +101,7 @@ export const LEVELS = {
   easy: { label: 'Easy', lambda: 5, about: 'Loose: often picks a weaker card when the choice is close, and now and then misses a big one.' },
   medium: { label: 'Medium', lambda: 20, about: 'Mostly sound: rarely misses a big play, but loose when the choice is close.' },
   hard: { label: 'Hard', lambda: null, about: 'The full sparring partner: the unexploitable mix every round.' },
+  reader: { label: 'Reader', lambda: null, reader: true, about: 'Learns your habits: what you pick with each pile size, and after each win or loss. It starts as Hard and leans on its read as it sees more.' },
 }
 
 const softmax = (u, lambda) => {
