@@ -39,8 +39,8 @@ export function load(name) {
 }
 
 // Bots: 'hard' (the sparring partner), 'attack' (a random attack every round),
-// 'pressure' (a random Pressure when it has one, else a random attack),
-// 'random' (any available card at random).
+// 'pressure', 'convert', 'recover' (a random card of that type when it has one,
+// else a random attack, else anything), 'random' (any available card at random).
 function choose(bot, X, mx, side, rng) {
   if (bot === 'hard') {
     const p = side === 0 ? mx.x : mx.y, o = side === 0 ? mx.oa : mx.ob
@@ -50,7 +50,8 @@ function choose(bot, X, mx, side, rng) {
   const pick = arr => arr[Math.floor(rng() * arr.length)]
   if (bot === 'random') return pick(o)
   const atk = o.filter(i => ['P', 'C', 'T'].includes(card(X, i).t) && (card(X, i).t !== 'T' || card(X, i).chip > 0))
-  if (bot === 'pressure') { const pr = o.filter(i => card(X, i).t === 'P'); if (pr.length) return pick(pr) }
+  const only = { pressure: 'P', convert: 'C', recover: 'R' }[bot]
+  if (only) { const pr = o.filter(i => card(X, i).t === only); if (pr.length) return pick(pr) }
   return atk.length ? pick(atk) : pick(o)
 }
 
@@ -137,7 +138,7 @@ if (mode === 'game') {
 } else if (mode === 'exploit') {
   const names = opt('--names', 'atlas,bastion,gambler,vex').split(',')
   const out = []
-  for (const bot of ['attack', 'pressure', 'random']) for (const nm of names) {
+  for (const bot of opt('--bots', 'attack,pressure,random').split(',')) for (const nm of names) {
     const r = runMatch(nm, nm, n, seed + names.indexOf(nm), [bot, 'hard'])
     out.push({ bot, fighter: nm, win: r.win, median: r.median })
     if (!json) console.log(`${bot.padEnd(9)} ${nm.padEnd(8)} beats Hard ${pct(r.win)}  (median ${r.median})`)
