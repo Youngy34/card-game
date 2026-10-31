@@ -3,7 +3,7 @@
 
 import fs from 'fs'
 import { toFighter16, validateFighter16 } from '../src/engine/v16/cards.js'
-import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16, runClash16, unseenPool, DEFAULT_RULES16 } from '../src/engine/v16/engine.js'
+import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16, runClash16, unseenPool, DEFAULT_RULES16, clashChoices16 } from '../src/engine/v16/engine.js'
 import { neutralActions16 } from '../src/engine/v16/ai.js'
 
 const raw = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
@@ -206,6 +206,22 @@ function setup(handA, handB, patch = {}) {
   S = setup([JAB], [GUARD], { A: { meter: 4 }, B: { pile: 2 }, rules: W })
   S = startClash16(S, 'S', GUARD)
   ok(S.A.meter === 0 && S.B.hp === 30 - 2 - 5 && S.B.next.knockdown, 'Overdrive: 4 meter, cashes, chips 5, knocks down')
+}
+// 14. Focus as the clash blank: anyone may play nothing; a Dizzy player has no choice
+{
+  const W = { ...DEFAULT_RULES16 }
+  let G = setup([JAB, GUARD], [JAB], { rules: W })
+  ok(clashChoices16(G.A, W).includes(null) && clashChoices16(G.A, W).includes(JAB), 'the blank is a choice alongside legal cards')
+  ok(!clashChoices16(G.A, { ...W, blankClash: false }).includes(null), 'blankClash off: no blank while you hold a card')
+  let D = setup([JAB], [JAB], { A: { st: { dizzy: true } }, rules: W })
+  ok(clashChoices16(D.A, W).length === 0, 'Dizzy: no choice at all')
+  let P = setup([JAB, GUARD], [JAB, SLASH, SWING], { B: { pile: 0 }, rules: W })
+  P = startClash16(P, null, JAB)
+  ok(P.clash.outcome === 'unopposed' && P.clash.winner === 1 && P.A.pile === 2 && P.A.hp === 29, "a blank against a Jab: the Jab lands (builds 2, chips 1)")
+  ok(P.pending?.stage === 'link', '…and a Starter landing on a blank combos')
+  let Q = setup([GUARD], [JAB], { A: { pile: 5 }, rules: W })
+  Q = startClash16(Q, GUARD, null)
+  ok(Q.clash.outcome === 'unopposed' && Q.A.pile === 0 && !Q.pending, 'a Guard against a blank clears, with no follow-up')
 }
 console.log(`${passes} passed, ${fails} failed`)
 process.exit(fails ? 1 : 0)

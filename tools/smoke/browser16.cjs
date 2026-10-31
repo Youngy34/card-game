@@ -45,7 +45,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 
   // Play one whole game against the partner (or two players), answering every prompt
   async function playGame(page, { hotseat = false, shots = false, maxSteps = 600 } = {}) {
-    const seen = { neutralCard: 0, focus: 0, breather: 0, follow: 0, link: 0, end: 0, discard: 0, pass: 0, rounds: 0 }
+    const seen = { neutralCard: 0, focus: 0, breather: 0, blank: 0, follow: 0, link: 0, end: 0, discard: 0, pass: 0, rounds: 0 }
     let shotN = 0
     const shot = async name => { if (shots && SHOTS && shotN < 12) { shotN++; await page.screenshot({ path: `${SHOTS}${name}.png`, fullPage: true }) } }
     for (let step = 0; step < maxSteps; step++) {
@@ -63,6 +63,9 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         if (await breather.count() && r !== 2) { seen.breather++; await breather.first().click(); continue }
         if (await focusBtn.first().isEnabled()) { seen.focus++; await focusBtn.first().click(); continue }
         seen.breather++; await breather.first().click(); continue
+      }
+      if (await btn(page, 'Lock in').count() && seen.rounds % 7 === 5 && !seen.blank && await btn(page, 'Play nothing (Focus)').count()) {
+        seen.blank++; await btn(page, 'Play nothing (Focus)').click(); continue
       }
       if (await btn(page, 'Lock in').count()) {
         if (seen.rounds === 1) await shot('03-clash-pick')
@@ -116,6 +119,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   console.log('vs Hard:', JSON.stringify(seen))
   ok(seen.rounds > 3, 'played several rounds')
   ok(seen.neutralCard > 0 && seen.focus > 0, 'played a neutral card and Focused')
+  ok(seen.blank > 0, 'played nothing (Focus as the blank) at a clash')
   ok(seen.follow + seen.link + seen.end > 0, 'was offered a follow-up or a combo')
   SHOTS && await page.screenshot({ path: SHOTS + '06-over.png', fullPage: true })
   await page.waitForSelector('text=Saved to the playtest log', { timeout: 5000 }).catch(() => {})
@@ -174,13 +178,12 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   await page.locator('h1').click()
   await btn(page, 'Use the defaults').click()
   await page.locator('#s-handLimit').fill('7')
-  await page.locator('#s-focus').selectOption('meter')
   await page.locator('#s-superuses').selectOption('1')
   await btn(page, 'Save settings').click()
   await page.waitForTimeout(300)
   await btn(page, 'Play').click()
   if (await btn(page, 'New match').count()) await btn(page, 'New match').click()
-  ok((await body()).includes('hand limit 7') && (await body()).includes('the breather (draw a card), or focus (gain 1 meter)') && (await body()).includes('once per game'), 'setup shows the new settings')
+  ok((await body()).includes('hand limit 7') && (await body()).includes('or focus (draw a card and gain 1 meter)') && (await body()).includes('once per game'), 'setup shows the new settings')
 
   // lab
   await btn(page, 'Lab').click()
@@ -198,7 +201,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   if (await btn(page, 'New match').count()) await btn(page, 'New match').click()
   await page.locator('.seg button', { hasText: 'Two players, one device' }).click()
   await btn(page, 'Start the match').click()
-  await page.waitForSelector('text=Breather: draw a card')
+  await page.waitForSelector('text=Focus: draw')
   const hs = await playGame(page, { hotseat: true, maxSteps: 900 })
   console.log('hot-seat:', JSON.stringify(hs))
   ok(hs.pass > 2, 'hot-seat asks for the device to change hands')

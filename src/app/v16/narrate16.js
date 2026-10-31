@@ -23,7 +23,7 @@ const status = s => (typeof s === 'string' ? STATUSES[s]?.label : `Lock ${LABEL1
 export function outcomeTitle16(c, names) {
   const [a, b] = c.names
   switch (c.outcome) {
-    case 'none': return { title: 'Nobody plays', sub: 'Neither player had a card to play.' }
+    case 'none': return { title: 'Nobody plays', sub: 'Both players played nothing.' }
     case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
     case 'guards': return { title: 'Both Guard', sub: 'Two Guards: each player clears their own pile.' }
     case 'cancel': return { title: `${a} and ${b} tie`, sub: 'Same type, same speed: the tie cancels and neither lands.' }

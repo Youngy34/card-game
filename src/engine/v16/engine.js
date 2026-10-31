@@ -32,10 +32,12 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 // burnNeutrals: whether a neutral card may be burned (false: it can only be played).
 // focusMeter: the meter Focus gains (0: no Focus). focusDraw: Focus also draws a card,
 //   replacing the Breather.
+// blankClash: a player may place their Focus as a blank at the clash (playing nothing),
+//   whether or not they hold a clash card.
 // As written since 31 October: the neutral step is a neutral card or Focus (draw a card and
-// gain 1 meter); nothing is burned; the meter track runs 0–4.
+// gain 1 meter); nothing is burned; the meter track runs 0–4; Focus is also the clash blank.
 export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 4, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
-  oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 1, focusDraw: true }
+  oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 1, focusDraw: true, blankClash: true }
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -174,6 +176,14 @@ function gainMeter(X, n, rules) {
 export const superReady = (X, rules) => !!X.f.sup && X.meter >= X.f.sup.meter && !(rules?.superUses > 0 && X.supersUsed >= rules.superUses)
 // …and playable this round (with one reveal, this round's meter isn't there yet)
 const superPlayable = (X, rules) => superReady(X, rules) && X.meter - (X.pendingMeter || 0) >= X.f.sup.meter
+
+// Every choice at the clash: the legal cards, plus the blank (null) where it's allowed.
+// A Dizzy player has no choice: they play nothing.
+export function clashChoices16(X, rules) {
+  const o = clashOptions16(X, rules)
+  if (X.st.dizzy) return []
+  return rules?.blankClash === false || rules?.blankClash === 0 ? o : [...o, null]
+}
 
 export function clashOptions16(X, rules) {
   if (X.st.dizzy) return []

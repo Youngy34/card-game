@@ -12,7 +12,7 @@
 // beyond the next round (a knockdown is worth only what the weights say).
 
 import { maximin } from '../lp.js'
-import { clashOptions16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady } from './engine.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -91,7 +91,7 @@ function withHand(G, side, hand) {
 // options, columns the opponent's, entries its chance of winning
 function grid(G, side, W) {
   const me = side === 0 ? G.A : G.B, op = side === 0 ? G.B : G.A
-  const rows = clashOptions16(me, G.rules), cols = clashOptions16(op, G.rules)
+  const rows = clashChoices16(me, G.rules), cols = clashChoices16(op, G.rules)
   const R = rows.length ? rows : [null], C = cols.length ? cols : [null]
   const decide = (g, p) => bestChoice16(g, p, W)
   const M = R.map(r => C.map(c => {

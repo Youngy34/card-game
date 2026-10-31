@@ -225,7 +225,8 @@ function Action16({ m, setM, side, prefs, names, who }) {
   const X = side === 0 ? m.G.A : m.G.B
   const [sel, setSel] = useState(null)
   const [burn, setBurn] = useState(null)        // null, or the hand positions picked to burn
-  useEffect(() => { setSel(null); setBurn(null) }, [m.phase, m.G.round, m.turn, m.G.pending?.stage])
+  const [disc, setDisc] = useState([])          // hand positions picked to discard down to the limit
+  useEffect(() => { setSel(null); setBurn(null); setDisc([]) }, [m.phase, m.G.round, m.turn, m.G.pending?.stage])
   const youName = m.mode === 'ai' ? 'Your' : `${who[side]}'s`
   const notes = prefs.hints !== false && (m.phase === 'clash' || m.phase === 'neutral') ? M.boardNotes16(m, side) : []
   const Notes = notes.length ? html`<ul class="notes" aria-label="Board notes">${notes.map(n => html`<li class=${n.tone || ''}>${n.text}</li>`)}</ul>` : null
@@ -267,7 +268,8 @@ function Action16({ m, setM, side, prefs, names, who }) {
     const groups = M.handGroups(X, ok, M.clashWhy(X))
     const sup = X.f.sup
     return html`<div class="spread"><h3>${youName} clash card · Round ${m.G.round}</h3>
-        <div class="actions"><button class="btn" disabled=${sel === null} onClick=${() => setM(M.choosePick(m, side, sel))}>Lock in</button></div></div>
+        <div class="actions"><button class="btn" disabled=${sel === null} onClick=${() => setM(M.choosePick(m, side, sel))}>Lock in</button>
+          ${m.G.rules.blankClash !== false ? html`<button class="btn ghost" onClick=${() => setM(M.choosePick(m, side, null))}>Play nothing (Focus)</button>` : null}</div></div>
       ${Notes}
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
@@ -298,7 +300,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
 
   if (m.phase === 'discard') {
     const need = m.G.discardDown[side]
-    const [pick, setPick] = [sel || [], v => setSel(v)]
+    const [pick, setPick] = [disc, setDisc]
     const hand = X.hand.map((i, pos) => ({ i, pos, c: X.f.cards[i] }))
     const toggle = pos => setPick(pick.includes(pos) ? pick.filter(p => p !== pos) : pick.length < need ? [...pick, pos] : pick)
     return html`<div class="spread"><h3>Discard down to ${m.G.rules.handLimit}</h3>
