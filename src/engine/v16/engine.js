@@ -25,7 +25,13 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 
 // superUses: 0 = reusable (meter is the only gate), 1 = once per game.
 // burnMax: the most cards a player may burn in one neutral phase.
-export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 1, superUses: 0, speedTie: 'cancel', maxRounds: 60 }
+// oneReveal: the neutral phase and the clash share one reveal (a setup card and a
+//   clash card placed together). The Breather's card arrives at the reveal (too late
+//   to clash with, in time for a combo), and meter gained arrives after the clash.
+// neutralMeter: a neutral card played also gains this much meter.
+// burnNeutrals: whether a neutral card may be burned (false: it can only be played).
+export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 1, superUses: 0, speedTie: 'cancel', maxRounds: 60,
+  oneReveal: false, neutralMeter: 0, burnNeutrals: true }
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -104,8 +110,9 @@ export function neutralOptions16(X, rules = DEFAULT_RULES16) {
   const neutrals = [...new Set(X.hand.filter(i => X.f.cards[i].t === 'N'))]
   const meterMax = rules.meterMax ?? 3
   const superDone = rules.superUses > 0 && X.supersUsed >= rules.superUses
-  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, X.hand.length, rules.burnMax ?? 1))
-  return { skip: false, neutrals, maxBurn, canDraw: true }
+  const burnable = rules.burnNeutrals === false || rules.burnNeutrals === 0 ? X.hand.filter(i => X.f.cards[i].t !== 'N').length : X.hand.length
+  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, burnable, rules.burnMax ?? 1))
+  return { skip: false, neutrals, maxBurn, canDraw: true, superDone }
 }
 
 // acts: [actA, actB], each null (nothing), { kind: 'draw' }, { kind: 'neutral', i } or { kind: 'burn', cards: [i, ...] }
@@ -126,21 +133,33 @@ export function applyNeutral16(G, acts) {
       takeFromHand(X, act.i)
       X.used.push(act.i)
       for (const [key, v] of Object.entries(c.thisRound || {})) X.fx[key] = (X.fx[key] || 0) + v
-      done.push({ kind: 'neutral', i: act.i, name: c.name })
+      const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
+      const m = superDone ? 0 : Math.max(0, Math.min(G.rules.neutralMeter || 0, meterMax - X.meter))
+      gainMeter(X, m, G.rules)
+      done.push({ kind: 'neutral', i: act.i, name: c.name, ...(m ? { meter: m } : {}) })
     } else if (act.kind === 'burn') {
+      if ((G.rules.burnNeutrals === false || G.rules.burnNeutrals === 0) && act.cards.some(i => X.f.cards[i].t === 'N')) throw new Error("neutral cards can't be burned")
       const n = Math.min(act.cards.length, meterMax - X.meter, G.rules.burnMax ?? 1)
       const cards = act.cards.slice(0, n)
       for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: true }) }
-      X.meter += n
+      gainMeter(X, n, G.rules)
       done.push({ kind: 'burn', n, cards })
     } else done.push(act)
   }
   return { ...G, A: P[0], B: P[1], rng: R.s, phase: 'clash', neutral: done }
 }
 
+// Meter gained in the neutral phase; with one reveal it can't pay for a Super until after the clash
+function gainMeter(X, n, rules) {
+  X.meter += n
+  if (rules.oneReveal && n) X.pendingMeter = (X.pendingMeter || 0) + n
+}
+
 // ---- 2. clash ----------------------------------------------------------------
 // The distinct cards a player may set as their clash card ('S' = the Super)
 export const superReady = (X, rules) => !!X.f.sup && X.meter >= X.f.sup.meter && !(rules?.superUses > 0 && X.supersUsed >= rules.superUses)
+// …and playable this round (with one reveal, this round's meter isn't there yet)
+const superPlayable = (X, rules) => superReady(X, rules) && X.meter - (X.pendingMeter || 0) >= X.f.sup.meter
 
 export function clashOptions16(X, rules) {
   if (X.st.dizzy) return []
@@ -151,7 +170,7 @@ export function clashOptions16(X, rules) {
     const c = X.f.cards[i]
     if (c.t !== 'N' && !locked(X, c.t)) out.push(i)
   }
-  if (superReady(X, rules) && !locked(X, X.f.sup.t)) out.push('S')
+  if (superPlayable(X, rules) && !locked(X, X.f.sup.t)) out.push('S')
   return out
 }
 
@@ -166,7 +185,7 @@ export function iconOptions(X, icon, rules) {
     if (c[icon] && canUse(X, c)) out.push(i)
   }
   const s = X.f.sup
-  if (s && s[icon] && superReady(X, rules) && canUse(X, s)) out.push('S')
+  if (s && s[icon] && superPlayable(X, rules) && canUse(X, s)) out.push('S')
   return out
 }
 
@@ -302,7 +321,7 @@ export function startDraw16(G) {
   const P = [cloneP(G.A), cloneP(G.B)]
   for (const X of P) {
     for (const i of X.used) if (i !== 'S') X.discard.push({ i, burned: false })
-    X.used = []; X.fx = {}
+    X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
   }
   const over = P.map(X => Math.max(0, X.hand.length - (G.rules.handLimit ?? 8)))

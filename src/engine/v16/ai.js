@@ -43,7 +43,7 @@ export const BOTS16 = {
 
 // ---- value -----------------------------------------------------------------
 export function score16(X, W, rules) {
-  let e = X.hp - W.alpha * X.pile + W.card * X.hand.length + W.meter * X.meter
+  let e = X.hp - W.alpha * X.pile + W.card * (X.hand.length + (X.pendingDraw || 0)) + W.meter * X.meter
   if (superReady(X, rules)) e += W.superReady
   const n = X.next
   if (n.knockdown) e -= W.knockdown
@@ -137,6 +137,46 @@ export function clashMix16(G, side, W, rng, level = 'hard', hands = null) {
   return { options: rows, x, value, util }
 }
 
+// One reveal: the setup card and the clash card are one secret choice, made
+// without seeing the opponent's setup card. Rows are (setup action, clash card)
+// pairs; columns the opponent's pairs, over the opponent hands it deals.
+// Returns { options: [{ act, pick }], x, value, util }.
+export function jointMix16(G, side, W, rng, level = 'hard') {
+  const me = side === 0 ? G.A : G.B, op = side === 0 ? G.B : G.A
+  const myActs = neutralActions16(me, G.rules, W.ban)
+  const pool = unseenPool(op)
+  const K = W.samples
+  let rows = null, x = null, util = null, value = 0
+  for (let s = 0; s < K; s++) {
+    const Gs = withHand(G, side, dealHand(pool, op.hand.length, rng))
+    const opActs = neutralActions16(side === 0 ? Gs.B : Gs.A, G.rules)
+    const blocks = myActs.map(a => {
+      const Ga = afterNeutral(Gs, side, a, rng)
+      return opActs.map(b => grid(afterNeutral(Ga, 1 - side, b, rng), side, W))
+    })
+    const R = [], M = []
+    myActs.forEach((a, ai) => blocks[ai][0].rows.forEach((r, ri) => {
+      R.push({ act: a, pick: r })
+      M.push(opActs.flatMap((b, bi) => blocks[ai][bi].M[ri]))
+    }))
+    if (!rows) { rows = R; x = R.map(() => 0); util = R.map(() => 0) }
+    const sol = maximin(M)
+    const C = M[0].length
+    const Mt = Array.from({ length: C }, (_, j) => M.map(row => 1 - row[j]))
+    const y = maximin(Mt).x
+    for (let i = 0; i < rows.length; i++) {
+      x[i] += sol.x[i] / K
+      let u = 0
+      for (let j = 0; j < y.length; j++) u += M[i][j] * y[j]
+      util[i] += u / K
+    }
+    value += sol.v / K
+  }
+  const lambda = LEVELS16[level]?.lambda
+  if (lambda) x = softmax(util, lambda)
+  return { options: rows, x, value, util }
+}
+
 // ---- the neutral phase -----------------------------------------------------------
 // The cards a player would give up first: the ones it holds most copies of,
 // and the most of whose type it holds
@@ -147,35 +187,46 @@ export function burnOrder(X) {
 }
 
 // Every action a player could take in the neutral phase
-export function neutralActions16(X, rules) {
+// ban (testing only): 'neutral' or 'burn', an option this partner won't take
+export function neutralActions16(X, rules, ban = null) {
   const o = neutralOptions16(X, rules)
   if (o.skip) return [null]
   const acts = [{ kind: 'draw' }]
-  for (const i of o.neutrals) acts.push({ kind: 'neutral', i })
-  const order = burnOrder(X)
+  if (ban !== 'neutral') for (const i of o.neutrals) acts.push({ kind: 'neutral', i })
+  if (ban === 'burn') return acts
+  const noN = rules?.burnNeutrals === false || rules?.burnNeutrals === 0
+  const order = burnOrder(X).filter(i => !noN || X.f.cards[i].t !== 'N')
   for (let n = 1; n <= o.maxBurn && n < X.hand.length; n++) acts.push({ kind: 'burn', cards: order.slice(0, n) })
   return acts
 }
 
-// What `side` would hold after an action (the opponent's action unknown: taken as nothing)
-function afterNeutral(G, side, act, rng) {
+// What `side` would hold after an action (the opponent's action unknown: taken as nothing).
+// With one reveal, this is also the state it picks its clash card from: a drawn card
+// arrives too late to clash with (counted as pendingDraw), and new meter can't pay for a Super yet.
+export function afterNeutral(G, side, act, rng) {
   const key = side === 0 ? 'A' : 'B'
   const X = { ...G[key], hand: G[key].hand.slice(), fx: { ...G[key].fx } }
+  const R = G.rules || {}, meterMax = R.meterMax ?? 3
+  const gain = n => { X.meter += n; if (R.oneReveal && n) X.pendingMeter = (X.pendingMeter || 0) + n }
+  if (!act) return G
   if (act.kind === 'draw') {
-    if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])      // it doesn't know its deck order
+    if (R.oneReveal) X.pendingDraw = 1
+    else if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])      // it doesn't know its deck order
   } else if (act.kind === 'neutral') {
     X.hand.splice(X.hand.lastIndexOf(act.i), 1)
     for (const [k, v] of Object.entries(X.f.cards[act.i].thisRound || {})) X.fx[k] = (X.fx[k] || 0) + v
+    const superDone = R.superUses > 0 && X.supersUsed >= R.superUses
+    if (!superDone) gain(Math.max(0, Math.min(R.neutralMeter || 0, meterMax - X.meter)))
   } else if (act.kind === 'burn') {
     for (const i of act.cards) X.hand.splice(X.hand.lastIndexOf(i), 1)
-    X.meter += act.cards.length
+    gain(act.cards.length)
   }
   return { ...G, [key]: X }
 }
 
 export function neutralChoice16(G, side, W, rng, level = 'hard') {
   const X = side === 0 ? G.A : G.B, op = side === 0 ? G.B : G.A
-  const acts = neutralActions16(X, G.rules)
+  const acts = neutralActions16(X, G.rules, W.ban)
   if (acts.length === 1) return { acts, p: [1], values: [null], act: acts[0] }
   const pool = unseenPool(op)
   const hands = Array.from({ length: W.neutralSamples }, () => dealHand(pool, op.hand.length, rng))

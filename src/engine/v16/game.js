@@ -2,7 +2,7 @@
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
 import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16 } from './engine.js'
-import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex } from './ai.js'
+import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16 } from './ai.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -72,16 +72,47 @@ export function aiClash(G, side, level, W, rng) {
 }
 export const aiCombo = (g, p, W) => bestChoice16(g, p, W)
 
+// One reveal: the setup card and the clash card are chosen together, without
+// seeing the opponent's setup card
+export function aiRound16(G, side, level, W, rng) {
+  if (BOTS16[level]) {
+    const act = botNeutral(G, side, level, rng)
+    return { act, pick: botClash(afterNeutral(G, side, act, rng), side, level, rng) }
+  }
+  // The setup action is picked as in the two-phase neutral phase (its best clash card's
+  // value against the opponent's mix, through the same softmax), then the clash card
+  // from the solved mix within that action
+  const m = jointMix16(G, side, W, rng, level)
+  const acts = [...new Set(m.options.map(o => o.act))]
+  const best = acts.map(a => Math.max(...m.options.map((o, i) => (o.act === a ? m.util[i] : -Infinity))))
+  const a = acts[sampleIndex(softmaxP(best, LEVELS16[level]?.neutral ?? 60), rng)]
+  const idx = m.options.map((o, i) => i).filter(i => m.options[i].act === a)
+  let w = idx.map(i => m.x[i])
+  if (w.reduce((t, v) => t + v, 0) < 1e-9) w = softmaxP(idx.map(i => m.util[i]), 60)
+  return m.options[idx[sampleIndex(w, rng)]]
+}
+const softmaxP = (u, lambda) => {
+  const mx = Math.max(...u), e = u.map(v => Math.exp(lambda * (v - mx))), t = e.reduce((a, b) => a + b, 0)
+  return e.map(v => v / t)
+}
+
 // ---- a whole game ------------------------------------------------------------------
 export function playGame16(fa, fb, { rules = DEFAULT_RULES16, W = DEFAULT_W16, levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed) } = {}) {
   let G = newGame16(fa, fb, rules, seed)
   const rounds = []
   while (G.result === null) {
     const before = [snap16(G.A), snap16(G.B)]
-    const acts = [0, 1].map(k => aiNeutral(G, k, levels[k], W, rng))
-    G = applyNeutral16(G, acts)
+    let picks
+    if (rules.oneReveal) {
+      const both = [0, 1].map(k => aiRound16(G, k, levels[k], W, rng))
+      G = applyNeutral16(G, both.map(b => b.act))
+      picks = both.map(b => b.pick)
+    } else {
+      const acts = [0, 1].map(k => aiNeutral(G, k, levels[k], W, rng))
+      G = applyNeutral16(G, acts)
+      picks = [0, 1].map(k => aiClash(G, k, levels[k], W, rng))
+    }
     const neutral = G.neutral
-    const picks = [0, 1].map(k => aiClash(G, k, levels[k], W, rng))
     G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, W))
     rounds.push(roundRecord16(G.round, before, G, neutral))
     if (G.result !== null) break
