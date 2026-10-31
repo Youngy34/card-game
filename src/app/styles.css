@@ -335,3 +335,27 @@ pre.json { background: var(--ground); padding: 12px; overflow-x: auto; font-fami
 .followup-ask { margin: 0; font-weight: 600; text-align: center; }
 .readline { width: 100%; max-width: 640px; display: grid; gap: 4px; padding: 8px 12px; background: var(--ground); border-left: 3px solid var(--line-2); }
 .readline p { margin: 0; font-size: 14px; }
+
+/* ---- rules v16: decks, combos, statuses ---- */
+.icons { display: flex; flex-wrap: wrap; gap: 0.25em; padding: 0 0.5em 0.3em; }
+.icon { font-size: 0.7em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.1em 0.4em; border: 1px solid var(--ink-3); color: var(--ink-2); }
+.icon.starter { border-color: var(--pressure); color: var(--pressure); }
+.icon.linker { border-color: var(--ink-2); }
+.icon.ender { border-color: var(--convert); color: var(--convert); }
+.icon.counter { border-color: var(--recover); color: var(--recover); }
+.icon.tiny { font-size: 10px; padding: 0 4px; }
+.card-count { position: absolute; right: 0.4em; bottom: 0.4em; z-index: 3; font-family: var(--font-display); font-weight: 900; font-size: 1.3em; background: var(--ink); color: var(--ground); padding: 0 0.3em; }
+.card.small { --w: 110px; }
+.meter { display: flex; align-items: center; gap: 5px; }
+.pipm { width: 14px; height: 14px; transform: rotate(45deg); background: var(--ground); box-shadow: inset 0 0 0 2px var(--line-2); }
+.pipm.on { background: var(--convert); box-shadow: none; }
+.hud-row .count b { font-family: var(--font-display); font-weight: 900; font-size: 18px; font-variant-numeric: tabular-nums; }
+.flag.status { background: var(--bad); color: var(--ground); }
+.flag.status.next { background: none; color: var(--bad); border: 1px solid var(--bad); }
+.neutral-line { display: grid; gap: 4px; width: 100%; max-width: 640px; font-size: 15px; }
+.neutral-line div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; }
+@media (max-width: 520px) { .neutral-line div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+.combo-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.combo-row .card { --w: 120px; }
+.narr16 { margin: 0; padding: 0 0 0 18px; display: grid; gap: 3px; width: 100%; max-width: 640px; font-size: 15px; color: var(--ink-2); }
+.flag.sup.ready { background: var(--convert); color: var(--ground); }

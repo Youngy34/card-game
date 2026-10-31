@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 3,
+  "rules": 16,
+  "id": "benchmark16",
+  "name": "Benchmark",
+  "epithet": "Reference",
+  "concept": "The plain v16 fighter: a 24-card deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters.",
+  "hp": 30,
+  "passive": null,
+  "cards": [
+    { "name": "Jab", "type": "pressure", "kind": "strike", "speed": 17, "build": 2, "chip": 1, "copies": 4, "icons": ["starter", "linker"] },
+    { "name": "Slash", "type": "pressure", "kind": "strike", "speed": 14, "build": 4, "chip": 1, "copies": 2, "icons": ["linker", "counter"] },
+    { "name": "Sweep", "type": "pressure", "kind": "strike", "speed": 13, "build": 3, "chip": 0, "copies": 2, "icons": ["ender"], "onHit": "knockdown" },
+    { "name": "Throw", "type": "convert", "kind": "grab", "speed": 7, "chip": 2, "copies": 3, "icons": ["counter"] },
+    { "name": "Big Swing", "type": "convert", "kind": "guardBreak", "speed": 3, "chip": 3, "copies": 3, "icons": ["ender", "counter"] },
+    { "name": "Guard", "type": "recover", "kind": "guard", "copies": 6 },
+    { "name": "Wind-Up", "type": "neutral", "copies": 2, "thisRound": { "convertChip": 2 } },
+    { "name": "Step In", "type": "neutral", "copies": 2, "thisRound": { "speed": 2 } }
+  ],
+  "super": { "name": "Overdrive", "type": "convert", "kind": "guardBreak", "speed": 10, "chip": 5, "icons": ["ender"], "meter": 3, "onHit": "dizzy",
+             "flavour": "Ends a combo with a cash and a Dizzy: their next round is a free hit." },
+  "notes": "Added 31 Oct 2026 from rules-overview 16.md."
+}

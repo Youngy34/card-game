@@ -4,6 +4,7 @@
 import { html, render } from './app/lib.js'
 import { initData, connect } from './app/store.js'
 import { App } from './app/app.js'
+import { App16 } from './app/v16/app16.js'
 import { EDITIONS } from './editions.js'
 
 // Running locally: the edition comes from the address (index.html?edition=v15)
@@ -29,7 +30,8 @@ function start(boot) {
     initData(data)
     const el = document.getElementById('app')
     el.textContent = ''                      // drop the loading line, which Preact would otherwise leave behind
-    render(html`<${App} boot=${boot || {}} />`, el)
+    const Shell = data.edition?.key === 'v16' ? App16 : App
+    render(html`<${Shell} boot=${boot || {}} />`, el)
     connect()
   }, e => {
     document.getElementById('app').textContent = `Couldn't load the fighters: ${e.message}`

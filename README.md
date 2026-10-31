@@ -17,9 +17,24 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
+| `v16` | Yomi Playtest v16 | The v16 Benchmark deck (`data/v16/`). Rules v16 (decks, the neutral phase, combos, statuses, meter) run on their own engine in `src/engine/v16/` and their own screens in `src/app/v16/` | `node tools/build-artifact.mjs --edition v16` |
 | `v15` | Yomi Playtest v15 | The v15 Benchmark, Benchmark C3/4 (Converts chip 3 and 4), the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
 
-Locally, open `index.html?edition=v15` for the v15 edition.
+Locally, open `index.html?edition=v15` (or `?edition=v16`) for those editions.
+
+### Rules v16
+
+`rules-overview 16.md` in the Claude project. A fighter with `"rules": 16` is a deck: each distinct card once, with its `copies`, and a Super beside the deck. The engine (`src/engine/v16/engine.js`) is pure: a game state in, a new one out, with the shuffle's random state kept in the game. A round is the neutral phase (`applyNeutral16`), the clash (`startClash16`, then `decideClash16` for each follow-up, Linker or Ender), and the draw (`startDraw16`, `discardDown16`). The rule dials are `openingHand`, `handLimit`, `meterMax`, `burnMax` (cards burned per neutral phase), `superUses` (0 = reusable, 1 = once per game), `speedTie` and `maxRounds`.
+
+The sparring partner (`src/engine/v16/ai.js`) can't see your hand. For each decision it deals you a few possible hands from the cards it hasn't seen (your deck, your hand and your burned cards), solves the clash grid for each as the v15 partner did, and plays the average mix. Follow-ups, Linkers and Enders are chosen greedily by the same value function; neutral actions are scored by the clash they lead to and picked with a little randomness. The Reader isn't ported to v16 yet.
+
+```
+node tools/test16.mjs                                   # rule checks for the v16 engine
+node tools/sim16.mjs game benchmark -n 300              # Benchmark mirror, full report
+node tools/sim16.mjs game benchmark -n 300 --burnMax 1  # with a rule dial changed
+node tools/sim16.mjs exploit benchmark -n 300           # mindless bots vs Hard
+node tools/smoke/browser16.cjs dist/yomi-playtest-v16.html <vendor dir> [shots dir]
+```
 
 ### Rules v15 in the engine
 

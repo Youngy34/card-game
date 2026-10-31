@@ -12,6 +12,10 @@
 //   games/<id>       one logged game (see match.js, gameRecord)
 
 import { validateFighter, fighterHash } from '../engine/fighters.js'
+import { validateFighter16 } from '../engine/v16/cards.js'
+
+// v16 fighters (decks) have their own validator
+const validate = f => (f?.rules === 16 ? validateFighter16(f) : validateFighter(f))
 import { DEFAULT_WEIGHTS } from '../engine/ai.js'
 
 const listeners = new Set()
@@ -93,7 +97,7 @@ export function roster() {
   const entry = (id, saved, base) => {
     let fighter = base, problems = null
     if (saved !== undefined) {
-      const v = validateFighter(saved)
+      const v = validate(saved)
       if (v.errors.length) problems = v.errors
       else fighter = saved
     }
@@ -102,7 +106,7 @@ export function roster() {
     const baseHash = base ? fighterHash(base) : null
     const reference = S.reference.includes(id), draft = S.drafts.includes(id)
     const status = !base ? 'variant' : hash !== baseHash ? 'edited' : reference ? 'reference' : draft ? 'draft' : 'signed-off'
-    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: fighter.rules === 12 || fighter.rules === 15 ? fighter.rules : 11 }
+    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: [12, 15, 16].includes(fighter.rules) ? fighter.rules : 11 }
   }
   for (const id of S.order) out.push(entry(id, S.docs[id]?.fighter, S.bundled[id]))
   const variants = Object.keys(S.docs).filter(id => !S.bundled[id]).sort()
@@ -120,7 +124,7 @@ function writable() {
 
 export async function saveFighter(f) {
   writable()
-  const v = validateFighter(f)
+  const v = validate(f)
   if (v.errors.length) throw new Error(`Fix ${v.errors.length} problem${v.errors.length > 1 ? 's' : ''} before saving.`)
   const body = { fighter: JSON.parse(JSON.stringify(f)), updatedAt: Date.now() }
   if (S.backend === 'db') await db.doc(`fighters/${f.id}`).set(body)
