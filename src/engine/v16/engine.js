@@ -253,6 +253,9 @@ function attackOptions(X, rules) {
   return out
 }
 
+// Whether a neutral card bends this card's type this round (Armor: Converts; Mix-Up: Pressures)
+const bent = (X, c) => (c.t === 'C' && !!X.fx.armor) || (c.t === 'P' && !!X.fx.mixup)
+
 export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0)
 
 // Who wins a same-type duel at equal speed: 0, 1, or -1 (cancel)
@@ -321,6 +324,10 @@ export function startClash16(G, a, b, lite = false) {
     else if (cb.t === 'P' && !cb.sup && ca.t === 'R' && B.fx.mixup) { winner = 1; outcome = 'mixup' }
   }
   else if (ca.t === 'R') outcome = 'guards'
+  else if (G.rules.bendersLoseMirror && !ca.sup && !cb.sup && bent(A, ca) !== bent(B, cb)) {
+    // A bent type (Armor's Converts, Mix-Up's Pressures) is slow: it loses any duel of its own type
+    winner = bent(A, ca) ? 1 : 0; outcome = 'outpaced'
+  }
   else {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
     if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
@@ -343,7 +350,7 @@ export function startClash16(G, a, b, lite = false) {
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return ask(next, 'follow', winner)
-  if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
+  if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }
 

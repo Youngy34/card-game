@@ -42,7 +42,7 @@ export function roundRecord16(n, before, G, neutral) {
     outcome: c.outcome, winner: c.winner,
     speeds: ev.find(e => e.kind === 'speeds')?.speeds || null,
     follow: c.follow, combo: c.combo, offered: c.offered || {},
-    starterWon: c.winner >= 0 && ['triangle', 'armor', 'mixup', 'speed', 'tie', 'unopposed'].includes(c.outcome) && !!card16(c.winner === 0 ? G.A : G.B, c.picks[c.winner])?.starter,
+    starterWon: c.winner >= 0 && ['triangle', 'armor', 'mixup', 'outpaced', 'speed', 'tie', 'unopposed'].includes(c.outcome) && !!card16(c.winner === 0 ? G.A : G.B, c.picks[c.winner])?.starter,
     statuses: [statusList(G.A.next), statusList(G.B.next)],
     dmg, before, after: [snap16(G.A), snap16(G.B)],
     quiet: before[0].hp === G.A.hp && before[1].hp === G.B.hp && before[0].pile === G.A.pile && before[1].pile === G.B.pile,

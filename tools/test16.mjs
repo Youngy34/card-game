@@ -272,6 +272,15 @@ function setup(handA, handB, patch = {}) {
   M2 = { ...M2, A: { ...M2.A, hand: [J] }, B: { ...M2.B, hand: [GU] } }
   M2 = startClash16(applyNeutral16(M2, [null, null]), J, GU)
   ok(M2.clash.winner === 1, 'without Mix-Up, the Guard beats the Jab')
+  // bendersLoseMirror (under test): a bent type loses any duel of its own type
+  let B1 = newGame16(FN, FN, { ...W, bendersLoseMirror: true }, 3)
+  B1 = { ...B1, A: { ...B1.A, hand: [J], nhand: [MX, FO, FO] }, B: { ...B1.B, hand: [SL] } }
+  B1 = startClash16(applyNeutral16(B1, [{ kind: 'neutral', i: MX }, null]), J, SL)
+  ok(B1.clash.winner === 1 && B1.clash.outcome === 'outpaced', "with bendersLoseMirror, a Mix-Up Jab (17) loses to a plain Slash (14)")
+  let B2 = newGame16(FN, FN, W, 3)
+  B2 = { ...B2, A: { ...B2.A, hand: [J], nhand: [MX, FO, FO] }, B: { ...B2.B, hand: [SL] } }
+  B2 = startClash16(applyNeutral16(B2, [{ kind: 'neutral', i: MX }, null]), J, SL)
+  ok(B2.clash.winner === 0 && B2.clash.outcome === 'speed', 'as written, the Mix-Up Jab still wins on speed')
   // Parry: a Guard's follow-up can be any attack, and a Starter combos
   let P1 = newGame16(FN, FN, W, 3)
   P1 = { ...P1, A: { ...P1.A, hand: [GU, J, SL, SW], nhand: [PA, FO, FO] }, B: { ...P1.B, hand: [SL] } }
