@@ -42,10 +42,15 @@ export function Settings16() {
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Hand limit')}
-        ${num('meterMax', 1, 5, 'Meter maximum')}
-        ${num('burnMax', 1, 5, 'Most cards burned a round', 'Set to 1 after the first sim: burning 3 at once made the Super, and Dizzy, far too frequent.')}
+        ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 4.')}
+        ${num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}
       </div>
+      <label class="field"><span>Focus</span>
+        <select id="s-focus" value=${d.rules.focusDraw ? 'both' : 'meter'} onChange=${e => rule({ focusDraw: e.target.value === 'both' })}>
+          <option value="both">Draws a card and gains 1 meter (as written)</option>
+          <option value="meter">Gains 1 meter; a separate Breather draws a card</option>
+        </select></label>
       <label class="field"><span>The Super</span>
         <select id="s-superuses" value=${String(d.rules.superUses)} onChange=${e => rule({ superUses: Number(e.target.value) })}>
           <option value="0">Reusable: meter is the only gate (as written)</option>

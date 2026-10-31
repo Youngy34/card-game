@@ -32,7 +32,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral phase (play a neutral card, burn cards for meter, or draw an extra card), the clash, and a draw. Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
+      <p class="lede">Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card, or Focus: draw a card and gain 1 meter), the clash, and a draw. Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -63,7 +63,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
       <label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you choose (lethal range, live Supers, statuses, Counters they could hold, speed duels)</label>
       <label class="check"><input type="checkbox" checked=${!!prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the sparring partner's mix after each reveal</label>
       ${prefs.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${!!prefs.showHands} onChange=${e => setPrefs({ ...prefs, showHands: e.target.checked })} /> Show both hands</label>` : null}
-      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; burn up to ${s.rules.burnMax} a round for meter (max ${s.rules.meterMax}); the Super is ${s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${s.rules.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel'}. Change these in Settings.</p>
+      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${s.rules.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel'}. Change these in Settings.</p>
       <div class="actions"><button class="btn" onClick=${start}>Start the match</button></div>
     </div>
   </div>`
@@ -215,6 +215,11 @@ function ClashView({ m, clash, names, prefs }) {
     </div>` : null}`
 }
 
+// The neutral step's options, in words
+export const neutralRule = R => R.focusDraw
+  ? `neutral step: a neutral card, or Focus (draw a card${(R.focusMeter ?? 0) > 0 ? ` and gain ${R.focusMeter} meter` : ''})${(R.burnMax ?? 0) > 0 ? `, or burn up to ${R.burnMax}` : ''}`
+  : `neutral step: a neutral card, the Breather (draw a card)${(R.focusMeter ?? 0) > 0 ? `, or Focus (gain ${R.focusMeter} meter)` : ''}${(R.burnMax ?? 0) > 0 ? `, or burn up to ${R.burnMax}` : ''}`
+
 // ---- what the deciding player does --------------------------------------------------
 function Action16({ m, setM, side, prefs, names, who }) {
   const X = side === 0 ? m.G.A : m.G.B
@@ -226,7 +231,8 @@ function Action16({ m, setM, side, prefs, names, who }) {
   const Notes = notes.length ? html`<ul class="notes" aria-label="Board notes">${notes.map(n => html`<li class=${n.tone || ''}>${n.text}</li>`)}</ul>` : null
 
   if (m.phase === 'neutral') {
-    const o = neutralOptions16(X, m.G.rules)
+    const R = m.G.rules
+    const o = neutralOptions16(X, R)
     const groups = M.handGroups(X, burn ? null : new Set(o.neutrals))
     if (burn) {
       const hand = X.hand.map((i, pos) => ({ i, pos, c: X.f.cards[i] }))
@@ -236,18 +242,21 @@ function Action16({ m, setM, side, prefs, names, who }) {
           <button class="btn" disabled=${!burn.length} onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'burn', cards: burn.map(p => X.hand[p]) }))}>Burn ${burn.length || ''}</button>
           <button class="btn ghost" onClick=${() => setBurn(null)}>Back</button>
         </div></div>
-        <p class="small">Pick up to ${o.maxBurn} card${o.maxBurn > 1 ? 's' : ''}: 1 meter each (you have ${X.meter} of ${m.G.rules.meterMax}). They go face down under your discard pile; the opponent sees how many, not which.</p>
+        <p class="small">Pick up to ${o.maxBurn} card${o.maxBurn > 1 ? 's' : ''}: 1 meter each (you have ${X.meter} of ${R.meterMax}). They go face down under your discard pile; the opponent sees how many, not which.</p>
         <div class="hand">${hand.map(h => html`<div key=${h.pos}><${Card16} as="button" card=${h.c.src} cls=${cx(burn.includes(h.pos) && 'selected')} onClick=${() => toggle(h.pos)} /></div>`)}</div>`
     }
+    const full = X.meter >= (R.meterMax ?? 4)
     return html`<div class="spread"><h3>${youName} neutral action · Round ${m.G.round}</h3></div>
       ${Notes}
       <div class="actions">
-        <button class="btn" onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'draw' }))}>Draw a card</button>
-        <button class="btn ghost" disabled=${!o.maxBurn} onClick=${() => setBurn([])}>Burn for meter…</button>
+        ${R.focusDraw
+          ? html`<button class="btn" onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'focus' }))}>Focus: draw${full ? '' : ' + 1 meter'}</button>`
+          : html`<button class="btn" onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'draw' }))}>Breather: draw a card</button>
+            ${(R.focusMeter ?? 0) > 0 ? html`<button class="btn ghost" disabled=${!o.canFocus} onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'focus' }))}>Focus: +1 meter</button>` : null}`}
+        ${o.maxBurn || (R.burnMax ?? 0) > 0 ? html`<button class="btn ghost" disabled=${!o.maxBurn} onClick=${() => setBurn([])}>Burn for meter…</button>` : null}
         <button class="btn ghost" disabled=${sel === null} onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'neutral', i: sel }))}>Play ${sel !== null ? X.f.cards[sel].name : 'a neutral card'}</button>
-        <button class="link" onClick=${() => setM(M.chooseNeutral(m, side, null))}>Do nothing</button>
       </div>
-      <p class="small muted">${o.neutrals.length ? 'To play a neutral card, pick it below.' : 'You hold no neutral cards.'} ${!o.maxBurn ? (X.meter >= m.G.rules.meterMax ? 'Your meter is full.' : '') : ''}</p>
+      <p class="small muted">${o.neutrals.length ? 'To play a neutral card, pick it below.' : 'You hold no neutral cards.'} ${full ? 'Your meter is full.' : `Meter ${X.meter} of ${R.meterMax ?? 4}.`}</p>
       <div class="hand">${groups.map(g => html`<div key=${g.i}>${g.c.t === 'N'
         ? html`<${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} cls=${cx(sel === g.i && 'selected')} onClick=${() => setSel(g.i)} />`
         : html`<${Card16} card=${g.c.src} count=${g.n > 1 ? g.n : null} />`}</div>`)}</div>`
@@ -310,7 +319,7 @@ function HandView({ X, title }) {
 
 function RoundLog16({ m, names }) {
   if (!m.history.length) return html`<div class="panel stack"><h3>Rounds</h3><p class="small muted">Each round's neutral actions, cards and the board after it appear here.</p></div>`
-  const nl = a => ({ draw: 'drew', neutral: a.name, burn: `burned ${a.n}`, none: '—', skip: a.why ? a.why.toLowerCase() : 'skipped' })[a.kind] || a.kind
+  const nl = a => ({ draw: 'drew', focus: 'focus', neutral: a.name, burn: `burned ${a.n}`, none: '—', skip: a.why ? a.why.toLowerCase() : 'skipped' })[a.kind] || a.kind
   return html`<div class="panel stack">
     <h3>Rounds</h3>
     <div class="log">

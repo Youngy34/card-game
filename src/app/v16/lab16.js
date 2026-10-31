@@ -7,6 +7,7 @@ import { settings16, toFighter16 } from './fighters16.js'
 import { runBalance16 } from '../../engine/v16/game.js'
 import { LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
 import { Seg, StatusChip, NumField } from '../ui.js'
+import { neutralRule } from './play16.js'
 
 const SIZES = [[100, '100'], [300, '300'], [500, '500'], [1000, '1,000']]
 const ALL_LEVELS = { ...LEVELS16, ...BOTS16 }
@@ -63,7 +64,7 @@ export function Lab16({ state, setState }) {
         <label class="field"><span>Seed</span><${NumField} id="lab-seed" lo=${0} value=${seed} onValue=${v => upd({ seed: v })} /></label>
       </div>
       <div class="row"><span class="label">Games</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (burn up to ${s.rules.burnMax} a round, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (${neutralRule(s.rules)}, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
       <div class="actions">
         <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${check}>Run the exploit check</button>
@@ -102,7 +103,7 @@ function Report16({ r }) {
       <div class="stat-tile"><span class="label">Quiet rounds</span><b>${pct(r.quiet / R, 1)}</b><span class="small muted">no HP or pile change</span></div>
       <div class="stat-tile"><span class="label">Combos</span><b>${pct(r.combos / R, 1)}</b><span class="small muted">of rounds · ${(r.comboLen / Math.max(r.combos, 1)).toFixed(1)} cards, ${(r.comboDmg / Math.max(r.combos, 1)).toFixed(1)} HP each · a Starter won ${pct(r.starterWins / R)} of rounds</span></div>
       <div class="stat-tile"><span class="label">Guard beats Pressure</span><b>${pct(r.guardWins / R, 1)}</b><span class="small muted">of rounds · follow-up ${pct(r.follows / Math.max(r.guardWins, 1))}, ${(r.followDmg / Math.max(r.follows, 1)).toFixed(1)} HP each · no Counter in hand ${pct(r.guardWinsNoCounter / Math.max(r.guardWins, 1))}</span></div>
-      <div class="stat-tile"><span class="label">Supers</span><b>${((r.supers[0] + r.supers[1]) / n).toFixed(1)}</b><span class="small muted">a game · cards burned ${((r.burned[0] + r.burned[1]) / n).toFixed(1)} a game</span></div>
+      <div class="stat-tile"><span class="label">Supers</span><b>${((r.supers[0] + r.supers[1]) / n).toFixed(1)}</b><span class="small muted">a game · Focus ${(((r.focused?.[0] || 0) + (r.focused?.[1] || 0)) / n).toFixed(1)} a game${r.burned[0] + r.burned[1] ? ` · cards burned ${((r.burned[0] + r.burned[1]) / n).toFixed(1)} a game` : ''}</span></div>
       <div class="stat-tile"><span class="label">Statuses a game</span><span class="small">${Object.entries(r.statuses).map(([k, v]) => `${k} ${(v / n).toFixed(1)}`).join(', ') || 'none'}</span></div>
       <div class="stat-tile"><span class="label">How games end</span><span class="small">${share(r.routes, n)}</span></div>
       <div class="stat-tile"><span class="label">Clash outcomes</span><span class="small">${share(r.outcomes, R)}</span></div>

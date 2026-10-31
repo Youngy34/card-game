@@ -135,7 +135,7 @@ export function summarise16(games, fighters) {
     outcomes: {}, neutral: [{}, {}], types: [{}, {}], plays: [{}, {}],
     guardWins: 0, guardWinsWithFollow: 0, followDmg: 0, followC: 0, follows: 0, guardWinsNoCounter: 0,
     combos: 0, comboLen: 0, comboDmg: 0, comboEnds: {}, starterWins: 0,
-    statuses: {}, supers: [0, 0], burned: [0, 0], reshuffles: [0, 0], handAfter: [[], []], sameType: 0, ties: 0 }
+    statuses: {}, supers: [0, 0], burned: [0, 0], focused: [0, 0], reshuffles: [0, 0], handAfter: [[], []], sameType: 0, ties: 0 }
   for (const g of games) {
     R.win += g.result
     R.lengths.push(g.rounds.length)
@@ -153,6 +153,7 @@ export function summarise16(games, fighters) {
         const key = a.kind === 'neutral' ? 'neutral card' : a.kind === 'burn' ? `burn ${a.n}` : a.kind
         R.neutral[k][key] = (R.neutral[k][key] || 0) + 1
         if (a.kind === 'burn') R.burned[k] += a.n
+        if (a.kind === 'focus') R.focused[k]++
         const t = r.types[k] || '-'
         R.types[k][t] = (R.types[k][t] || 0) + 1
         if (r.cards[k]) R.plays[k][r.cards[k]] = (R.plays[k][r.cards[k]] || 0) + 1

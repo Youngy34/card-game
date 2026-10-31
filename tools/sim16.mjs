@@ -23,7 +23,7 @@ const n = +opt('-n', 100), seed = +opt('--seed', 5), tie = opt('--tie', 'cancel'
 const json = flag('--json')
 const settings = JSON.parse(fs.readFileSync(`${root}/data/v16/settings.json`, 'utf8'))
 const rules = { ...settings.rules, speedTie: tie }
-for (const k of ['openingHand', 'handLimit', 'meterMax', 'burnMax', 'superUses', 'maxRounds', 'oneReveal', 'neutralMeter', 'burnNeutrals']) { const v = opt('--' + k, null); if (v !== null) rules[k] = +v }
+for (const k of ['openingHand', 'handLimit', 'meterMax', 'burnMax', 'superUses', 'maxRounds', 'oneReveal', 'neutralMeter', 'burnNeutrals', 'focusMeter']) { const v = opt('--' + k, null); if (v !== null) rules[k] = +v }
 const W = { ...DEFAULT_W16, ...settings.ai }
 for (const k of Object.keys(DEFAULT_W16)) { const v = opt('--' + k, null); if (v !== null) W[k] = +v }
 const mode = args[0]

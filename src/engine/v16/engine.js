@@ -30,8 +30,12 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 //   to clash with, in time for a combo), and meter gained arrives after the clash.
 // neutralMeter: a neutral card played also gains this much meter.
 // burnNeutrals: whether a neutral card may be burned (false: it can only be played).
-export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 1, superUses: 0, speedTie: 'cancel', maxRounds: 60,
-  oneReveal: false, neutralMeter: 0, burnNeutrals: true }
+// focusMeter: the meter Focus gains (0: no Focus). focusDraw: Focus also draws a card,
+//   replacing the Breather.
+// As written since 31 October: the neutral step is a neutral card or Focus (draw a card and
+// gain 1 meter); nothing is burned; the meter track runs 0–4.
+export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 4, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
+  oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 1, focusDraw: true }
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -111,11 +115,14 @@ export function neutralOptions16(X, rules = DEFAULT_RULES16) {
   const meterMax = rules.meterMax ?? 3
   const superDone = rules.superUses > 0 && X.supersUsed >= rules.superUses
   const burnable = rules.burnNeutrals === false || rules.burnNeutrals === 0 ? X.hand.filter(i => X.f.cards[i].t !== 'N').length : X.hand.length
-  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, burnable, rules.burnMax ?? 1))
-  return { skip: false, neutrals, maxBurn, canDraw: true, superDone }
+  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, burnable, rules.burnMax ?? 0))
+  // focusDraw: Focus also draws a card, replacing the Breather (always available; its meter is capped)
+  const canFocus = rules.focusDraw ? true : !superDone && (rules.focusMeter ?? 0) > 0 && X.meter < meterMax
+  return { skip: false, neutrals, maxBurn, canDraw: true, canFocus, superDone }
 }
 
-// acts: [actA, actB], each null (nothing), { kind: 'draw' }, { kind: 'neutral', i } or { kind: 'burn', cards: [i, ...] }
+// acts: [actA, actB], each null (nothing), { kind: 'draw' } (the Breather), { kind: 'focus' }, { kind: 'neutral', i }
+// or { kind: 'burn', cards: [i, ...] } (only with burnMax above 0)
 export function applyNeutral16(G, acts) {
   const R = { s: G.rng }
   const P = [cloneP(G.A), cloneP(G.B)]
@@ -137,9 +144,16 @@ export function applyNeutral16(G, acts) {
       const m = superDone ? 0 : Math.max(0, Math.min(G.rules.neutralMeter || 0, meterMax - X.meter))
       gainMeter(X, m, G.rules)
       done.push({ kind: 'neutral', i: act.i, name: c.name, ...(m ? { meter: m } : {}) })
+    } else if (act.kind === 'focus') {
+      if (!neutralOptions16(X, G.rules).canFocus) throw new Error("can't Focus")
+      const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
+      const m = superDone ? 0 : Math.max(0, Math.min(G.rules.focusMeter ?? 0, meterMax - X.meter))
+      gainMeter(X, m, G.rules)
+      const drew = G.rules.focusDraw ? drawCards(X, 1, R) : 0
+      done.push({ kind: 'focus', n: m, ...(G.rules.focusDraw ? { drew } : {}) })
     } else if (act.kind === 'burn') {
       if ((G.rules.burnNeutrals === false || G.rules.burnNeutrals === 0) && act.cards.some(i => X.f.cards[i].t === 'N')) throw new Error("neutral cards can't be burned")
-      const n = Math.min(act.cards.length, meterMax - X.meter, G.rules.burnMax ?? 1)
+      const n = Math.min(act.cards.length, meterMax - X.meter, G.rules.burnMax ?? 0)
       const cards = act.cards.slice(0, n)
       for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: true }) }
       gainMeter(X, n, G.rules)

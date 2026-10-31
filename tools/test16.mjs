@@ -3,7 +3,8 @@
 
 import fs from 'fs'
 import { toFighter16, validateFighter16 } from '../src/engine/v16/cards.js'
-import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16, runClash16, unseenPool } from '../src/engine/v16/engine.js'
+import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16, runClash16, unseenPool, DEFAULT_RULES16 } from '../src/engine/v16/engine.js'
+import { neutralActions16 } from '../src/engine/v16/ai.js'
 
 const raw = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
 const v = validateFighter16(raw)
@@ -96,7 +97,7 @@ function setup(handA, handB, patch = {}) {
   G = applyNeutral16(G, [{ kind: 'neutral', i: WIND }, { kind: 'burn', cards: burn }])
   ok(G.A.fx.convertChip === 2 && G.A.hand.length === h0 - 1, 'Wind-Up: Converts chip +2 this round')
   ok(G.B.meter === 3 && G.B.hand.length === 3 && G.B.discard.filter(d => d.burned).length === 3, 'burning 3 cards gives 3 meter, face down')
-  ok(clashOptions16(G.B, G.rules).includes('S'), 'the Super is playable at 3 meter')
+  ok(G.B.meter === 3 && !clashOptions16(G.B, G.rules).includes('S'), 'Overdrive needs 4 meter: not playable at 3')
   let H = newGame16(F, F, rules, 3)
   H = applyNeutral16(H, [{ kind: 'draw' }, null])
   ok(H.A.hand.length === 7 && H.A.deck.length === d0 - 1, 'draw an extra card')
@@ -111,9 +112,10 @@ function setup(handA, handB, patch = {}) {
   L = applyNeutral16(L, [{ kind: 'burn', cards: L.A.hand.slice(0, 3) }, null])
   ok(L.A.meter === 1 && L.A.hand.length === 5, 'only 1 burned with burnMax 1')
 }
-// 7. The Super: Dizzy, the free hit, and once-per-game
+// 7. The Super: Dizzy (on a Super that has it), the free hit, and once-per-game
 {
-  let G = setup([JAB], [GUARD], { A: { meter: 3 }, B: { pile: 4 } })
+  const FD = { ...F, sup: { ...F.sup, onHit: 'dizzy', meter: 3 } }
+  let G = setup([JAB], [GUARD], { A: { meter: 3, f: FD }, B: { pile: 4 } })
   G = startClash16(G, 'S', GUARD)
   ok(G.A.meter === 0 && G.B.hp === 30 - 4 - 5 && G.B.next.dizzy, 'Overdrive cashes 4, chips 5, Dizzy')
   G = startDraw16(G)
@@ -123,7 +125,7 @@ function setup(handA, handB, patch = {}) {
   G = { ...G, A: { ...G.A, hand: handA } }
   G = startClash16(G, JAB, null)
   ok(G.clash.outcome === 'unopposed' && G.pending?.stage === 'link', 'the free hit lands unopposed and a Starter combos')
-  let U = setup([JAB], [GUARD], { A: { meter: 3, supersUsed: 1 }, rules: { superUses: 1 } })
+  let U = setup([JAB], [GUARD], { A: { meter: 4, supersUsed: 1 }, rules: { superUses: 1 } })
   ok(!clashOptions16(U.A, U.rules).includes('S'), 'superUses 1: no second Super')
 }
 // 8. Lock: a locked type can't be played, follow-ups and combos included
@@ -157,6 +159,53 @@ function setup(handA, handB, patch = {}) {
 {
   const G = setup([JAB], [GUARD], { B: { deck: [SWING, THROW], discard: [{ i: SLASH, burned: true }, { i: JAB, burned: false }] } })
   ok(unseenPool(G.B).sort().join() === [SWING, THROW, GUARD, SLASH].sort().join(), 'unseen: deck + hand + burned, not face-up discards')
+}
+// 12. Breather and Focus as separate cards (focusDraw off); no burning
+{
+  const W = { ...DEFAULT_RULES16, focusDraw: false }
+  ok(W.burnMax === 0 && W.focusMeter === 1, 'no burning, Focus gains 1')
+  let G = newGame16(F, F, W, 5)
+  const o = neutralOptions16(G.A, W)
+  ok(o.maxBurn === 0 && o.canFocus, 'no burn option; Focus available')
+  ok(!neutralActions16(G.A, W).some(a => a.kind === 'burn') && neutralActions16(G.A, W).some(a => a.kind === 'focus'), 'the partner considers Focus, never a burn')
+  const h0 = G.A.hand.length
+  G = applyNeutral16(G, [{ kind: 'focus' }, { kind: 'draw' }])
+  ok(G.A.meter === 1 && G.A.hand.length === h0 && G.B.hand.length === h0 + 1, 'Focus: +1 meter, no card spent; the Breather draws')
+  ok(G.neutral[0].kind === 'focus' && G.neutral[0].n === 1, 'Focus is recorded')
+  let full = newGame16(F, F, W, 5); full = { ...full, A: { ...full.A, meter: 4 } }
+  ok(!neutralOptions16(full.A, W).canFocus, "no Focus at full meter")
+  let threw = false; try { applyNeutral16(full, [{ kind: 'focus' }, null]) } catch { threw = true }
+  ok(threw, 'Focus at full meter is refused')
+  let once = newGame16(F, F, { ...W, superUses: 1 }, 5); once = { ...once, A: { ...once.A, supersUsed: 1 } }
+  ok(!neutralOptions16(once.A, once.rules).canFocus, 'no Focus once a once-per-game Super is spent')
+  // Focus meter pays for this round's Super in two steps
+  let S = newGame16(F, F, W, 5); S = { ...S, A: { ...S.A, meter: 3 } }
+  S = applyNeutral16(S, [{ kind: 'focus' }, null])
+  ok(clashOptions16(S.A, S.rules).includes('S'), "two steps: Focus's meter can pay for this round's Super")
+  let R = newGame16(F, F, { ...W, oneReveal: true }, 5); R = { ...R, A: { ...R.A, meter: 3 } }
+  R = applyNeutral16(R, [{ kind: 'focus' }, null])
+  ok(!clashOptions16(R.A, R.rules).includes('S'), "one reveal: Focus's meter arrives after the clash")
+}
+// 13. As written (31 October): a neutral card or Focus (draw a card and gain 1 meter); Super 4 meter
+{
+  const W = { ...DEFAULT_RULES16 }
+  ok(W.focusDraw && W.burnMax === 0 && W.meterMax === 4, 'as written: Focus draws and gains meter, no burning, meter 0–4')
+  ok(F.sup.meter === 4 && F.sup.onHit === 'knockdown', 'Overdrive: 4 meter, knocks down')
+  let G = newGame16(F, F, W, 9)
+  const acts = neutralActions16(G.A, W)
+  ok(!acts.some(a => a.kind === 'draw' || a.kind === 'burn') && acts.some(a => a.kind === 'focus'), 'options: Focus or a neutral card')
+  const h0 = G.A.hand.length, d0 = G.A.deck.length
+  G = applyNeutral16(G, [{ kind: 'focus' }, null])
+  ok(G.A.meter === 1 && G.A.hand.length === h0 + 1 && G.A.deck.length === d0 - 1, 'Focus: +1 meter and a card')
+  let full = newGame16(F, F, W, 9); full = { ...full, A: { ...full.A, meter: 4 } }
+  ok(neutralOptions16(full.A, W).canFocus, 'Focus is always available')
+  full = applyNeutral16(full, [{ kind: 'focus' }, null])
+  ok(full.A.meter === 4 && full.A.hand.length === h0 + 1 && full.neutral[0].n === 0, 'at full meter, Focus still draws')
+  let S = setup([JAB], [GUARD], { A: { meter: 3 }, rules: W })
+  ok(!clashOptions16(S.A, S.rules).includes('S'), 'no Super at 3 meter')
+  S = setup([JAB], [GUARD], { A: { meter: 4 }, B: { pile: 2 }, rules: W })
+  S = startClash16(S, 'S', GUARD)
+  ok(S.A.meter === 0 && S.B.hp === 30 - 2 - 5 && S.B.next.knockdown, 'Overdrive: 4 meter, cashes, chips 5, knocks down')
 }
 console.log(`${passes} passed, ${fails} failed`)
 process.exit(fails ? 1 : 0)

@@ -187,11 +187,12 @@ export function burnOrder(X) {
 }
 
 // Every action a player could take in the neutral phase
-// ban (testing only): 'neutral' or 'burn', an option this partner won't take
+// ban (testing only): 'neutral', 'focus' or 'burn', an option this partner won't take
 export function neutralActions16(X, rules, ban = null) {
   const o = neutralOptions16(X, rules)
   if (o.skip) return [null]
-  const acts = [{ kind: 'draw' }]
+  const acts = rules?.focusDraw ? [] : [{ kind: 'draw' }]
+  if (o.canFocus && (ban !== 'focus' || rules?.focusDraw)) acts.push({ kind: 'focus' })
   if (ban !== 'neutral') for (const i of o.neutrals) acts.push({ kind: 'neutral', i })
   if (ban === 'burn') return acts
   const noN = rules?.burnNeutrals === false || rules?.burnNeutrals === 0
@@ -217,6 +218,13 @@ export function afterNeutral(G, side, act, rng) {
     for (const [k, v] of Object.entries(X.f.cards[act.i].thisRound || {})) X.fx[k] = (X.fx[k] || 0) + v
     const superDone = R.superUses > 0 && X.supersUsed >= R.superUses
     if (!superDone) gain(Math.max(0, Math.min(R.neutralMeter || 0, meterMax - X.meter)))
+  } else if (act.kind === 'focus') {
+    const superDone = R.superUses > 0 && X.supersUsed >= R.superUses
+    if (!superDone) gain(Math.max(0, Math.min(R.focusMeter ?? 0, meterMax - X.meter)))
+    if (R.focusDraw) {
+      if (R.oneReveal) X.pendingDraw = 1
+      else if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])
+    }
   } else if (act.kind === 'burn') {
     for (const i of act.cards) X.hand.splice(X.hand.lastIndexOf(i), 1)
     gain(act.cards.length)
@@ -244,7 +252,7 @@ export function botNeutral(G, side, bot, rng) {
   const X = side === 0 ? G.A : G.B
   const acts = neutralActions16(X, G.rules)
   if (bot === 'random') return pickRandom(acts, rng)
-  return acts[0]                                    // draw (or the forced skip)
+  return acts[0]                                    // the Breather (or the forced skip)
 }
 
 export function botClash(G, side, bot, rng) {

@@ -17,7 +17,7 @@
     { "name": "Wind-Up", "type": "neutral", "copies": 2, "thisRound": { "convertChip": 2 } },
     { "name": "Step In", "type": "neutral", "copies": 2, "thisRound": { "speed": 2 } }
   ],
-  "super": { "name": "Overdrive", "type": "convert", "kind": "guardBreak", "speed": 10, "chip": 5, "icons": ["ender"], "meter": 3, "onHit": "dizzy",
-             "flavour": "Ends a combo with a cash and a Dizzy: their next round is a free hit." },
+  "super": { "name": "Overdrive", "type": "convert", "kind": "guardBreak", "speed": 10, "chip": 5, "icons": ["ender"], "meter": 4, "onHit": "knockdown",
+             "flavour": "Ends a combo with a cash and a knockdown." },
   "notes": "Added 31 Oct 2026 from rules-overview 16.md."
 }

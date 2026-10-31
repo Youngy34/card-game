@@ -6,7 +6,10 @@ import { LABEL16, STATUSES, LOCKABLE } from '../../engine/v16/cards.js'
 export function neutralLine16(a, f) {
   if (!a) return 'did nothing'
   switch (a.kind) {
-    case 'draw': return a.n ? 'drew an extra card' : 'tried to draw (no cards left)'
+    case 'draw': return a.n ? 'took a Breather: drew a card' : 'tried to draw (no cards left)'
+    case 'focus': return a.drew !== undefined
+      ? `focused: ${a.drew ? 'drew a card' : 'no card to draw'}${a.n ? ` and gained ${a.n} meter` : ' (meter full)'}`
+      : `focused: gained ${a.n} meter`
     case 'neutral': return `played ${a.name}`
     case 'burn': return `burned ${a.n} card${a.n === 1 ? '' : 's'} for meter`
     case 'skip': return `${a.why === 'Dizzy' ? 'is Dizzy' : 'is knocked down'}: no neutral action`
