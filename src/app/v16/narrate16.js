@@ -53,6 +53,7 @@ export function narrate16(ev, names) {
       else if (e.t === 'R') out.push(`${who}'s ${e.name} clears ${e.cleared ? `${e.cleared} grey` : 'an empty pile'}${e.chip ? ` and chips ${e.chip}` : ''}.`)
     } else if (e.kind === 'status') out.push(`${names[e.side]} is hit with ${status(e.status)} (from ${e.from}) for next round.`)
     else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.`)
+    else if (e.kind === 'prevented') out.push(`${who}'s ${e.by} stops the ${typeof e.status === 'string' ? (STATUSES[e.status]?.label || e.status).toLowerCase() : 'Lock'}, and is discarded.`)
     else if (e.kind === 'voided') out.push(`${who}'s ${e.name} is voided: their ${LABEL16[e.t]}s are Locked.`)
     else if (e.kind === 'play' && e.sup) out.push(`${who} spends meter on ${e.name}.`)
   }

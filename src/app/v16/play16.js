@@ -163,6 +163,7 @@ function Hud16({ X, who, m }) {
       ${X.reshuffles ? html`<span class="count muted">reshuffled ${X.reshuffles}×</span>` : null}
     </div>
     ${X.nhand ? html`<div class="hud-row small neutral-row">
+      ${X.inPlay != null ? html`<span class="flag status" title=${X.f.cards[X.inPlay].src ? '' : ''}>In play: ${X.f.cards[X.inPlay].name}</span>` : null}
       <span class="count"><b>${X.nhand.length}</b> neutral in hand</span>
       <span class="count"><b>${X.ndeck.length}</b> in neutral deck</span>
       <span class="count"><b>${X.ndiscard.length}</b> neutral discarded${X.ndiscard.length ? html`<span class="muted"> · top: ${X.f.cards[X.ndiscard[X.ndiscard.length - 1]].name}</span>` : null}</span>
@@ -376,6 +377,7 @@ function DeckPanel({ X, title, mine }) {
     for (const i of X.nhand) n[i].hand++
     for (const i of X.ndeck) n[i].deck++
     for (const i of [...X.ndiscard, ...X.nused]) n[i].discard++
+    if (X.inPlay != null) n[X.inPlay].discard++
   }
   return html`<details class="panel details" open=${open} onToggle=${e => setOpen(e.target.open)}>
     <summary class="spread"><h3>${title}</h3><span class="small muted">${open ? 'Hide' : 'Show'}</span></summary>

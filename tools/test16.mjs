@@ -166,7 +166,7 @@ function setup(handA, handB, patch = {}) {
 }
 // 12. Breather and Focus as separate cards (focusDraw off); no burning
 {
-  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: false, focusMeter: 1, blankClash: true }
+  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: false, focusMeter: 1, blankClash: true, meterMax: 4 }
   ok(W.burnMax === 0 && W.focusMeter === 1, 'no burning, Focus gains 1')
   let G = newGame16(F, F, W, 5)
   const o = neutralOptions16(G.A, W)
@@ -192,7 +192,7 @@ function setup(handA, handB, patch = {}) {
 }
 // 13. One deck with a kept Focus card (draw a card and gain 1 meter); Super 4 meter
 {
-  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: true, focusMeter: 1, blankClash: true }
+  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: true, focusMeter: 1, blankClash: true, meterMax: 4 }
   ok(W.burnMax === 0 && W.meterMax === 4, 'no burning, meter 0–4')
   ok(F.sup.meter === 4 && F.sup.onHit === 'knockdown', 'Overdrive: 4 meter, knocks down')
   let G = newGame16(F, F, W, 9)
@@ -227,63 +227,61 @@ function setup(handA, handB, patch = {}) {
   Q = startClash16(Q, GUARD, null)
   ok(Q.clash.outcome === 'unopposed' && Q.A.pile === 0 && !Q.pending, 'a Guard against a blank clears, with no follow-up')
 }
-// 15. As written (31 October, evening): split decks, a neutral hand of 3, Focus as a neutral card
+// 15. As written (31 October, night): split decks, a neutral hand of 3, meter 0–3
 {
   const rawN = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
   ok(!validateFighter16(rawN).errors.length, 'the split-deck Benchmark validates')
   const FN = toFighter16(rawN)
   const nid = name => FN.cards.findIndex(c => c.name === name)
-  const [J, SL, TH, SW, GU, FO, AR, PA, MX] = ['Jab', 'Slash', 'Throw', 'Big Swing', 'Guard', 'Focus', 'Armor', 'Parry', 'Mix-Up'].map(nid)
+  const [J, SL, SWP, TH, SW, GU, CH, RD, RU, WU, PA, BF] = ['Jab', 'Slash', 'Sweep', 'Throw', 'Big Swing', 'Guard', 'Charge', 'Read', 'Rush', 'Wind-Up', 'Parry', 'Breakfall'].map(nid)
   const W = { ...DEFAULT_RULES16 }
-  ok(W.splitDecks && W.neutralHand === 3 && !W.blankClash && W.burnMax === 0 && W.meterMax === 4, 'as written: split decks, neutral hand 3, no blank, no burning, meter 0–4')
+  ok(W.splitDecks && W.neutralHand === 3 && !W.blankClash && W.burnMax === 0 && W.meterMax === 3 && FN.sup.meter === 3, 'as written: split decks, neutral hand 3, no blank, no burning, meter 0–3, Overdrive 3')
   let G = newGame16(FN, FN, W, 11)
   ok(G.A.hand.length === 6 && G.A.hand.every(i => FN.cards[i].t !== 'N'), 'opening clash hand: 6 clash cards')
   ok(G.A.nhand.length === 3 && G.A.nhand.every(i => FN.cards[i].t === 'N') && G.A.ndeck.length === 7 && G.A.deck.length === 14, 'neutral hand 3; decks 14 clash, 7 neutral')
   const o = neutralOptions16(G.A, W)
   ok(o.split && o.neutrals.every(i => G.A.nhand.includes(i)) && !neutralActions16(G.A, W).some(a => a.kind !== 'neutral'), 'the neutral step: a card from the neutral hand, nothing else')
-  // Focus: a clash card and a meter
-  G = { ...G, A: { ...G.A, nhand: [FO, AR, PA] }, B: { ...G.B, nhand: [FO, AR, PA] } }
+  // Charge and Read
+  G = { ...G, A: { ...G.A, nhand: [CH, RU, PA] }, B: { ...G.B, nhand: [RD, WU, PA] } }
   const h0 = G.A.hand.length
-  let H = applyNeutral16(G, [{ kind: 'neutral', i: FO }, { kind: 'neutral', i: AR }])
-  ok(H.A.meter === 1 && H.A.hand.length === h0 + 1 && H.A.nhand.length === 2 && H.neutral[0].drew === 1, 'Focus: draw a clash card, gain 1 meter')
-  ok(H.B.fx.armor === 1, 'Armor is on for this round')
+  let H = applyNeutral16(G, [{ kind: 'neutral', i: CH }, { kind: 'neutral', i: RD }])
+  ok(H.A.meter === 1 && H.A.hand.length === h0, 'Charge: gain 1 meter, no card')
+  ok(H.B.meter === 0 && H.B.hand.length === h0 + 2 && H.neutral[1].drew === 2, 'Read: draw 2 clash cards')
   // the draw step refills the neutral hand and discards the played neutral card
   H = startDraw16(runClash16(H, H.A.hand[0], H.B.hand[0], () => null))
   while (H.phase === 'draw') for (const k of [0, 1]) if (H.discardDown?.[k]) H = discardDown16(H, k, (k ? H.B : H.A).hand.slice(0, H.discardDown[k]))
-  ok(H.A.nhand.length === 3 && H.A.ndiscard.includes(FO) && H.B.ndiscard.includes(AR), 'draw step: neutral hand back to 3; played neutral cards to the neutral discard')
+  ok(H.A.nhand.length === 3 && H.A.ndiscard.includes(CH) && H.B.ndiscard.includes(RD), 'draw step: neutral hand back to 3; played neutral cards to the neutral discard')
   ok(H.A.discard.every(d => FN.cards[d.i].t !== 'N'), 'neutral cards never reach the clash discard')
-  // Armor: a Convert beats a Pressure
-  let A1 = newGame16(FN, FN, W, 3)
-  A1 = { ...A1, A: { ...A1.A, hand: [SW], nhand: [AR, FO, FO] }, B: { ...A1.B, hand: [J], pile: 4 } }
-  A1 = applyNeutral16(A1, [{ kind: 'neutral', i: AR }, null])
-  A1 = startClash16(A1, SW, J)
-  ok(A1.clash.winner === 0 && A1.clash.outcome === 'armor' && A1.B.hp === 30 - 4 - 3, 'Armor: Big Swing beats a Jab (cashes 4, chips 3)')
-  let A2 = newGame16(FN, FN, W, 3)
-  A2 = { ...A2, A: { ...A2.A, hand: [SW] }, B: { ...A2.B, hand: [J] } }
-  A2 = startClash16(applyNeutral16(A2, [null, null]), SW, J)
-  ok(A2.clash.winner === 1, 'without Armor, the Jab beats Big Swing')
-  // Mix-Up: a Pressure beats a Guard, and a Starter combos
-  let M1 = newGame16(FN, FN, W, 3)
-  M1 = { ...M1, A: { ...M1.A, hand: [J, SL, SW], nhand: [MX, FO, FO] }, B: { ...M1.B, hand: [GU], pile: 0 } }
-  M1 = applyNeutral16(M1, [{ kind: 'neutral', i: MX }, null])
-  M1 = startClash16(M1, J, GU)
-  ok(M1.clash.winner === 0 && M1.clash.outcome === 'mixup' && M1.B.pile === 2 && M1.pending?.stage === 'link', 'Mix-Up: a Jab beats a Guard, builds 2, and combos')
-  let M2 = newGame16(FN, FN, W, 3)
-  M2 = { ...M2, A: { ...M2.A, hand: [J] }, B: { ...M2.B, hand: [GU] } }
-  M2 = startClash16(applyNeutral16(M2, [null, null]), J, GU)
-  ok(M2.clash.winner === 1, 'without Mix-Up, the Guard beats the Jab')
-  // bendersLoseMirror (under test): a bent type loses any duel of its own type
-  let B1 = newGame16(FN, FN, { ...W, bendersLoseMirror: true }, 3)
-  B1 = { ...B1, A: { ...B1.A, hand: [J], nhand: [MX, FO, FO] }, B: { ...B1.B, hand: [SL] } }
-  B1 = startClash16(applyNeutral16(B1, [{ kind: 'neutral', i: MX }, null]), J, SL)
-  ok(B1.clash.winner === 1 && B1.clash.outcome === 'outpaced', "with bendersLoseMirror, a Mix-Up Jab (17) loses to a plain Slash (14)")
+  // Rush and Wind-Up power up a type without changing what it beats
+  let R2 = newGame16(FN, FN, W, 3)
+  R2 = { ...R2, A: { ...R2.A, hand: [J], nhand: [RU, CH, CH] }, B: { ...R2.B, hand: [TH], pile: 0 } }
+  R2 = startClash16(applyNeutral16(R2, [{ kind: 'neutral', i: RU }, null]), J, TH)
+  ok(R2.clash.winner === 0 && R2.B.pile === 5 && R2.B.hp === 29, 'Rush: a Jab builds 2 + 3')
+  let R3 = newGame16(FN, FN, W, 3)
+  R3 = { ...R3, A: { ...R3.A, hand: [J], nhand: [RU, CH, CH] }, B: { ...R3.B, hand: [GU] } }
+  R3 = startClash16(applyNeutral16(R3, [{ kind: 'neutral', i: RU }, null]), J, GU)
+  ok(R3.clash.winner === 1, "Rush doesn't change the triangle: the Guard still beats the Jab")
+  let W2 = newGame16(FN, FN, W, 3)
+  W2 = { ...W2, A: { ...W2.A, hand: [TH], nhand: [WU, CH, CH] }, B: { ...W2.B, hand: [GU], pile: 2 } }
+  W2 = startClash16(applyNeutral16(W2, [{ kind: 'neutral', i: WU }, null]), TH, GU)
+  ok(W2.clash.winner === 0 && W2.B.hp === 30 - 2 - 5, 'Wind-Up: a Throw cashes 2 and chips 2 + 3')
+  // Breakfall stays in play, stops one knockdown, then goes to the neutral discard
+  let B1 = newGame16(FN, FN, W, 3)
+  B1 = { ...B1, A: { ...B1.A, hand: [SWP] }, B: { ...B1.B, hand: [TH], nhand: [BF, CH, CH] } }
+  B1 = applyNeutral16(B1, [null, { kind: 'neutral', i: BF }])
+  ok(B1.B.inPlay === BF && !B1.B.nused.includes(BF), 'Breakfall stays in play')
+  B1 = startClash16(B1, SWP, TH)
+  ok(B1.clash.winner === 0 && !B1.B.next.knockdown && B1.B.inPlay == null && B1.B.ndiscard.includes(BF), 'Breakfall stops the Sweep knockdown and is discarded')
+  ok(B1.clash.events.some(e => e.kind === 'prevented'), '…and says so')
   let B2 = newGame16(FN, FN, W, 3)
-  B2 = { ...B2, A: { ...B2.A, hand: [J], nhand: [MX, FO, FO] }, B: { ...B2.B, hand: [SL] } }
-  B2 = startClash16(applyNeutral16(B2, [{ kind: 'neutral', i: MX }, null]), J, SL)
-  ok(B2.clash.winner === 0 && B2.clash.outcome === 'speed', 'as written, the Mix-Up Jab still wins on speed')
+  B2 = { ...B2, B: { ...B2.B, inPlay: BF, nhand: [BF, CH, CH] } }
+  B2 = applyNeutral16(B2, [null, { kind: 'neutral', i: BF }])
+  ok(B2.B.inPlay === BF && B2.B.ndiscard.filter(i => i === BF).length === 1, 'a new card in play replaces the old one')
+  B2 = startDraw16(runClash16(B2, B2.A.hand[0], B2.B.hand[0], () => null))
+  ok(B2.B.inPlay === BF, "a card in play survives the draw step")
   // Parry: a Guard's follow-up can be any attack, and a Starter combos
   let P1 = newGame16(FN, FN, W, 3)
-  P1 = { ...P1, A: { ...P1.A, hand: [GU, J, SL, SW], nhand: [PA, FO, FO] }, B: { ...P1.B, hand: [SL] } }
+  P1 = { ...P1, A: { ...P1.A, hand: [GU, J, SL, SW], nhand: [PA, CH, CH] }, B: { ...P1.B, hand: [SL] } }
   P1 = applyNeutral16(P1, [{ kind: 'neutral', i: PA }, null])
   P1 = startClash16(P1, GU, SL)
   ok(P1.pending?.stage === 'follow' && P1.pending.options.includes(J), 'Parry: a Jab (not a Counter) can be the follow-up')
@@ -293,17 +291,36 @@ function setup(handA, handB, patch = {}) {
   P2 = { ...P2, A: { ...P2.A, hand: [GU, J, SL] }, B: { ...P2.B, hand: [SL] } }
   P2 = startClash16(applyNeutral16(P2, [null, null]), GU, SL)
   ok(P2.pending?.stage === 'follow' && !P2.pending.options.includes(J) && P2.pending.options.includes(SL), 'without Parry, only Counters follow up')
-  // no blank while you hold a clash card you can play
-  ok(!clashChoices16(G.A, W).includes(null), 'no blank while a clash card is playable')
-  const E = { ...G.A, hand: [] }
-  ok(clashChoices16(E, W).length === 0, 'no clash cards: nothing to play (and everyone can see it)')
-  // the partner never sees neutral cards in the pool it deals your clash hand from
-  ok(unseenPool(G.B).every(i => FN.cards[i].t !== 'N'), "the partner deals clash hands from clash cards only")
+  // no blank while you hold a clash card
+  ok(!clashChoices16(G.A, W).includes(null), 'no blank while you hold a clash card')
+  ok(clashChoices16({ ...G.A, hand: [] }, W).length === 0, 'no clash cards: nothing to play (and everyone can see it)')
+  ok(unseenPool(G.B).every(i => FN.cards[i].t !== 'N'), 'the partner deals clash hands from clash cards only')
   // reshuffling the neutral discard
   let R1 = newGame16(FN, FN, W, 5)
-  R1 = { ...R1, A: { ...R1.A, ndeck: [], ndiscard: [FO, AR], nhand: [PA, FO], nused: [] } }
+  R1 = { ...R1, A: { ...R1.A, ndeck: [], ndiscard: [CH, RD], nhand: [PA, RU], nused: [] } }
   R1 = startDraw16({ ...R1, phase: 'draw' })
   ok(R1.A.nhand.length === 3 && R1.A.ndeck.length === 1 && R1.A.ndiscard.length === 0, 'an empty neutral deck reshuffles its discard')
+}
+// 16. Armor and Mix-Up (engine effects kept for testing; not on the Benchmark: they bend the triangle)
+{
+  const rawX = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
+  rawX.cards.push({ name: 'Armor', type: 'neutral', copies: 1, thisRound: { armor: 1 } }, { name: 'Mix-Up', type: 'neutral', copies: 1, thisRound: { mixup: 1 } })
+  const FX = toFighter16(rawX)
+  const xid = name => FX.cards.findIndex(c => c.name === name)
+  const [J, SL, SW, GU, AR, MX, CH] = ['Jab', 'Slash', 'Big Swing', 'Guard', 'Armor', 'Mix-Up', 'Charge'].map(xid)
+  const W = { ...DEFAULT_RULES16 }
+  let A1 = newGame16(FX, FX, W, 3)
+  A1 = { ...A1, A: { ...A1.A, hand: [SW], nhand: [AR, CH, CH] }, B: { ...A1.B, hand: [J], pile: 4 } }
+  A1 = startClash16(applyNeutral16(A1, [{ kind: 'neutral', i: AR }, null]), SW, J)
+  ok(A1.clash.winner === 0 && A1.clash.outcome === 'armor', 'Armor: Big Swing beats a Jab')
+  let M1 = newGame16(FX, FX, W, 3)
+  M1 = { ...M1, A: { ...M1.A, hand: [J, SL, SW], nhand: [MX, CH, CH] }, B: { ...M1.B, hand: [GU], pile: 0 } }
+  M1 = startClash16(applyNeutral16(M1, [{ kind: 'neutral', i: MX }, null]), J, GU)
+  ok(M1.clash.winner === 0 && M1.clash.outcome === 'mixup' && M1.pending?.stage === 'link', 'Mix-Up: a Jab beats a Guard, and combos')
+  let B1 = newGame16(FX, FX, { ...W, bendersLoseMirror: true }, 3)
+  B1 = { ...B1, A: { ...B1.A, hand: [J], nhand: [MX, CH, CH] }, B: { ...B1.B, hand: [SL] } }
+  B1 = startClash16(applyNeutral16(B1, [{ kind: 'neutral', i: MX }, null]), J, SL)
+  ok(B1.clash.winner === 1 && B1.clash.outcome === 'outpaced', 'bendersLoseMirror: a Mix-Up Jab loses to a plain Slash')
 }
 console.log(`${passes} passed, ${fails} failed`)
 process.exit(fails ? 1 : 0)

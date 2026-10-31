@@ -18,6 +18,7 @@ export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
   card: 0.5,         // each card in hand is worth 0.5 HP
   meter: 0.4,        // each point of meter is worth 0.4 HP
+  inPlay: 0.4,       // a neutral card staying in play (Breakfall) is worth 0.4 HP
   superReady: 1.5,   // having the meter for your Super is worth 1.5 HP more
   knockdown: 0.8,    // being knocked down next round costs 0.8 HP
   lock: 1.5,         // each type locked next round costs 1.5 HP
@@ -43,7 +44,7 @@ export const BOTS16 = {
 
 // ---- value -----------------------------------------------------------------
 export function score16(X, W, rules) {
-  let e = X.hp - W.alpha * X.pile + W.card * (X.hand.length + (X.pendingDraw || 0)) + W.meter * X.meter
+  let e = X.hp - W.alpha * X.pile + W.card * (X.hand.length + (X.pendingDraw || 0)) + W.meter * X.meter + (X.inPlay != null ? (W.inPlay ?? 0.4) : 0)
   if (superReady(X, rules)) e += W.superReady
   const n = X.next
   if (n.knockdown) e -= W.knockdown
@@ -221,7 +222,7 @@ export function afterNeutral(G, side, act, rng) {
     else if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])      // it doesn't know its deck order
   } else if (act.kind === 'neutral') {
     const c = X.f.cards[act.i]
-    if (X.nhand) { X.nhand = X.nhand.slice(); X.nhand.splice(X.nhand.lastIndexOf(act.i), 1) }
+    if (X.nhand) { X.nhand = X.nhand.slice(); X.nhand.splice(X.nhand.lastIndexOf(act.i), 1); if (c.stays) X.inPlay = act.i }
     else X.hand.splice(X.hand.lastIndexOf(act.i), 1)
     for (const [k, v] of Object.entries(c.thisRound || {})) X.fx[k] = (X.fx[k] || 0) + v
     const superDone = R.superUses > 0 && X.supersUsed >= R.superUses

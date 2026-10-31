@@ -38,8 +38,9 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 //   the neutral hand is refilled to neutralHand cards in the draw step, and a neutral card
 //   must be played each neutral step (Focus is a neutral card).
 // As written since 31 October (evening): split decks with a neutral hand of 3; no burning;
-// the meter track runs 0–4; you play a clash card if you have one you can play.
-export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 4, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
+// the meter track runs 0–3; you play a clash card if you have one you can play; one neutral
+// card that stays in play per player (a new one replaces it).
+export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3 }
 export const STAGGER = 3
@@ -164,7 +165,11 @@ export function applyNeutral16(G, acts) {
     else if (act.kind === 'neutral') {
       const c = X.f.cards[act.i]
       if (!c || c.t !== 'N') throw new Error('not a neutral card')
-      if (X.nhand) { const k = X.nhand.lastIndexOf(act.i); if (k < 0) throw new Error(`card ${act.i} isn't in the neutral hand`); X.nhand.splice(k, 1); X.nused.push(act.i) }
+      if (X.nhand) {
+        const k = X.nhand.lastIndexOf(act.i); if (k < 0) throw new Error(`card ${act.i} isn't in the neutral hand`); X.nhand.splice(k, 1)
+        if (c.stays) { if (X.inPlay != null) X.ndiscard.push(X.inPlay); X.inPlay = act.i }      // one in play: a new one replaces it
+        else X.nused.push(act.i)
+      }
       else { takeFromHand(X, act.i); X.used.push(act.i) }
       for (const [key, v] of Object.entries(c.thisRound || {})) X.fx[key] = (X.fx[key] || 0) + v
       const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
@@ -279,7 +284,7 @@ function hit(X, Y, c, ev, side, how) {
   const e = { side, kind: 'hit', how, name: c.name, t: c.t }
   if (c.t === 'P') {
     e.build = c.build + (X.fx.pressureBuild || 0)
-    e.chip = c.chip + (X.fx.attackChip || 0)
+    e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0)
     Y.pile += e.build; Y.hp -= e.chip
   } else if (c.t === 'C') {
     e.cash = Y.pile
@@ -290,7 +295,12 @@ function hit(X, Y, c, ev, side, how) {
     if (c.chip) { e.chip = c.chip; Y.hp -= c.chip }            // a Recover Super's second verb
   }
   ev.push(e)
-  if (c.onHit && c.t !== 'N') {
+  const ward = Y.inPlay != null ? Y.f.cards[Y.inPlay] : null
+  if (c.onHit && c.t !== 'N' && ward?.prevent && (ward.prevent === c.onHit || (ward.prevent === 'lock' && c.onHit.lock))) {
+    // a card in play (Breakfall) stops the status, and goes to the neutral discard
+    Y.ndiscard = [...Y.ndiscard, Y.inPlay]; Y.inPlay = null
+    ev.push({ side: 1 - side, kind: 'prevented', status: c.onHit, by: ward.name, from: c.name })
+  } else if (c.onHit && c.t !== 'N') {
     applyStatus(Y.next, c.onHit)
     ev.push({ side: 1 - side, kind: 'status', status: c.onHit, from: c.name })
   }

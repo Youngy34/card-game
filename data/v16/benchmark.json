@@ -4,26 +4,144 @@
   "id": "benchmark16",
   "name": "Benchmark",
   "epithet": "Reference",
-  "concept": "The plain v16 fighter: a 20-card clash deck and a 10-card neutral deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters. Neutral: Focus, Armor, Mix-Up, Parry: a threat for each type.",
+  "concept": "The plain v16 fighter: a 20-card clash deck and a 10-card neutral deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters. Neutral: Charge and Read for resources, Rush and Wind-Up to power up a type, Parry, and Breakfall to stay on your feet.",
   "hp": 30,
   "passive": null,
   "cards": [
-    { "name": "Jab", "type": "pressure", "kind": "strike", "speed": 17, "build": 2, "chip": 1, "copies": 4, "icons": ["starter", "linker"] },
-    { "name": "Slash", "type": "pressure", "kind": "strike", "speed": 14, "build": 4, "chip": 1, "copies": 2, "icons": ["linker", "counter"] },
-    { "name": "Sweep", "type": "pressure", "kind": "strike", "speed": 13, "build": 3, "chip": 0, "copies": 2, "icons": ["ender"], "onHit": "knockdown" },
-    { "name": "Throw", "type": "convert", "kind": "grab", "speed": 7, "chip": 2, "copies": 3, "icons": ["counter"] },
-    { "name": "Big Swing", "type": "convert", "kind": "guardBreak", "speed": 3, "chip": 3, "copies": 3, "icons": ["ender", "counter"] },
-    { "name": "Guard", "type": "recover", "kind": "guard", "copies": 6 },
-    { "name": "Focus", "type": "neutral", "copies": 4, "now": { "draw": 1, "meter": 1 },
-      "flavour": "Reset and breathe: a card and a bar of meter." },
-    { "name": "Armor", "type": "neutral", "copies": 2, "thisRound": { "armor": 1 },
-      "flavour": "Brace through their poke: the heavy swing absorbs it." },
-    { "name": "Mix-Up", "type": "neutral", "copies": 2, "thisRound": { "mixup": 1 },
-      "flavour": "High or low? Their guard guesses wrong." },
-    { "name": "Parry", "type": "neutral", "copies": 2, "thisRound": { "parry": 1 },
-      "flavour": "Read the strike, turn it aside, and open them up." }
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 2,
+      "chip": 1,
+      "copies": 4,
+      "icons": [
+        "starter",
+        "linker"
+      ]
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Sweep",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "counter"
+      ]
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ]
+    },
+    {
+      "name": "Guard",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 6
+    },
+    {
+      "name": "Charge",
+      "type": "neutral",
+      "copies": 2,
+      "now": {
+        "meter": 1
+      },
+      "flavour": "Build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "neutral",
+      "copies": 2,
+      "now": {
+        "draw": 2
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Rush",
+      "type": "neutral",
+      "copies": 2,
+      "thisRound": {
+        "pressureBuild": 3
+      },
+      "flavour": "Step in and lean on them."
+    },
+    {
+      "name": "Wind-Up",
+      "type": "neutral",
+      "copies": 2,
+      "thisRound": {
+        "convertChip": 3
+      },
+      "flavour": "Load the heavy one."
+    },
+    {
+      "name": "Parry",
+      "type": "neutral",
+      "copies": 1,
+      "thisRound": {
+        "parry": 1
+      },
+      "flavour": "Read the strike, turn it aside, and open them up."
+    },
+    {
+      "name": "Breakfall",
+      "type": "neutral",
+      "copies": 1,
+      "stays": true,
+      "prevent": "knockdown",
+      "flavour": "Roll out of it and stay on your feet."
+    }
   ],
-  "super": { "name": "Overdrive", "type": "convert", "kind": "guardBreak", "speed": 10, "chip": 5, "icons": ["ender"], "meter": 4, "onHit": "knockdown",
-             "flavour": "Ends a combo with a cash and a knockdown." },
+  "super": {
+    "name": "Overdrive",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 10,
+    "chip": 5,
+    "icons": [
+      "ender"
+    ],
+    "meter": 3,
+    "onHit": "knockdown",
+    "flavour": "Ends a combo with a cash and a knockdown."
+  },
   "notes": "Added 31 Oct 2026 from rules-overview 16.md."
 }

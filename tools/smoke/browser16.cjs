@@ -57,7 +57,8 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         const n = await nhand.count()
         await nhand.nth(step % n).click()
         const name = (await page.locator('.actions .btn', { hasText: /^Play / }).first().innerText()).toLowerCase()
-        seen[name.includes('focus') ? 'focus' : 'neutralCard']++
+        seen.names = seen.names || new Set(); seen.names.add(name)
+        seen[name.includes('charge') || name.includes('read') ? 'focus' : 'neutralCard']++
         await page.locator('.actions .btn', { hasText: /^Play / }).first().click(); continue
       }
       if (await btn(page, 'Lock in').count()) {
@@ -110,9 +111,9 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok((await body()).includes('in hand') && (await body()).includes('in deck'), 'HUD shows hand and deck counts')
   SHOTS && await page.screenshot({ path: SHOTS + '02-neutral.png', fullPage: true })
   const seen = await playGame(page, { shots: true })
-  console.log('vs Hard:', JSON.stringify(seen))
+  console.log('vs Hard:', JSON.stringify({ ...seen, names: [...(seen.names || [])] }))
   ok(seen.rounds > 3, 'played several rounds')
-  ok(seen.neutralCard > 0 && seen.focus > 0, 'played Focus and another neutral card')
+  ok(seen.names && seen.names.size >= 2, 'played at least two different neutral cards')
   SHOTS && await page.screenshot({ path: SHOTS + '06-over.png', fullPage: true })
   await page.waitForSelector('text=Saved to the playtest log', { timeout: 5000 }).catch(() => {})
   ok((await body()).includes('saved to the playtest log'), 'the game is logged')
@@ -138,7 +139,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   // decks
   await btn(page, 'Decks').click()
   await page.waitForSelector('text=Counters')
-  ok(await page.locator('.cards-grid .card').count() === 11, 'ten cards and the Super')
+  ok(await page.locator('.cards-grid .card').count() === 13, 'twelve cards and the Super')
   await page.getByRole('button', { name: 'One more Jab' }).click()
   ok((await body()).includes('unsaved changes') && (await body()).includes('31'), 'copies edit: 31 cards, unsaved')
   await btn(page, 'Save').click()
@@ -156,7 +157,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 
   // settings
   await btn(page, 'Settings').click()
-  ok(await page.locator('#s-burnMax').inputValue() === '0' && await page.locator('#s-meterMax').inputValue() === '4', 'defaults: no burning, meter track 0–4')
+  ok(await page.locator('#s-burnMax').inputValue() === '0' && await page.locator('#s-meterMax').inputValue() === '3', 'defaults: no burning, meter track 0–3')
   const lim = page.locator('#s-handLimit')
   await lim.click(); await page.keyboard.press('End'); await page.keyboard.press('Backspace')
   ok(await lim.inputValue() === '', 'an emptied field stays empty while typing')

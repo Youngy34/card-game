@@ -46,6 +46,7 @@ export const LOCKABLE = { pressure: 'P', convert: 'C', recover: 'R' }
 export const THIS_ROUND = {
   convertChip: { label: 'Converts chip', line: n => `This round, your Converts chip +${n}.` },
   pressureBuild: { label: 'Pressures build', line: n => `This round, your Pressures build +${n}.` },
+  pressureChip: { label: 'Pressures chip', line: n => `This round, your Pressures chip +${n}.` },
   attackChip: { label: 'Attacks chip', line: n => `This round, your attacks chip +${n}.` },
   speed: { label: 'Attack speed', line: n => `This round, your attacks are +${n} speed.` },
   armor: { label: 'Armor', line: () => 'This round, your Converts (not your Super) also beat Pressures.' },
@@ -58,7 +59,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'art', 'flavour', 'notes']
 
 const isInt = v => Number.isInteger(v)
 const statusName = s => (typeof s === 'string' ? STATUSES[s]?.label : s && s.lock ? `Lock ${LABEL16[LOCKABLE[s.lock]]}` : null)
@@ -76,6 +77,7 @@ export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
   if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
+  if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
   if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' '))
   if (c.thisRound) for (const [k, v] of Object.entries(c.thisRound)) if (THIS_ROUND[k] && v) text.push(THIS_ROUND[k].line(v))
   if (c.onHit) text.push(typeof c.onHit === 'string' ? `On hit: ${STATUSES[c.onHit]?.label}.` : `On hit: ${statusText(c.onHit)} (no ${LABEL16[LOCKABLE[c.onHit.lock]]}s for them next round).`)
@@ -125,7 +127,12 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.thisRound !== undefined) {
     if (t !== 'N') E('Only neutral cards have this-round effects.')
     else if (!c.thisRound || typeof c.thisRound !== 'object' || Object.keys(c.thisRound).some(k => !THIS_ROUND[k] || !isInt(c.thisRound[k]) || c.thisRound[k] < 1)) E(`thisRound takes ${Object.keys(THIS_ROUND).join(', ')}, each a whole number of 1 or more.`)
-  } else if (t === 'N' && !c.now) W('This neutral card does nothing.')
+  } else if (t === 'N' && !c.now && !c.prevent) W('This neutral card does nothing.')
+  if (c.stays !== undefined && (t !== 'N' || typeof c.stays !== 'boolean')) E('stays is true or false, on neutral cards only.')
+  if (c.prevent !== undefined) {
+    if (t !== 'N' || !c.stays) E('prevent belongs on a neutral card that stays in play.')
+    else if (!(STATUSES[c.prevent] || c.prevent === 'lock')) E('prevent must be knockdown, staggered, dizzy or lock.')
+  }
   if (c.now !== undefined) {
     if (t !== 'N') E('Only neutral cards have reveal effects (now).')
     else if (!c.now || typeof c.now !== 'object' || Object.keys(c.now).some(k => !NOW[k] || !isInt(c.now[k]) || c.now[k] < 1)) E(`now takes ${Object.keys(NOW).join(', ')}, each a whole number of 1 or more.`)
@@ -176,7 +183,7 @@ function norm(c, isSuper) {
     build: c.build ?? 0, chip: c.chip ?? 0, copies: isSuper ? 0 : c.copies,
     starter: icons.has('starter'), linker: icons.has('linker'), ender: icons.has('ender'), counter: icons.has('counter'),
     onHit: c.onHit ?? null, cost: c.cost ?? null, onLossSelf: c.onLossSelf ?? 0,
-    meter: isSuper ? (c.meter ?? 3) : 0, thisRound: c.thisRound ?? null, now: c.now ?? null,
+    meter: isSuper ? (c.meter ?? 3) : 0, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
     sup: isSuper, src: c,
   }
 }
