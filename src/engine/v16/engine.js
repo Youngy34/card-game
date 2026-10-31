@@ -25,7 +25,7 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 
 // superUses: 0 = reusable (meter is the only gate), 1 = once per game.
 // burnMax: the most cards a player may burn in one neutral phase.
-export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 3, superUses: 0, speedTie: 'cancel', maxRounds: 60 }
+export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 1, superUses: 0, speedTie: 'cancel', maxRounds: 60 }
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -104,7 +104,7 @@ export function neutralOptions16(X, rules = DEFAULT_RULES16) {
   const neutrals = [...new Set(X.hand.filter(i => X.f.cards[i].t === 'N'))]
   const meterMax = rules.meterMax ?? 3
   const superDone = rules.superUses > 0 && X.supersUsed >= rules.superUses
-  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, X.hand.length, rules.burnMax ?? 3))
+  const maxBurn = superDone ? 0 : Math.max(0, Math.min(meterMax - X.meter, X.hand.length, rules.burnMax ?? 1))
   return { skip: false, neutrals, maxBurn, canDraw: true }
 }
 
@@ -128,7 +128,7 @@ export function applyNeutral16(G, acts) {
       for (const [key, v] of Object.entries(c.thisRound || {})) X.fx[key] = (X.fx[key] || 0) + v
       done.push({ kind: 'neutral', i: act.i, name: c.name })
     } else if (act.kind === 'burn') {
-      const n = Math.min(act.cards.length, meterMax - X.meter, G.rules.burnMax ?? 3)
+      const n = Math.min(act.cards.length, meterMax - X.meter, G.rules.burnMax ?? 1)
       const cards = act.cards.slice(0, n)
       for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: true }) }
       X.meter += n

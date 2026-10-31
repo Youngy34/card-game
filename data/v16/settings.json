@@ -1,5 +1,5 @@
 {
   "schemaVersion": 3,
-  "rules": { "openingHand": 6, "handLimit": 8, "meterMax": 3, "speedTie": "cancel", "maxRounds": 60 },
+  "rules": { "openingHand": 6, "handLimit": 8, "meterMax": 3, "burnMax": 1, "superUses": 0, "speedTie": "cancel", "maxRounds": 60 },
   "ai": { "alpha": 0.6, "card": 0.5, "meter": 0.4, "superReady": 1.5, "knockdown": 0.8, "lock": 1.5, "staggered": 0.4, "dizzy": 5, "k": 0.22, "samples": 6, "neutralSamples": 3 }
 }

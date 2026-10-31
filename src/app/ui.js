@@ -96,3 +96,23 @@ export function StatusChip({ status }) {
   const label = custom || { 'signed-off': 'Signed off', edited: 'Edited', variant: 'Variant', reference: 'Reference', draft: 'Draft' }[status] || status
   return html`<span class=${cx('chip', status)}>${label}</span>`
 }
+
+// A number field you can type into freely. What you type stays as typed, and
+// onValue fires whenever it reads as a number in range; leaving the field puts
+// back the value in use. (Clamping every keystroke snaps an emptied field back
+// to its old value, so you can't type over it, which is worst on a phone.)
+export function NumField({ id, value, lo, hi, int = true, onValue, disabled, placeholder }) {
+  const [text, setText] = useState(null)
+  const ok = s => {
+    if (s.trim() === '') return false
+    const v = Number(s)
+    return Number.isFinite(v) && (!int || Number.isInteger(v)) && (lo === undefined || v >= lo) && (hi === undefined || v <= hi)
+  }
+  const bad = text !== null && !ok(text)
+  const range = lo !== undefined && hi !== undefined ? `${lo}–${hi}` : lo !== undefined ? `${lo} or more` : ''
+  return html`<input id=${id} type="text" inputmode=${int && (lo === undefined || lo >= 0) ? 'numeric' : 'decimal'} class=${cx('num', bad && 'bad')}
+    value=${text ?? (value ?? '')} disabled=${disabled} placeholder=${placeholder} aria-invalid=${bad ? 'true' : null}
+    title=${bad && range ? `Enter ${int ? 'a whole number ' : ''}${range}` : null}
+    onInput=${e => { const s = e.target.value; setText(s); if (ok(s)) onValue(Number(s)) }}
+    onBlur=${() => setText(null)} />`
+}

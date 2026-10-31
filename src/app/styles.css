@@ -102,7 +102,8 @@ p { margin: 0; }
 input[type="number"], input[type="text"], select, textarea {
   background: var(--ground); border: 1px solid var(--line-2); padding: 7px 9px; border-radius: 0; min-width: 0; width: 100%;
 }
-input[type="number"] { font-variant-numeric: tabular-nums; }
+input[type="number"], input.num { font-variant-numeric: tabular-nums; }
+input.num.bad { border-color: var(--convert); outline-color: var(--convert); }
 textarea { font-family: var(--font-mono); font-size: 13px; line-height: 1.5; resize: vertical; }
 input:focus, select:focus, textarea:focus { border-color: var(--ink-2); outline: none; }
 .check { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; font-size: 15px; }

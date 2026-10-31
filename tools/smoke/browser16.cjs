@@ -160,13 +160,26 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 
   // settings
   await btn(page, 'Settings').click()
-  await page.locator('#s-burnMax').fill('1')
+  const burn = page.locator('#s-burnMax')
+  ok(await burn.inputValue() === '1', 'burn limit defaults to 1')
+  await burn.click(); await page.keyboard.press('End'); await page.keyboard.press('Backspace')
+  ok(await burn.inputValue() === '', 'an emptied field stays empty while typing')
+  await page.keyboard.type('9')
+  ok(await burn.inputValue() === '9' && await burn.evaluate(e => e.classList.contains('bad')), 'out of range is flagged, not snapped')
+  await page.keyboard.press('Backspace'); await page.keyboard.type('2')
+  await page.locator('h1').click()
+  ok(await burn.inputValue() === '2' && (await body()).includes('as written: 1'), 'typed over: 2')
+  const alpha = page.locator('#s-alpha')
+  await alpha.click(); await alpha.press('Control+a'); await page.keyboard.type('0.45')
+  ok(await alpha.inputValue() === '0.45', 'decimals can be typed')
+  await page.locator('h1').click()
+  await btn(page, 'Use the defaults').click()
   await page.locator('#s-superuses').selectOption('1')
   await btn(page, 'Save settings').click()
   await page.waitForTimeout(300)
   await btn(page, 'Play').click()
   if (await btn(page, 'New match').count()) await btn(page, 'New match').click()
-  ok((await body()).includes('burn up to 1 a round') && (await body()).includes('once per game'), 'setup shows the new settings')
+  ok((await body()).includes('burn up to 2 a round') && (await body()).includes('once per game'), 'setup shows the new settings')
 
   // lab
   await btn(page, 'Lab').click()

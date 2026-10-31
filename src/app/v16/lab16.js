@@ -6,7 +6,7 @@ import { roster } from '../store.js'
 import { settings16, toFighter16 } from './fighters16.js'
 import { runBalance16 } from '../../engine/v16/game.js'
 import { LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
-import { Seg, StatusChip } from '../ui.js'
+import { Seg, StatusChip, NumField } from '../ui.js'
 
 const SIZES = [[100, '100'], [300, '300'], [500, '500'], [1000, '1,000']]
 const ALL_LEVELS = { ...LEVELS16, ...BOTS16 }
@@ -60,7 +60,7 @@ export function Lab16({ state, setState }) {
         <label class="field"><span>Fighter B</span><select id="lab-b" value=${b} onChange=${e => upd({ b: e.target.value })}>${list.map(r => html`<option value=${r.id}>${r.fighter.name}${r.status !== 'reference' ? ` (${r.status})` : ''}</option>`)}</select></label>
         <label class="field"><span>A plays as</span><select id="lab-la" value=${la} onChange=${e => upd({ la: e.target.value })}>${Object.entries(ALL_LEVELS).map(([k, l]) => html`<option value=${k}>${l.label}</option>`)}</select></label>
         <label class="field"><span>B plays as</span><select id="lab-lb" value=${lb} onChange=${e => upd({ lb: e.target.value })}>${Object.entries(ALL_LEVELS).map(([k, l]) => html`<option value=${k}>${l.label}</option>`)}</select></label>
-        <label class="field"><span>Seed</span><input id="lab-seed" type="number" value=${seed} onInput=${e => upd({ seed: Math.trunc(Number(e.target.value)) || 0 })} /></label>
+        <label class="field"><span>Seed</span><${NumField} id="lab-seed" lo=${0} value=${seed} onValue=${v => upd({ seed: v })} /></label>
       </div>
       <div class="row"><span class="label">Games</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games" /></div>
       <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (burn up to ${s.rules.burnMax} a round, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>

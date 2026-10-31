@@ -5,7 +5,7 @@ import { saveSettings, resetSettings, getState } from '../store.js'
 import { settings16 } from './fighters16.js'
 import { DEFAULT_W16 } from '../../engine/v16/ai.js'
 import { DEFAULT_RULES16 } from '../../engine/v16/engine.js'
-import { toast } from '../ui.js'
+import { toast, NumField } from '../ui.js'
 
 const WEIGHTS = [
   ['alpha', 'A grey token on you costs (HP)', 'Grey can be cleared, so a token counts for less than a point of HP.'],
@@ -20,7 +20,6 @@ const WEIGHTS = [
   ['samples', 'Hands it deals the opponent per clash', 'More is steadier and slower.'],
   ['neutralSamples', '… per neutral-phase choice', ''],
 ]
-const int = (v, lo, hi, d) => Math.max(lo, Math.min(hi, Math.trunc(Number(v)) || d))
 
 export function Settings16() {
   const cur = settings16()
@@ -32,8 +31,8 @@ export function Settings16() {
   const changed = JSON.stringify(d) !== JSON.stringify(cur)
   const rule = p => setD({ ...d, rules: { ...d.rules, ...p } })
   const num = (key, lo, hi, label, help) => html`<label class="field" title=${help || ''}><span>${label}</span>
-    <input id=${'s-' + key} type="number" min=${lo} max=${hi} value=${d.rules[key]} onInput=${e => rule({ [key]: int(e.target.value, lo, hi, DEFAULT_RULES16[key]) })} />
-    ${DEFAULT_RULES16[key] !== d.rules[key] ? html`<span class="small diff">As written: ${DEFAULT_RULES16[key]}</span>` : null}</label>`
+    <${NumField} id=${'s-' + key} lo=${lo} hi=${hi} value=${d.rules[key]} onValue=${v => rule({ [key]: v })} />
+    <span class="small muted">${lo}–${hi}${DEFAULT_RULES16[key] !== d.rules[key] ? html` · <span class="diff">As written: ${DEFAULT_RULES16[key]}</span>` : ''}</span></label>`
   return html`<div class="stack" style=${{ gap: '24px', maxWidth: '760px' }}>
     <div class="stack"><h1>Settings</h1>
       <p class="lede">Rules v16's dials and the sparring partner's weights. They apply to new matches and Lab runs, and every logged game records the settings it ran under.</p></div>
@@ -44,7 +43,7 @@ export function Settings16() {
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Hand limit')}
         ${num('meterMax', 1, 5, 'Meter maximum')}
-        ${num('burnMax', 1, 5, 'Most cards burned a round', 'Open question: burning 3 at once makes the Super very frequent.')}
+        ${num('burnMax', 1, 5, 'Most cards burned a round', 'Set to 1 after the first sim: burning 3 at once made the Super, and Dizzy, far too frequent.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}
       </div>
       <label class="field"><span>The Super</span>
@@ -63,7 +62,7 @@ export function Settings16() {
       <p class="small muted">It deals you possible hands from the cards it hasn't seen, scores every pairing of clash cards a round ahead with these weights, and plays the mix that's safest across them. Anything that pays off later is valued only through the weights.</p>
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
         ${WEIGHTS.map(([k, label, help]) => html`<label class="field" title=${help}><span>${label}</span>
-          <input id=${'s-' + k} type="number" step=${k === 'samples' || k === 'neutralSamples' ? 1 : 0.05} value=${d.ai[k]} onInput=${e => setD({ ...d, ai: { ...d.ai, [k]: Number(e.target.value) } })} />
+          <${NumField} id=${'s-' + k} int=${k === 'samples' || k === 'neutralSamples'} lo=${k === 'samples' || k === 'neutralSamples' ? 1 : 0} hi=${k === 'samples' || k === 'neutralSamples' ? 50 : undefined} value=${d.ai[k]} onValue=${v => setD({ ...d, ai: { ...d.ai, [k]: v } })} />
           ${DEFAULT_W16[k] !== d.ai[k] ? html`<span class="small diff">Default ${DEFAULT_W16[k]}</span>` : null}
         </label>`)}
       </div>
