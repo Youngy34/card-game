@@ -49,6 +49,7 @@ export const THIS_ROUND = {
   attackChip: { label: 'Attacks chip', line: n => `This round, your attacks chip +${n}.` },
   speed: { label: 'Attack speed', line: n => `This round, your attacks are +${n} speed.` },
   armor: { label: 'Armor', line: () => 'This round, your Converts (not your Super) also beat Pressures.' },
+  mixup: { label: 'Mix-Up', line: () => 'This round, your Pressures (not your Super) also beat Guards.' },
   parry: { label: 'Parry', line: () => 'This round, if your Guard beats a Pressure, your follow-up can be any attack, and it can start a combo.' },
 }
 // Neutral-card effects that happen as soon as it's revealed

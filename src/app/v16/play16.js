@@ -294,6 +294,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
       ${Notes}
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
+          stamp=${g.ok && X.st.lock?.[g.c.t] ? 'Locked: voided' : null}
           cls=${cx(!g.ok && 'off', sel === g.i && 'selected')} onClick=${() => g.ok && setSel(g.i)} /></div>`)}
         ${sup ? html`<div key="S"><${Card16} as="button" card=${sup.src} isSuper=${true} disabled=${!ok.has('S')} why=${ok.has('S') ? null : `${X.meter} of ${sup.meter} meter`}
           cls=${cx(!ok.has('S') && 'off', sel === 'S' && 'selected')} onClick=${() => ok.has('S') && setSel('S')} /></div>` : null}
@@ -314,6 +315,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
       <p class="small">${p.stage === 'follow' ? 'Your Guard beat their Pressure: one Counter from your hand lands unopposed. It never starts a combo.' : p.stage === 'link' ? 'Your Starter landed. A Linker lands unopposed, then you may end with an Ender. Skip the Linker to go straight to the Ender.' : 'An Ender lands unopposed and ends the combo: a Convert cashes the whole pile, a status Ender leaves them loaded.'}</p>
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
+          stamp=${g.ok && X.st.lock?.[g.c.t] ? 'Locked: voided' : null}
           cls=${cx(!g.ok && 'off', sel === g.i && 'selected')} onClick=${() => g.ok && setSel(g.i)} /></div>`)}
         ${sup && ok.has('S') ? html`<div key="S"><${Card16} as="button" card=${sup.src} isSuper=${true} cls=${cx(sel === 'S' && 'selected')} onClick=${() => setSel('S')} /></div>` : null}
       </div>`

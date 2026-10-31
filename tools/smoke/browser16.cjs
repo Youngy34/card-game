@@ -99,7 +99,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const body = async () => (await page.locator('body').innerText()).toLowerCase()
   ok((await body()).includes('rules v16'), 'header says rules v16')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
-  ok((await body()).includes('20 clash + 8 neutral cards'), 'the picker shows both deck sizes')
+  ok((await body()).includes('20 clash + 10 neutral cards'), 'the picker shows both deck sizes')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })
 
   await btn(page, 'Start the match').click()
@@ -138,9 +138,9 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   // decks
   await btn(page, 'Decks').click()
   await page.waitForSelector('text=Counters')
-  ok(await page.locator('.cards-grid .card').count() === 10, 'nine cards and the Super')
+  ok(await page.locator('.cards-grid .card').count() === 11, 'ten cards and the Super')
   await page.getByRole('button', { name: 'One more Jab' }).click()
-  ok((await body()).includes('unsaved changes') && (await body()).includes('29'), 'copies edit: 29 cards, unsaved')
+  ok((await body()).includes('unsaved changes') && (await body()).includes('31'), 'copies edit: 31 cards, unsaved')
   await btn(page, 'Save').click()
   await page.waitForSelector('text=Edited', { timeout: 5000 })
   ok((await body()).includes('edited'), 'saved as an edit')

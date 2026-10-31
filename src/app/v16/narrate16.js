@@ -25,7 +25,8 @@ export function outcomeTitle16(c, names) {
   switch (c.outcome) {
     case 'none': return { title: 'Nobody plays', sub: 'Both players played nothing.' }
     case 'armor': return { title: `${c.names[c.winner]} armors through ${c.names[1 - c.winner]}`, sub: 'Armor: this round, a Convert also beats a Pressure.' }
-    case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
+    case 'mixup': return { title: `${c.names[c.winner]} mixes up ${c.names[1 - c.winner]}`, sub: 'Mix-Up: this round, a Pressure also beats a Guard.' }
+    case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: c.voided?.[1 - c.winner] ? `${names[1 - c.winner]}'s ${c.names[1 - c.winner]} was voided (Locked), so it lands unopposed.` : `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
     case 'guards': return { title: 'Both Guard', sub: 'Two Guards: each player clears their own pile.' }
     case 'cancel': return { title: `${a} and ${b} tie`, sub: 'Same type, same speed: the tie cancels and neither lands.' }
     case 'tie': return { title: `${c.names[c.winner]} wins the tie`, sub: `Same speed: the tie goes to ${names[c.winner]}, on less HP.` }
@@ -52,6 +53,7 @@ export function narrate16(ev, names) {
       else if (e.t === 'R') out.push(`${who}'s ${e.name} clears ${e.cleared ? `${e.cleared} grey` : 'an empty pile'}${e.chip ? ` and chips ${e.chip}` : ''}.`)
     } else if (e.kind === 'status') out.push(`${names[e.side]} is hit with ${status(e.status)} (from ${e.from}) for next round.`)
     else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.`)
+    else if (e.kind === 'voided') out.push(`${who}'s ${e.name} is voided: their ${LABEL16[e.t]}s are Locked.`)
     else if (e.kind === 'play' && e.sup) out.push(`${who} spends meter on ${e.name}.`)
   }
   return out

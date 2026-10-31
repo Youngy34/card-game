@@ -130,10 +130,12 @@ function setup(handA, handB, patch = {}) {
   let U = setup([JAB], [GUARD], { A: { meter: 4, supersUsed: 1 }, rules: { superUses: 1 } })
   ok(!clashOptions16(U.A, U.rules).includes('S'), 'superUses 1: no second Super')
 }
-// 8. Lock: a locked type can't be played, follow-ups and combos included
+// 8. Lock: a Locked card can be played but is voided at the reveal; no Locked follow-ups or combo cards
 {
-  let G = setup([JAB, THROW, GUARD], [GUARD], { A: { st: { lock: { C: true } } } })
-  ok(!clashOptions16(G.A, G.rules).includes(THROW), 'Lock Convert: no Throw')
+  let G = setup([JAB, THROW, GUARD], [GUARD], { A: { st: { lock: { C: true } } }, B: { pile: 0 } })
+  ok(clashOptions16(G.A, G.rules).includes(THROW), 'Lock Convert: a Throw can still be played')
+  const V = startClash16(G, THROW, GUARD)
+  ok(V.clash.voided[0] && V.clash.outcome === 'unopposed' && V.clash.winner === 1 && !V.A.hand.includes(THROW), 'a Locked Throw is spent and voided: their Guard lands unopposed')
   let H = setup([JAB], [GUARD, SWING, SLASH], { B: { st: { lock: { C: true } } } })
   H = startClash16(H, JAB, GUARD)
   ok(H.pending?.options.join() === String(SLASH), 'Lock Convert: no Big Swing follow-up')
@@ -231,12 +233,12 @@ function setup(handA, handB, patch = {}) {
   ok(!validateFighter16(rawN).errors.length, 'the split-deck Benchmark validates')
   const FN = toFighter16(rawN)
   const nid = name => FN.cards.findIndex(c => c.name === name)
-  const [J, SL, TH, SW, GU, FO, AR, PA] = ['Jab', 'Slash', 'Throw', 'Big Swing', 'Guard', 'Focus', 'Armor', 'Parry'].map(nid)
+  const [J, SL, TH, SW, GU, FO, AR, PA, MX] = ['Jab', 'Slash', 'Throw', 'Big Swing', 'Guard', 'Focus', 'Armor', 'Parry', 'Mix-Up'].map(nid)
   const W = { ...DEFAULT_RULES16 }
   ok(W.splitDecks && W.neutralHand === 3 && !W.blankClash && W.burnMax === 0 && W.meterMax === 4, 'as written: split decks, neutral hand 3, no blank, no burning, meter 0–4')
   let G = newGame16(FN, FN, W, 11)
   ok(G.A.hand.length === 6 && G.A.hand.every(i => FN.cards[i].t !== 'N'), 'opening clash hand: 6 clash cards')
-  ok(G.A.nhand.length === 3 && G.A.nhand.every(i => FN.cards[i].t === 'N') && G.A.ndeck.length === 5 && G.A.deck.length === 14, 'neutral hand 3; decks 14 clash, 5 neutral')
+  ok(G.A.nhand.length === 3 && G.A.nhand.every(i => FN.cards[i].t === 'N') && G.A.ndeck.length === 7 && G.A.deck.length === 14, 'neutral hand 3; decks 14 clash, 7 neutral')
   const o = neutralOptions16(G.A, W)
   ok(o.split && o.neutrals.every(i => G.A.nhand.includes(i)) && !neutralActions16(G.A, W).some(a => a.kind !== 'neutral'), 'the neutral step: a card from the neutral hand, nothing else')
   // Focus: a clash card and a meter
@@ -260,6 +262,16 @@ function setup(handA, handB, patch = {}) {
   A2 = { ...A2, A: { ...A2.A, hand: [SW] }, B: { ...A2.B, hand: [J] } }
   A2 = startClash16(applyNeutral16(A2, [null, null]), SW, J)
   ok(A2.clash.winner === 1, 'without Armor, the Jab beats Big Swing')
+  // Mix-Up: a Pressure beats a Guard, and a Starter combos
+  let M1 = newGame16(FN, FN, W, 3)
+  M1 = { ...M1, A: { ...M1.A, hand: [J, SL, SW], nhand: [MX, FO, FO] }, B: { ...M1.B, hand: [GU], pile: 0 } }
+  M1 = applyNeutral16(M1, [{ kind: 'neutral', i: MX }, null])
+  M1 = startClash16(M1, J, GU)
+  ok(M1.clash.winner === 0 && M1.clash.outcome === 'mixup' && M1.B.pile === 2 && M1.pending?.stage === 'link', 'Mix-Up: a Jab beats a Guard, builds 2, and combos')
+  let M2 = newGame16(FN, FN, W, 3)
+  M2 = { ...M2, A: { ...M2.A, hand: [J] }, B: { ...M2.B, hand: [GU] } }
+  M2 = startClash16(applyNeutral16(M2, [null, null]), J, GU)
+  ok(M2.clash.winner === 1, 'without Mix-Up, the Guard beats the Jab')
   // Parry: a Guard's follow-up can be any attack, and a Starter combos
   let P1 = newGame16(FN, FN, W, 3)
   P1 = { ...P1, A: { ...P1.A, hand: [GU, J, SL, SW], nhand: [PA, FO, FO] }, B: { ...P1.B, hand: [SL] } }

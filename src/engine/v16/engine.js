@@ -218,7 +218,7 @@ export function clashOptions16(X, rules) {
     if (seen.has(i)) continue
     seen.add(i)
     const c = X.f.cards[i]
-    if (c.t !== 'N' && !locked(X, c.t)) out.push(i)
+    if (c.t !== 'N') out.push(i)                      // a Locked card can be played: it's voided at the reveal
   }
   if (superPlayable(X, rules) && !locked(X, X.f.sup.t)) out.push('S')
   return out
@@ -302,7 +302,11 @@ export function startClash16(G, a, b, lite = false) {
   const A = cloneP(G.A, lite), B = cloneP(G.B, lite)
   const P = [A, B], ev = []
   const picks = [a ?? null, b ?? null]
-  const cards = picks.map((p, k) => (p === null ? null : play(P[k], p, ev, k, 'clash')))
+  const played = picks.map((p, k) => (p === null ? null : play(P[k], p, ev, k, 'clash')))
+  // Lock: a card of a Locked type is spent but does nothing, as if nothing were played
+  const voided = played.map((c, k) => !!c && locked(P[k], c.t))
+  voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: 'voided', name: played[k].name, t: played[k].t }) })
+  const cards = played.map((c, k) => (voided[k] ? null : c))
   const [ca, cb] = cards
   let winner = -1, outcome
   if (!ca && !cb) outcome = 'none'
@@ -312,6 +316,9 @@ export function startClash16(G, a, b, lite = false) {
     // Armor: this round, the armored player's Converts (not their Super) also beat Pressures
     if (ca.t === 'C' && !ca.sup && cb.t === 'P' && A.fx.armor) { winner = 0; outcome = 'armor' }
     else if (cb.t === 'C' && !cb.sup && ca.t === 'P' && B.fx.armor) { winner = 1; outcome = 'armor' }
+    // Mix-Up: this round, the player's Pressures (not their Super) also beat Guards
+    else if (ca.t === 'P' && !ca.sup && cb.t === 'R' && A.fx.mixup) { winner = 0; outcome = 'mixup' }
+    else if (cb.t === 'P' && !cb.sup && ca.t === 'R' && B.fx.mixup) { winner = 1; outcome = 'mixup' }
   }
   else if (ca.t === 'R') outcome = 'guards'
   else {
@@ -331,12 +338,12 @@ export function startClash16(G, a, b, lite = false) {
     const lc = cards[1 - winner]
     if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf }) }
   }
-  const clash = { picks, types: cards.map(c => c?.t ?? null), names: cards.map(c => c?.name ?? null), outcome, winner, events: ev, follow: null, combo: [] }
+  const clash = { picks, types: cards.map(c => c?.t ?? null), names: played.map(c => c?.name ?? null), voided, outcome, winner, events: ev, follow: null, combo: [] }
   let next = { ...G, A, B, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return ask(next, 'follow', winner)
-  if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
+  if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }
 

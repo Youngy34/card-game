@@ -4,7 +4,7 @@
   "id": "benchmark16",
   "name": "Benchmark",
   "epithet": "Reference",
-  "concept": "The plain v16 fighter: a 20-card clash deck and an 8-card neutral deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters. Neutral: Focus, Armor, Parry.",
+  "concept": "The plain v16 fighter: a 20-card clash deck and a 10-card neutral deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters. Neutral: Focus, Armor, Mix-Up, Parry: a threat for each type.",
   "hp": 30,
   "passive": null,
   "cards": [
@@ -18,6 +18,8 @@
       "flavour": "Reset and breathe: a card and a bar of meter." },
     { "name": "Armor", "type": "neutral", "copies": 2, "thisRound": { "armor": 1 },
       "flavour": "Brace through their poke: the heavy swing absorbs it." },
+    { "name": "Mix-Up", "type": "neutral", "copies": 2, "thisRound": { "mixup": 1 },
+      "flavour": "High or low? Their guard guesses wrong." },
     { "name": "Parry", "type": "neutral", "copies": 2, "thisRound": { "parry": 1 },
       "flavour": "Read the strike, turn it aside, and open them up." }
   ],
