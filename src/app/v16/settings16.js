@@ -41,7 +41,8 @@ export function Settings16() {
       <h3>Rules</h3>
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
         ${num('openingHand', 3, 10, 'Opening hand')}
-        ${num('handLimit', 4, 12, 'Hand limit')}
+        ${num('handLimit', 4, 12, 'Clash hand limit')}
+        ${num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
         ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 4.')}
         ${num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}

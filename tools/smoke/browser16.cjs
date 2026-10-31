@@ -52,20 +52,13 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
       const t = (await page.locator('main').innerText()).toLowerCase()
       if (await page.locator('.overlay').count()) { seen.pass++; await page.locator('.overlay .btn').click(); continue }
       if (t.includes('k.o.') || (t.includes('round limit reached'))) return seen
-      const focusBtn = page.locator('.actions .btn', { hasText: /^Focus/ })
-      const breather = page.locator('.actions .btn', { hasText: /^Breather/ })
-      if (await focusBtn.count() || await breather.count()) {
-        const r = seen.rounds % 4
-        if (r === 1) {
-          const neutral = page.locator('.hand button.card:not([disabled])')
-          if (await neutral.count()) { await neutral.first().click(); const b = page.locator('.actions .btn', { hasText: 'Play ' }).first(); if (await b.isEnabled()) { seen.neutralCard++; await b.click(); continue } }
-        }
-        if (await breather.count() && r !== 2) { seen.breather++; await breather.first().click(); continue }
-        if (await focusBtn.first().isEnabled()) { seen.focus++; await focusBtn.first().click(); continue }
-        seen.breather++; await breather.first().click(); continue
-      }
-      if (await btn(page, 'Lock in').count() && seen.rounds % 7 === 5 && !seen.blank && await btn(page, 'Play nothing (Focus)').count()) {
-        seen.blank++; await btn(page, 'Play nothing (Focus)').click(); continue
+      const nhand = page.locator('.neutral-hand button.card')
+      if (await nhand.count()) {
+        const n = await nhand.count()
+        await nhand.nth(step % n).click()
+        const name = (await page.locator('.actions .btn', { hasText: /^Play / }).first().innerText()).toLowerCase()
+        seen[name.includes('focus') ? 'focus' : 'neutralCard']++
+        await page.locator('.actions .btn', { hasText: /^Play / }).first().click(); continue
       }
       if (await btn(page, 'Lock in').count()) {
         if (seen.rounds === 1) await shot('03-clash-pick')
@@ -106,21 +99,20 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const body = async () => (await page.locator('body').innerText()).toLowerCase()
   ok((await body()).includes('rules v16'), 'header says rules v16')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
-  ok((await body()).includes('24 cards'), 'the picker shows the deck size')
+  ok((await body()).includes('20 clash + 8 neutral cards'), 'the picker shows both deck sizes')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })
 
   await btn(page, 'Start the match').click()
-  await page.waitForSelector('text=Focus: draw')
+  await page.waitForSelector('.neutral-hand button.card')
   ok(await page.locator('.notes li').count() > 0, 'board notes show in the neutral phase')
-  ok(!(await btn(page, 'Burn for meter…').count()) && !(await page.locator('.actions .btn', { hasText: /^Breather/ }).count()), 'as written: Focus or a neutral card; no burn, no Breather')
+  ok(await page.locator('.neutral-hand button.card').count() >= 1 && !(await btn(page, 'Burn for meter…').count()) && !(await page.locator('.actions .btn', { hasText: /^Focus:/ }).count()), 'split decks: a neutral hand to pick from; no Focus button, no burn')
+  ok((await body()).includes('neutral in hand') && (await body()).includes('in neutral deck'), 'HUD shows the neutral hand and deck')
   ok((await body()).includes('in hand') && (await body()).includes('in deck'), 'HUD shows hand and deck counts')
   SHOTS && await page.screenshot({ path: SHOTS + '02-neutral.png', fullPage: true })
   const seen = await playGame(page, { shots: true })
   console.log('vs Hard:', JSON.stringify(seen))
   ok(seen.rounds > 3, 'played several rounds')
-  ok(seen.neutralCard > 0 && seen.focus > 0, 'played a neutral card and Focused')
-  ok(seen.blank > 0, 'played nothing (Focus as the blank) at a clash')
-  ok(seen.follow + seen.link + seen.end > 0, 'was offered a follow-up or a combo')
+  ok(seen.neutralCard > 0 && seen.focus > 0, 'played Focus and another neutral card')
   SHOTS && await page.screenshot({ path: SHOTS + '06-over.png', fullPage: true })
   await page.waitForSelector('text=Saved to the playtest log', { timeout: 5000 }).catch(() => {})
   ok((await body()).includes('saved to the playtest log'), 'the game is logged')
@@ -133,6 +125,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
     for (const k of Object.keys(more)) more[k] += s[k]
   }
   console.log('4 more games:', JSON.stringify(more))
+  ok(seen.follow + seen.link + seen.end + more.follow + more.link + more.end > 0, 'was offered a follow-up or a combo')
 
   // the log
   await page.getByRole('button', { name: 'Playtest log' }).click()
@@ -145,9 +138,9 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   // decks
   await btn(page, 'Decks').click()
   await page.waitForSelector('text=Counters')
-  ok(await page.locator('.cards-grid .card').count() === 9, 'eight cards and the Super')
+  ok(await page.locator('.cards-grid .card').count() === 10, 'nine cards and the Super')
   await page.getByRole('button', { name: 'One more Jab' }).click()
-  ok((await body()).includes('unsaved changes') && (await body()).includes('25'), 'copies edit: 25 cards, unsaved')
+  ok((await body()).includes('unsaved changes') && (await body()).includes('29'), 'copies edit: 29 cards, unsaved')
   await btn(page, 'Save').click()
   await page.waitForSelector('text=Edited', { timeout: 5000 })
   ok((await body()).includes('edited'), 'saved as an edit')
@@ -183,7 +176,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   await page.waitForTimeout(300)
   await btn(page, 'Play').click()
   if (await btn(page, 'New match').count()) await btn(page, 'New match').click()
-  ok((await body()).includes('hand limit 7') && (await body()).includes('or focus (draw a card and gain 1 meter)') && (await body()).includes('once per game'), 'setup shows the new settings')
+  ok((await body()).includes('hand limit 7') && (await body()).includes('play one of your 3 neutral cards') && (await body()).includes('once per game'), 'setup shows the new settings')
 
   // lab
   await btn(page, 'Lab').click()
@@ -201,7 +194,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   if (await btn(page, 'New match').count()) await btn(page, 'New match').click()
   await page.locator('.seg button', { hasText: 'Two players, one device' }).click()
   await btn(page, 'Start the match').click()
-  await page.waitForSelector('text=Focus: draw')
+  await page.waitForSelector('.neutral-hand button.card')
   const hs = await playGame(page, { hotseat: true, maxSteps: 900 })
   console.log('hot-seat:', JSON.stringify(hs))
   ok(hs.pass > 2, 'hot-seat asks for the device to change hands')

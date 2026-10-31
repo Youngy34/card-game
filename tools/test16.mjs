@@ -6,7 +6,9 @@ import { toFighter16, validateFighter16 } from '../src/engine/v16/cards.js'
 import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16, runClash16, unseenPool, DEFAULT_RULES16, clashChoices16 } from '../src/engine/v16/engine.js'
 import { neutralActions16 } from '../src/engine/v16/ai.js'
 
-const raw = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
+// The single-deck Benchmark (Wind-Up and Step In in one 24-card deck) for the rules before split
+// decks; the bundled Benchmark (split decks) for section 15 on.
+const raw = JSON.parse(fs.readFileSync(new URL('./fixtures/benchmark16-single.json', import.meta.url)))
 const v = validateFighter16(raw)
 let fails = 0, passes = 0
 const ok = (cond, msg) => { if (cond) passes++; else { fails++; console.log('FAIL:', msg) } }
@@ -16,7 +18,7 @@ const id = name => F.cards.findIndex(c => c.name === name)
 const [JAB, SLASH, SWEEP, THROW, SWING, GUARD, WIND, STEP] = ['Jab', 'Slash', 'Sweep', 'Throw', 'Big Swing', 'Guard', 'Wind-Up', 'Step In'].map(id)
 ok(F.deck.length === 24, 'deck is 24 cards')
 
-const rules = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 3, superUses: 0, speedTie: 'cancel', maxRounds: 60 }
+const rules = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 3, superUses: 0, speedTie: 'cancel', maxRounds: 60, splitDecks: false, focusMeter: 0, focusDraw: false, blankClash: false }
 function setup(handA, handB, patch = {}) {
   let G = newGame16(F, F, rules, 7)
   G = { ...G, A: { ...G.A, hand: handA.slice(), ...(patch.A || {}) }, B: { ...G.B, hand: handB.slice(), ...(patch.B || {}) }, rules: { ...rules, ...(patch.rules || {}) } }
@@ -162,7 +164,7 @@ function setup(handA, handB, patch = {}) {
 }
 // 12. Breather and Focus as separate cards (focusDraw off); no burning
 {
-  const W = { ...DEFAULT_RULES16, focusDraw: false }
+  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: false, focusMeter: 1, blankClash: true }
   ok(W.burnMax === 0 && W.focusMeter === 1, 'no burning, Focus gains 1')
   let G = newGame16(F, F, W, 5)
   const o = neutralOptions16(G.A, W)
@@ -186,10 +188,10 @@ function setup(handA, handB, patch = {}) {
   R = applyNeutral16(R, [{ kind: 'focus' }, null])
   ok(!clashOptions16(R.A, R.rules).includes('S'), "one reveal: Focus's meter arrives after the clash")
 }
-// 13. As written (31 October): a neutral card or Focus (draw a card and gain 1 meter); Super 4 meter
+// 13. One deck with a kept Focus card (draw a card and gain 1 meter); Super 4 meter
 {
-  const W = { ...DEFAULT_RULES16 }
-  ok(W.focusDraw && W.burnMax === 0 && W.meterMax === 4, 'as written: Focus draws and gains meter, no burning, meter 0–4')
+  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: true, focusMeter: 1, blankClash: true }
+  ok(W.burnMax === 0 && W.meterMax === 4, 'no burning, meter 0–4')
   ok(F.sup.meter === 4 && F.sup.onHit === 'knockdown', 'Overdrive: 4 meter, knocks down')
   let G = newGame16(F, F, W, 9)
   const acts = neutralActions16(G.A, W)
@@ -209,7 +211,7 @@ function setup(handA, handB, patch = {}) {
 }
 // 14. Focus as the clash blank: anyone may play nothing; a Dizzy player has no choice
 {
-  const W = { ...DEFAULT_RULES16 }
+  const W = { ...DEFAULT_RULES16, splitDecks: false, focusDraw: true, focusMeter: 1, blankClash: true }
   let G = setup([JAB, GUARD], [JAB], { rules: W })
   ok(clashChoices16(G.A, W).includes(null) && clashChoices16(G.A, W).includes(JAB), 'the blank is a choice alongside legal cards')
   ok(!clashChoices16(G.A, { ...W, blankClash: false }).includes(null), 'blankClash off: no blank while you hold a card')
@@ -222,6 +224,65 @@ function setup(handA, handB, patch = {}) {
   let Q = setup([GUARD], [JAB], { A: { pile: 5 }, rules: W })
   Q = startClash16(Q, GUARD, null)
   ok(Q.clash.outcome === 'unopposed' && Q.A.pile === 0 && !Q.pending, 'a Guard against a blank clears, with no follow-up')
+}
+// 15. As written (31 October, evening): split decks, a neutral hand of 3, Focus as a neutral card
+{
+  const rawN = JSON.parse(fs.readFileSync(new URL('../data/v16/benchmark.json', import.meta.url)))
+  ok(!validateFighter16(rawN).errors.length, 'the split-deck Benchmark validates')
+  const FN = toFighter16(rawN)
+  const nid = name => FN.cards.findIndex(c => c.name === name)
+  const [J, SL, TH, SW, GU, FO, AR, PA] = ['Jab', 'Slash', 'Throw', 'Big Swing', 'Guard', 'Focus', 'Armor', 'Parry'].map(nid)
+  const W = { ...DEFAULT_RULES16 }
+  ok(W.splitDecks && W.neutralHand === 3 && !W.blankClash && W.burnMax === 0 && W.meterMax === 4, 'as written: split decks, neutral hand 3, no blank, no burning, meter 0–4')
+  let G = newGame16(FN, FN, W, 11)
+  ok(G.A.hand.length === 6 && G.A.hand.every(i => FN.cards[i].t !== 'N'), 'opening clash hand: 6 clash cards')
+  ok(G.A.nhand.length === 3 && G.A.nhand.every(i => FN.cards[i].t === 'N') && G.A.ndeck.length === 5 && G.A.deck.length === 14, 'neutral hand 3; decks 14 clash, 5 neutral')
+  const o = neutralOptions16(G.A, W)
+  ok(o.split && o.neutrals.every(i => G.A.nhand.includes(i)) && !neutralActions16(G.A, W).some(a => a.kind !== 'neutral'), 'the neutral step: a card from the neutral hand, nothing else')
+  // Focus: a clash card and a meter
+  G = { ...G, A: { ...G.A, nhand: [FO, AR, PA] }, B: { ...G.B, nhand: [FO, AR, PA] } }
+  const h0 = G.A.hand.length
+  let H = applyNeutral16(G, [{ kind: 'neutral', i: FO }, { kind: 'neutral', i: AR }])
+  ok(H.A.meter === 1 && H.A.hand.length === h0 + 1 && H.A.nhand.length === 2 && H.neutral[0].drew === 1, 'Focus: draw a clash card, gain 1 meter')
+  ok(H.B.fx.armor === 1, 'Armor is on for this round')
+  // the draw step refills the neutral hand and discards the played neutral card
+  H = startDraw16(runClash16(H, H.A.hand[0], H.B.hand[0], () => null))
+  while (H.phase === 'draw') for (const k of [0, 1]) if (H.discardDown?.[k]) H = discardDown16(H, k, (k ? H.B : H.A).hand.slice(0, H.discardDown[k]))
+  ok(H.A.nhand.length === 3 && H.A.ndiscard.includes(FO) && H.B.ndiscard.includes(AR), 'draw step: neutral hand back to 3; played neutral cards to the neutral discard')
+  ok(H.A.discard.every(d => FN.cards[d.i].t !== 'N'), 'neutral cards never reach the clash discard')
+  // Armor: a Convert beats a Pressure
+  let A1 = newGame16(FN, FN, W, 3)
+  A1 = { ...A1, A: { ...A1.A, hand: [SW], nhand: [AR, FO, FO] }, B: { ...A1.B, hand: [J], pile: 4 } }
+  A1 = applyNeutral16(A1, [{ kind: 'neutral', i: AR }, null])
+  A1 = startClash16(A1, SW, J)
+  ok(A1.clash.winner === 0 && A1.clash.outcome === 'armor' && A1.B.hp === 30 - 4 - 3, 'Armor: Big Swing beats a Jab (cashes 4, chips 3)')
+  let A2 = newGame16(FN, FN, W, 3)
+  A2 = { ...A2, A: { ...A2.A, hand: [SW] }, B: { ...A2.B, hand: [J] } }
+  A2 = startClash16(applyNeutral16(A2, [null, null]), SW, J)
+  ok(A2.clash.winner === 1, 'without Armor, the Jab beats Big Swing')
+  // Parry: a Guard's follow-up can be any attack, and a Starter combos
+  let P1 = newGame16(FN, FN, W, 3)
+  P1 = { ...P1, A: { ...P1.A, hand: [GU, J, SL, SW], nhand: [PA, FO, FO] }, B: { ...P1.B, hand: [SL] } }
+  P1 = applyNeutral16(P1, [{ kind: 'neutral', i: PA }, null])
+  P1 = startClash16(P1, GU, SL)
+  ok(P1.pending?.stage === 'follow' && P1.pending.options.includes(J), 'Parry: a Jab (not a Counter) can be the follow-up')
+  P1 = decideClash16(P1, J)
+  ok(P1.pending?.stage === 'link', '…and the Jab follow-up starts a combo')
+  let P2 = newGame16(FN, FN, W, 3)
+  P2 = { ...P2, A: { ...P2.A, hand: [GU, J, SL] }, B: { ...P2.B, hand: [SL] } }
+  P2 = startClash16(applyNeutral16(P2, [null, null]), GU, SL)
+  ok(P2.pending?.stage === 'follow' && !P2.pending.options.includes(J) && P2.pending.options.includes(SL), 'without Parry, only Counters follow up')
+  // no blank while you hold a clash card you can play
+  ok(!clashChoices16(G.A, W).includes(null), 'no blank while a clash card is playable')
+  const E = { ...G.A, hand: [] }
+  ok(clashChoices16(E, W).length === 0, 'no clash cards: nothing to play (and everyone can see it)')
+  // the partner never sees neutral cards in the pool it deals your clash hand from
+  ok(unseenPool(G.B).every(i => FN.cards[i].t !== 'N'), "the partner deals clash hands from clash cards only")
+  // reshuffling the neutral discard
+  let R1 = newGame16(FN, FN, W, 5)
+  R1 = { ...R1, A: { ...R1.A, ndeck: [], ndiscard: [FO, AR], nhand: [PA, FO], nused: [] } }
+  R1 = startDraw16({ ...R1, phase: 'draw' })
+  ok(R1.A.nhand.length === 3 && R1.A.ndeck.length === 1 && R1.A.ndiscard.length === 0, 'an empty neutral deck reshuffles its discard')
 }
 console.log(`${passes} passed, ${fails} failed`)
 process.exit(fails ? 1 : 0)

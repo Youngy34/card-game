@@ -34,10 +34,14 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 //   replacing the Breather.
 // blankClash: a player may place their Focus as a blank at the clash (playing nothing),
 //   whether or not they hold a clash card.
-// As written since 31 October: the neutral step is a neutral card or Focus (draw a card and
-// gain 1 meter); nothing is burned; the meter track runs 0–4; Focus is also the clash blank.
+// splitDecks: clash cards and neutral cards are separate decks, hands and discard piles;
+//   the neutral hand is refilled to neutralHand cards in the draw step, and a neutral card
+//   must be played each neutral step (Focus is a neutral card).
+// As written since 31 October (evening): split decks with a neutral hand of 3; no burning;
+// the meter track runs 0–4; you play a clash card if you have one you can play.
 export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 4, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
-  oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 1, focusDraw: true, blankClash: true }
+  oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
+  splitDecks: true, neutralHand: 3 }
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -57,8 +61,10 @@ function shuffle(a, R) {
 const cloneSt = s => (s.lock ? { ...s, lock: { ...s.lock } } : { ...s })
 // lite: share the deck and discard (the clash never touches them)
 export function cloneP(X, lite = false) {
-  return { ...X, deck: lite ? X.deck : X.deck.slice(), discard: lite ? X.discard : X.discard.slice(), hand: X.hand.slice(),
+  const Y = { ...X, deck: lite ? X.deck : X.deck.slice(), discard: lite ? X.discard : X.discard.slice(), hand: X.hand.slice(),
            st: cloneSt(X.st), next: cloneSt(X.next), fx: { ...X.fx }, used: X.used.slice() }
+  if (X.nhand) { Y.nhand = X.nhand.slice(); Y.ndeck = lite ? X.ndeck : X.ndeck.slice(); Y.ndiscard = lite ? X.ndiscard : X.ndiscard.slice(); Y.nused = X.nused.slice() }
+  return Y
 }
 export const card16 = (X, i) => (i === 'S' ? X.f.sup : X.f.cards[i])
 export const locked = (X, t) => !!(X.st.lock && X.st.lock[t])
@@ -74,6 +80,20 @@ function drawCards(X, n, R) {
       X.reshuffles = (X.reshuffles || 0) + 1
     }
     X.hand.push(X.deck.pop()); drawn++
+  }
+  return drawn
+}
+
+// Split decks: draw neutral cards, reshuffling the neutral discard when the neutral deck runs out
+function drawNeutral(X, n, R) {
+  let drawn = 0
+  for (let k = 0; k < n; k++) {
+    if (!X.ndeck.length) {
+      if (!X.ndiscard.length) break
+      X.ndeck = shuffle(X.ndiscard.slice(), R)
+      X.ndiscard = []
+    }
+    X.nhand.push(X.ndeck.pop()); drawn++
   }
   return drawn
 }
@@ -99,8 +119,12 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
   rules = { ...DEFAULT_RULES16, ...rules }
   const R = { s: seed >>> 0 }
   const mk = f => {
-    const X = { f, hp: f.hp, pile: 0, meter: 0, deck: shuffle(f.deck.slice(), R), hand: [], discard: [], st: {}, next: {}, fx: {}, used: [], reshuffles: 0, supersUsed: 0 }
+    const split = !!rules.splitDecks
+    const clash = split ? f.deck.filter(i => f.cards[i].t !== 'N') : f.deck.slice()
+    const X = { f, hp: f.hp, pile: 0, meter: 0, deck: shuffle(clash, R), hand: [], discard: [], st: {}, next: {}, fx: {}, used: [], reshuffles: 0, supersUsed: 0 }
+    if (split) { X.ndeck = shuffle(f.deck.filter(i => f.cards[i].t === 'N'), R); X.nhand = []; X.ndiscard = []; X.nused = [] }
     drawCards(X, rules.openingHand, R)
+    if (split) drawNeutral(X, rules.neutralHand ?? 3, R)
     return X
   }
   const A = mk(fa), B = mk(fb)
@@ -113,6 +137,7 @@ export const skipsNeutral = X => !!(X.st.knockdown || X.st.dizzy)
 // What a player may do this neutral phase
 export function neutralOptions16(X, rules = DEFAULT_RULES16) {
   if (skipsNeutral(X)) return { skip: true, neutrals: [], maxBurn: 0 }
+  if (rules.splitDecks && X.nhand) return { skip: false, neutrals: [...new Set(X.nhand)], maxBurn: 0, canDraw: false, canFocus: false, split: true, superDone: rules.superUses > 0 && X.supersUsed >= rules.superUses }
   const neutrals = [...new Set(X.hand.filter(i => X.f.cards[i].t === 'N'))]
   const meterMax = rules.meterMax ?? 3
   const superDone = rules.superUses > 0 && X.supersUsed >= rules.superUses
@@ -139,13 +164,14 @@ export function applyNeutral16(G, acts) {
     else if (act.kind === 'neutral') {
       const c = X.f.cards[act.i]
       if (!c || c.t !== 'N') throw new Error('not a neutral card')
-      takeFromHand(X, act.i)
-      X.used.push(act.i)
+      if (X.nhand) { const k = X.nhand.lastIndexOf(act.i); if (k < 0) throw new Error(`card ${act.i} isn't in the neutral hand`); X.nhand.splice(k, 1); X.nused.push(act.i) }
+      else { takeFromHand(X, act.i); X.used.push(act.i) }
       for (const [key, v] of Object.entries(c.thisRound || {})) X.fx[key] = (X.fx[key] || 0) + v
       const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
-      const m = superDone ? 0 : Math.max(0, Math.min(G.rules.neutralMeter || 0, meterMax - X.meter))
+      const m = superDone ? 0 : Math.max(0, Math.min((G.rules.neutralMeter || 0) + (c.now?.meter || 0), meterMax - X.meter))
       gainMeter(X, m, G.rules)
-      done.push({ kind: 'neutral', i: act.i, name: c.name, ...(m ? { meter: m } : {}) })
+      const drew = c.now?.draw ? drawCards(X, c.now.draw, R) : 0
+      done.push({ kind: 'neutral', i: act.i, name: c.name, ...(m ? { meter: m } : {}), ...(c.now?.draw ? { drew } : {}) })
     } else if (act.kind === 'focus') {
       if (!neutralOptions16(X, G.rules).canFocus) throw new Error("can't Focus")
       const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
@@ -213,6 +239,20 @@ export function iconOptions(X, icon, rules) {
   return out
 }
 
+// Every attack (Pressure or Convert) a player could play now, the Super included if they can pay for it
+function attackOptions(X, rules) {
+  const seen = new Set(), out = []
+  for (const i of X.hand) {
+    if (seen.has(i)) continue
+    seen.add(i)
+    const c = X.f.cards[i]
+    if ((c.t === 'P' || c.t === 'C') && canUse(X, c)) out.push(i)
+  }
+  const s = X.f.sup
+  if (s && (s.t === 'P' || s.t === 'C') && superPlayable(X, rules) && canUse(X, s)) out.push('S')
+  return out
+}
+
 export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0)
 
 // Who wins a same-type duel at equal speed: 0, 1, or -1 (cancel)
@@ -267,7 +307,12 @@ export function startClash16(G, a, b, lite = false) {
   let winner = -1, outcome
   if (!ca && !cb) outcome = 'none'
   else if (!ca || !cb) { winner = ca ? 0 : 1; outcome = 'unopposed' }
-  else if (ca.t !== cb.t) { winner = BEATS16.has(ca.t + cb.t) ? 0 : 1; outcome = 'triangle' }
+  else if (ca.t !== cb.t) {
+    winner = BEATS16.has(ca.t + cb.t) ? 0 : 1; outcome = 'triangle'
+    // Armor: this round, the armored player's Converts (not their Super) also beat Pressures
+    if (ca.t === 'C' && !ca.sup && cb.t === 'P' && A.fx.armor) { winner = 0; outcome = 'armor' }
+    else if (cb.t === 'C' && !cb.sup && ca.t === 'P' && B.fx.armor) { winner = 1; outcome = 'armor' }
+  }
   else if (ca.t === 'R') outcome = 'guards'
   else {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
@@ -291,14 +336,14 @@ export function startClash16(G, a, b, lite = false) {
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return ask(next, 'follow', winner)
-  if (wc.starter && (outcome === 'triangle' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
+  if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }
 
 const ICON_FOR = { follow: 'counter', link: 'linker', end: 'ender' }
 function ask(G, stage, side) {
   const X = side === 0 ? G.A : G.B
-  const options = iconOptions(X, ICON_FOR[stage], G.rules)
+  const options = stage === 'follow' && X.fx.parry ? attackOptions(X, G.rules) : iconOptions(X, ICON_FOR[stage], G.rules)
   G = { ...G, clash: { ...G.clash, offered: { ...(G.clash.offered || {}), [stage]: options.length } } }
   if (!options.length) {
     if (stage === 'link') return ask(G, 'end', side)
@@ -326,7 +371,9 @@ export function decideClash16(G, choice, lite = false) {
   if (stage === 'follow') clash.follow = { side, name: c.name, t: c.t }
   else clash.combo = [...clash.combo, { side, stage, name: c.name, t: c.t }]
   const next = { ...G, A, B, clash, pending: null, result: resultOf(A, B) }
-  if (next.result !== null || stage !== 'link') return finishClash(next)
+  if (next.result !== null) return finishClash(next)
+  if (stage === 'follow' && P[side].fx.parry && c.starter) return ask(next, 'link', side)     // Parry: the punish can combo
+  if (stage !== 'link') return finishClash(next)
   return ask(next, 'end', side)
 }
 
@@ -347,6 +394,11 @@ export function startDraw16(G) {
     for (const i of X.used) if (i !== 'S') X.discard.push({ i, burned: false })
     X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
+    if (X.nhand) {
+      for (const i of X.nused) X.ndiscard.push(i)
+      X.nused = []
+      drawNeutral(X, Math.max(0, (G.rules.neutralHand ?? 3) - X.nhand.length), R)
+    }
   }
   const over = P.map(X => Math.max(0, X.hand.length - (G.rules.handLimit ?? 8)))
   const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over }

@@ -360,3 +360,7 @@ pre.json { background: var(--ground); padding: 12px; overflow-x: auto; font-fami
 .combo-row .card { --w: 120px; }
 .narr16 { margin: 0; padding: 0 0 0 18px; display: grid; gap: 3px; width: 100%; max-width: 640px; font-size: 15px; color: var(--ink-2); }
 .flag.sup.ready { background: var(--convert); color: var(--ground); }
+
+/* split decks: the clash hand shown for reference during the neutral step */
+.hand.small-hand { opacity: .8; }
+.hud-row.neutral-row { border-top: 1px dashed var(--line-2); padding-top: 6px; }

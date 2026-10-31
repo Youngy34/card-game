@@ -54,7 +54,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${M.WHO16[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP · ${deckSize(r.fighter)} cards${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP · ${splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
@@ -162,6 +162,11 @@ function Hud16({ X, who, m }) {
       <span class="count"><b>${X.discard.length}</b> discarded${top ? html`<span class="muted"> · top: ${top.burned ? 'a burned card' : X.f.cards[top.i].name}</span>` : null}</span>
       ${X.reshuffles ? html`<span class="count muted">reshuffled ${X.reshuffles}×</span>` : null}
     </div>
+    ${X.nhand ? html`<div class="hud-row small neutral-row">
+      <span class="count"><b>${X.nhand.length}</b> neutral in hand</span>
+      <span class="count"><b>${X.ndeck.length}</b> in neutral deck</span>
+      <span class="count"><b>${X.ndiscard.length}</b> neutral discarded${X.ndiscard.length ? html`<span class="muted"> · top: ${X.f.cards[X.ndiscard[X.ndiscard.length - 1]].name}</span>` : null}</span>
+    </div>` : null}
   </section>`
 }
 
@@ -215,8 +220,13 @@ function ClashView({ m, clash, names, prefs }) {
     </div>` : null}`
 }
 
+// A deck's size, as clash and neutral cards
+const splitSize = f => { const all = deckSize(f), n = (f.cards || []).filter(c => c.type === 'neutral').reduce((t, c) => t + (c.copies || 0), 0); return `${all - n} clash + ${n} neutral cards` }
+
 // The neutral step's options, in words
-export const neutralRule = R => R.focusDraw
+export const neutralRule = R => R.splitDecks
+  ? `split decks: play one of your ${R.neutralHand ?? 3} neutral cards each neutral step, and a clash card if you have one you can play`
+  : R.focusDraw
   ? `neutral step: a neutral card, or Focus (draw a card${(R.focusMeter ?? 0) > 0 ? ` and gain ${R.focusMeter} meter` : ''})${(R.burnMax ?? 0) > 0 ? `, or burn up to ${R.burnMax}` : ''}`
   : `neutral step: a neutral card, the Breather (draw a card)${(R.focusMeter ?? 0) > 0 ? `, or Focus (gain ${R.focusMeter} meter)` : ''}${(R.burnMax ?? 0) > 0 ? `, or burn up to ${R.burnMax}` : ''}`
 
@@ -247,6 +257,17 @@ function Action16({ m, setM, side, prefs, names, who }) {
         <div class="hand">${hand.map(h => html`<div key=${h.pos}><${Card16} as="button" card=${h.c.src} cls=${cx(burn.includes(h.pos) && 'selected')} onClick=${() => toggle(h.pos)} /></div>`)}</div>`
     }
     const full = X.meter >= (R.meterMax ?? 4)
+    if (o.split) {
+      const ng = M.handGroups(X, new Set(o.neutrals), null, X.nhand)
+      const clashGroups = M.handGroups(X)
+      return html`<div class="spread"><h3>${youName} neutral card · Round ${m.G.round}</h3>
+          <div class="actions"><button class="btn" disabled=${sel === null} onClick=${() => setM(M.chooseNeutral(m, side, { kind: 'neutral', i: sel }))}>Play ${sel !== null && typeof sel === 'number' ? X.f.cards[sel].name : 'a neutral card'}</button></div></div>
+        ${Notes}
+        <p class="small muted">Pick one of your neutral cards. Meter ${X.meter} of ${R.meterMax ?? 4}${full ? ' (full)' : ''}.</p>
+        <div class="hand neutral-hand">${ng.map(g => html`<div key=${'n' + g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} cls=${cx(sel === g.i && 'selected')} onClick=${() => setSel(g.i)} /></div>`)}</div>
+        <span class="label">Your clash hand · ${X.hand.length}</span>
+        <div class="hand small-hand">${clashGroups.map(g => html`<div key=${'c' + g.i}><${Card16} card=${g.c.src} count=${g.n > 1 ? g.n : null} /></div>`)}</div>`
+    }
     return html`<div class="spread"><h3>${youName} neutral action · Round ${m.G.round}</h3></div>
       ${Notes}
       <div class="actions">
@@ -313,9 +334,12 @@ function Action16({ m, setM, side, prefs, names, who }) {
 
 function HandView({ X, title }) {
   const groups = M.handGroups(X)
+  const ng = X.nhand ? M.handGroups(X, null, null, X.nhand) : []
   return html`<div class="stack" style=${{ gap: '8px' }}>
     <span class="label">${title} · ${X.hand.length}</span>
     <div class="hand">${groups.map(g => html`<div key=${g.i}><${Card16} card=${g.c.src} count=${g.n > 1 ? g.n : null} /></div>`)}</div>
+    ${X.nhand ? html`<span class="label">Neutral · ${X.nhand.length}</span>
+    <div class="hand">${ng.map(g => html`<div key=${'n' + g.i}><${Card16} card=${g.c.src} count=${g.n > 1 ? g.n : null} /></div>`)}</div>` : null}
   </div>`
 }
 
@@ -346,6 +370,11 @@ function DeckPanel({ X, title, mine }) {
   for (const i of X.hand) n[i].hand++
   for (const i of X.deck) n[i].deck++
   for (const d of X.discard) n[d.i][d.burned ? 'burned' : 'discard']++
+  if (X.nhand) {
+    for (const i of X.nhand) n[i].hand++
+    for (const i of X.ndeck) n[i].deck++
+    for (const i of [...X.ndiscard, ...X.nused]) n[i].discard++
+  }
   return html`<details class="panel details" open=${open} onToggle=${e => setOpen(e.target.open)}>
     <summary class="spread"><h3>${title}</h3><span class="small muted">${open ? 'Hide' : 'Show'}</span></summary>
     ${open ? html`<div class="stack" style=${{ marginTop: '12px', gap: '6px' }}>

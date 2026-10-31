@@ -42,7 +42,7 @@ export function roundRecord16(n, before, G, neutral) {
     outcome: c.outcome, winner: c.winner,
     speeds: ev.find(e => e.kind === 'speeds')?.speeds || null,
     follow: c.follow, combo: c.combo, offered: c.offered || {},
-    starterWon: c.winner >= 0 && ['triangle', 'speed', 'tie', 'unopposed'].includes(c.outcome) && !!card16(c.winner === 0 ? G.A : G.B, c.picks[c.winner])?.starter,
+    starterWon: c.winner >= 0 && ['triangle', 'armor', 'speed', 'tie', 'unopposed'].includes(c.outcome) && !!card16(c.winner === 0 ? G.A : G.B, c.picks[c.winner])?.starter,
     statuses: [statusList(G.A.next), statusList(G.B.next)],
     dmg, before, after: [snap16(G.A), snap16(G.B)],
     quiet: before[0].hp === G.A.hp && before[1].hp === G.B.hp && before[0].pile === G.A.pile && before[1].pile === G.B.pile,
@@ -150,7 +150,7 @@ export function summarise16(games, fighters) {
       if (r.outcome === 'speed' || r.outcome === 'cancel' || r.outcome === 'tie') { R.sameType++; if (r.outcome === 'cancel') R.ties++ }
       for (const k of [0, 1]) {
         const a = r.neutral[k]
-        const key = a.kind === 'neutral' ? 'neutral card' : a.kind === 'burn' ? `burn ${a.n}` : a.kind
+        const key = a.kind === 'neutral' ? (a.name || 'neutral card') : a.kind === 'burn' ? `burn ${a.n}` : a.kind
         R.neutral[k][key] = (R.neutral[k][key] || 0) + 1
         if (a.kind === 'burn') R.burned[k] += a.n
         if (a.kind === 'focus') R.focused[k]++

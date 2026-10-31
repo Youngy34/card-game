@@ -176,9 +176,9 @@ export const continueAfterPass = m => ({ ...m, pass: false })
 
 // ---- what the table shows ----------------------------------------------------------
 // A player's hand, grouped: [{ i, c, n, ok, why }]
-export function handGroups(X, okSet = null, why = null) {
+export function handGroups(X, okSet = null, why = null, cards = X.hand) {
   const counts = new Map()
-  for (const i of X.hand) counts.set(i, (counts.get(i) || 0) + 1)
+  for (const i of cards) counts.set(i, (counts.get(i) || 0) + 1)
   return [...counts.entries()].sort((a, b) => a[0] - b[0]).map(([i, n]) => {
     const c = X.f.cards[i]
     const ok = okSet ? okSet.has(i) : true
@@ -218,7 +218,7 @@ export function boardNotes16(m, side) {
     if (s.length) notes.push({ tone, text: `${who} ${who === 'You' ? 'are' : 'is'} ${s.join(', ')} this round.` })
   }
   // their neutral card
-  if (Y.fx && Object.keys(Y.fx).length) notes.push({ text: `${name}'s neutral card is live: ${Object.entries(Y.fx).map(([k, v]) => ({ convertChip: `Converts chip +${v}`, pressureBuild: `Pressures build +${v}`, attackChip: `attacks chip +${v}`, speed: `attacks +${v} speed` })[k]).join(', ')}.` })
+  if (Y.fx && Object.keys(Y.fx).length) notes.push({ text: `${name}'s neutral card is live: ${Object.entries(Y.fx).map(([k, v]) => ({ convertChip: `Converts chip +${v}`, pressureBuild: `Pressures build +${v}`, attackChip: `attacks chip +${v}`, speed: `attacks +${v} speed`, armor: 'Armor: their Converts (not their Super) also beat Pressures', parry: "Parry: if their Guard beats a Pressure, the punish can be any attack, and it can combo" })[k]).join(', ')}.` })
   // Counters
   const counters = could(c => c.counter)
   notes.push({ text: `${name} holds ${Y.hand.length} card${Y.hand.length === 1 ? '' : 's'}, from ${pool} you haven't seen: ${counters} of those are Counters. If you Pressure into their Guard, they punish only with a Counter.` })

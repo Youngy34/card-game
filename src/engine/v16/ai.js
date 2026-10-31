@@ -191,6 +191,12 @@ export function burnOrder(X) {
 export function neutralActions16(X, rules, ban = null) {
   const o = neutralOptions16(X, rules)
   if (o.skip) return [null]
+  if (o.split) {
+    // Split decks: a neutral card from the neutral hand must be played. ban (testing only) may name a card.
+    const acts = o.neutrals.map(i => ({ kind: 'neutral', i }))
+    const kept = acts.filter(a => X.f.cards[a.i].name !== ban)
+    return kept.length ? kept : acts.length ? acts : [null]
+  }
   const acts = rules?.focusDraw ? [] : [{ kind: 'draw' }]
   if (o.canFocus && (ban !== 'focus' || rules?.focusDraw)) acts.push({ kind: 'focus' })
   if (ban !== 'neutral') for (const i of o.neutrals) acts.push({ kind: 'neutral', i })
@@ -214,10 +220,16 @@ export function afterNeutral(G, side, act, rng) {
     if (R.oneReveal) X.pendingDraw = 1
     else if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])      // it doesn't know its deck order
   } else if (act.kind === 'neutral') {
-    X.hand.splice(X.hand.lastIndexOf(act.i), 1)
-    for (const [k, v] of Object.entries(X.f.cards[act.i].thisRound || {})) X.fx[k] = (X.fx[k] || 0) + v
+    const c = X.f.cards[act.i]
+    if (X.nhand) { X.nhand = X.nhand.slice(); X.nhand.splice(X.nhand.lastIndexOf(act.i), 1) }
+    else X.hand.splice(X.hand.lastIndexOf(act.i), 1)
+    for (const [k, v] of Object.entries(c.thisRound || {})) X.fx[k] = (X.fx[k] || 0) + v
     const superDone = R.superUses > 0 && X.supersUsed >= R.superUses
-    if (!superDone) gain(Math.max(0, Math.min(R.neutralMeter || 0, meterMax - X.meter)))
+    if (!superDone) gain(Math.max(0, Math.min((R.neutralMeter || 0) + (c.now?.meter || 0), meterMax - X.meter)))
+    for (let n = 0; n < (c.now?.draw || 0); n++) {
+      if (R.oneReveal) X.pendingDraw = (X.pendingDraw || 0) + 1
+      else if (X.deck.length) X.hand.push(X.deck[Math.floor(rng() * X.deck.length)])     // it doesn't know its deck order
+    }
   } else if (act.kind === 'focus') {
     const superDone = R.superUses > 0 && X.supersUsed >= R.superUses
     if (!superDone) gain(Math.max(0, Math.min(R.focusMeter ?? 0, meterMax - X.meter)))

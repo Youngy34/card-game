@@ -48,9 +48,16 @@ export const THIS_ROUND = {
   pressureBuild: { label: 'Pressures build', line: n => `This round, your Pressures build +${n}.` },
   attackChip: { label: 'Attacks chip', line: n => `This round, your attacks chip +${n}.` },
   speed: { label: 'Attack speed', line: n => `This round, your attacks are +${n} speed.` },
+  armor: { label: 'Armor', line: () => 'This round, your Converts (not your Super) also beat Pressures.' },
+  parry: { label: 'Parry', line: () => 'This round, if your Guard beats a Pressure, your follow-up can be any attack, and it can start a combo.' },
+}
+// Neutral-card effects that happen as soon as it's revealed
+export const NOW = {
+  draw: { label: 'Draw', line: n => `Draw ${n === 1 ? 'a' : n} clash card${n === 1 ? '' : 's'}.` },
+  meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'art', 'flavour', 'notes']
 
 const isInt = v => Number.isInteger(v)
 const statusName = s => (typeof s === 'string' ? STATUSES[s]?.label : s && s.lock ? `Lock ${LABEL16[LOCKABLE[s.lock]]}` : null)
@@ -68,6 +75,7 @@ export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
   if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
+  if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' '))
   if (c.thisRound) for (const [k, v] of Object.entries(c.thisRound)) if (THIS_ROUND[k] && v) text.push(THIS_ROUND[k].line(v))
   if (c.onHit) text.push(typeof c.onHit === 'string' ? `On hit: ${STATUSES[c.onHit]?.label}.` : `On hit: ${statusText(c.onHit)} (no ${LABEL16[LOCKABLE[c.onHit.lock]]}s for them next round).`)
   if (isSuper && c.meter) cost.push(`${c.meter} meter.`)
@@ -116,7 +124,11 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.thisRound !== undefined) {
     if (t !== 'N') E('Only neutral cards have this-round effects.')
     else if (!c.thisRound || typeof c.thisRound !== 'object' || Object.keys(c.thisRound).some(k => !THIS_ROUND[k] || !isInt(c.thisRound[k]) || c.thisRound[k] < 1)) E(`thisRound takes ${Object.keys(THIS_ROUND).join(', ')}, each a whole number of 1 or more.`)
-  } else if (t === 'N') W('This neutral card does nothing.')
+  } else if (t === 'N' && !c.now) W('This neutral card does nothing.')
+  if (c.now !== undefined) {
+    if (t !== 'N') E('Only neutral cards have reveal effects (now).')
+    else if (!c.now || typeof c.now !== 'object' || Object.keys(c.now).some(k => !NOW[k] || !isInt(c.now[k]) || c.now[k] < 1)) E(`now takes ${Object.keys(NOW).join(', ')}, each a whole number of 1 or more.`)
+  }
   return { errors, warnings }
 }
 
@@ -144,7 +156,11 @@ export function validateFighter16(f) {
   const size = deckSize(f)
   if (size < 12 || size > 40) errors.push({ where: 'Deck', msg: `A deck is 12–40 cards (this has ${size}).` })
   const counters = f.cards.reduce((s, c) => s + ((c?.icons || []).includes('counter') ? c.copies || 0 : 0), 0)
-  if (size && counters / size < 0.25) warnings.push({ where: 'Deck', msg: `${counters} Counters in ${size} cards: the rules ask for at least 6 in 24, so a Guard usually has a punish.` })
+  const neutral = f.cards.reduce((s, c) => s + (T16[c?.type] === 'N' && isInt(c?.copies) ? c.copies : 0), 0)
+  const clash = size - neutral
+  if (clash && counters / clash < 0.3) warnings.push({ where: 'Clash deck', msg: `${counters} Counters in ${clash} clash cards: aim for about a third, so a Guard usually has a punish.` })
+  if (neutral < 4) errors.push({ where: 'Neutral deck', msg: `Needs at least 4 neutral cards (a hand of 3, and one to draw); this has ${neutral}.` })
+  else if (neutral < 6) warnings.push({ where: 'Neutral deck', msg: `${neutral} neutral cards cycle very fast with a neutral hand of 3.` })
   for (const t of ['P', 'C', 'R']) if (!f.cards.some(c => T16[c?.type] === t)) warnings.push({ where: 'Deck', msg: `No ${LABEL16[t]}s.` })
   return { errors, warnings }
 }
@@ -159,7 +175,7 @@ function norm(c, isSuper) {
     build: c.build ?? 0, chip: c.chip ?? 0, copies: isSuper ? 0 : c.copies,
     starter: icons.has('starter'), linker: icons.has('linker'), ender: icons.has('ender'), counter: icons.has('counter'),
     onHit: c.onHit ?? null, cost: c.cost ?? null, onLossSelf: c.onLossSelf ?? 0,
-    meter: isSuper ? (c.meter ?? 3) : 0, thisRound: c.thisRound ?? null,
+    meter: isSuper ? (c.meter ?? 3) : 0, thisRound: c.thisRound ?? null, now: c.now ?? null,
     sup: isSuper, src: c,
   }
 }

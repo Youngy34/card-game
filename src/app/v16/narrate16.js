@@ -10,7 +10,7 @@ export function neutralLine16(a, f) {
     case 'focus': return a.drew !== undefined
       ? `focused: ${a.drew ? 'drew a card' : 'no card to draw'}${a.n ? ` and gained ${a.n} meter` : ' (meter full)'}`
       : `focused: gained ${a.n} meter`
-    case 'neutral': return `played ${a.name}`
+    case 'neutral': return `played ${a.name}${a.drew !== undefined || a.meter ? `: ${[a.drew !== undefined ? (a.drew ? 'drew a clash card' : 'no clash card to draw') : null, a.meter ? `gained ${a.meter} meter` : (a.drew !== undefined ? 'meter full' : null)].filter(Boolean).join(', ')}` : ''}`
     case 'burn': return `burned ${a.n} card${a.n === 1 ? '' : 's'} for meter`
     case 'skip': return `${a.why === 'Dizzy' ? 'is Dizzy' : 'is knocked down'}: no neutral action`
     case 'none': return 'did nothing'
@@ -24,6 +24,7 @@ export function outcomeTitle16(c, names) {
   const [a, b] = c.names
   switch (c.outcome) {
     case 'none': return { title: 'Nobody plays', sub: 'Both players played nothing.' }
+    case 'armor': return { title: `${c.names[c.winner]} armors through ${c.names[1 - c.winner]}`, sub: 'Armor: this round, a Convert also beats a Pressure.' }
     case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
     case 'guards': return { title: 'Both Guard', sub: 'Two Guards: each player clears their own pile.' }
     case 'cancel': return { title: `${a} and ${b} tie`, sub: 'Same type, same speed: the tie cancels and neither lands.' }
