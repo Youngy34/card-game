@@ -10,7 +10,10 @@ export function neutralLine16(a, f) {
     case 'focus': return a.drew !== undefined
       ? `focused: ${a.drew ? 'drew a card' : 'no card to draw'}${a.n ? ` and gained ${a.n} meter` : ' (meter full)'}`
       : `focused: gained ${a.n} meter`
-    case 'neutral': return `played ${a.name}${a.drew !== undefined || a.meter ? `: ${[a.drew !== undefined ? (a.drew ? 'drew a clash card' : 'no clash card to draw') : null, a.meter ? `gained ${a.meter} meter` : (a.drew !== undefined ? 'meter full' : null)].filter(Boolean).join(', ')}` : ''}`
+    case 'neutral': if (a.pending) return `played ${a.name}`
+      if (a.took) return `played ${a.name}: took ${a.took} from the table (${a.cost} meter)${a.sup ? ': their Super is live' : ''}`
+      if (a.fetched) return `played ${a.name}: put ${a.fetched} from their discard pile into their hand`
+      return `played ${a.name}${a.drew !== undefined || a.meter ? `: ${[a.drew !== undefined ? (a.drew ? 'drew a clash card' : 'no clash card to draw') : null, a.meter ? `gained ${a.meter} meter` : (a.drew !== undefined ? 'meter full' : null)].filter(Boolean).join(', ')}` : ''}`
     case 'burn': return `burned ${a.n} card${a.n === 1 ? '' : 's'} for meter`
     case 'skip': return `${a.why === 'Dizzy' ? 'is Dizzy' : 'is knocked down'}: no neutral action`
     case 'none': return 'did nothing'
@@ -29,7 +32,7 @@ export function outcomeTitle16(c, names) {
     case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: c.voided?.[1 - c.winner] ? `${names[1 - c.winner]}'s ${c.names[1 - c.winner]} was voided (Locked), so it lands unopposed.` : `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
     case 'guards': return { title: 'Both Guard', sub: 'Two Guards: each player clears their own pile.' }
     case 'cancel': return { title: `${a} and ${b} tie`, sub: 'Same type, same speed: the tie cancels and neither lands.' }
-    case 'tie': return { title: `${c.names[c.winner]} wins the tie`, sub: `Same speed: the tie goes to ${names[c.winner]}, on less HP.` }
+    case 'tie': return { title: `${c.names[c.winner]} wins the tie`, sub: `Same speed: the tie goes to ${names[c.winner]}.` }
     case 'speed': {
       const sp = c.events.find(e => e.kind === 'speeds')?.speeds || []
       return { title: `${c.names[c.winner]} is faster`, sub: `Two ${LABEL16[c.types[0]]}s: speed ${sp[c.winner]} beats ${sp[1 - c.winner]}.` }
@@ -55,7 +58,9 @@ export function narrate16(ev, names) {
     else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.`)
     else if (e.kind === 'prevented') out.push(`${who}'s ${e.by} stops the ${typeof e.status === 'string' ? (STATUSES[e.status]?.label || e.status).toLowerCase() : 'Lock'}, and is discarded.`)
     else if (e.kind === 'voided') out.push(`${who}'s ${e.name} is voided: their ${LABEL16[e.t]}s are Locked.`)
-    else if (e.kind === 'play' && e.sup) out.push(`${who} spends meter on ${e.name}.`)
+    else if (e.kind === 'play' && e.sup) out.push(e.gone ? `${who} plays their Super, ${e.name}: it's used up for the game.` : `${who} spends meter on ${e.name}.`)
+    else if (e.kind === 'confiscate') out.push(`${e.from} Confiscates: ${who} discards ${e.n} clash card${e.n === 1 ? '' : 's'} of their choice.`)
+    else if (e.kind === 'ended') out.push(`${them}'s ${e.by} hits: ${who}'s ${e.name} is broken and discarded.`)
   }
   return out
 }

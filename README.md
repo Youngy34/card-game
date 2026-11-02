@@ -17,10 +17,15 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
+| `v17` | Yomi Playtest v17 | The v17 Benchmark and the Warden (`data/v17/`). Rules v17 run on the v16 engine and screens with four switches on: `initiative`, `tableCards`, `refillAtReveal` (off) and `speedTie: "initiative"`. See `docs/rules-overview-17.md` and `docs/playtest-app-v17-guide.md` | `node tools/build-artifact.mjs --edition v17` |
 | `v16` | Yomi Playtest v16 | The v16 Benchmark deck (`data/v16/`). Rules v16 (decks, the neutral phase, combos, statuses, meter) run on their own engine in `src/engine/v16/` and their own screens in `src/app/v16/` | `node tools/build-artifact.mjs --edition v16` |
 | `v15` | Yomi Playtest v15 | The v15 Benchmark, Benchmark C3/4 (Converts chip 3 and 4), the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
 
-Locally, open `index.html?edition=v15` (or `?edition=v16`) for those editions.
+Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
+
+### Rules v17
+
+`docs/rules-overview-17.md` (also in the Claude project). v16's game with an initiative token (`G.init`, passed every round: it wins speed ties and goes first wherever players act in turn), specials and a single-use Super on the table (`X.table`, `X.superAt`), taken by Read's option or returned by Charge's (`neutralModes16`), and the neutral refill at the end of the round. Checks: `node tools/test17.mjs`, `node tools/test16-warden.mjs`, `node tools/smoke/browser17.cjs dist/yomi-playtest-v17.html <vendor dir>`, and sims with `node tools/sim16.mjs game data/v17/warden.json data/v17/benchmark.json -n 300 --settings v17/settings.json`.
 
 ### Rules v16
 

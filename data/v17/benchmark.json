@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 3,
+  "rules": 16,
+  "id": "benchmark17",
+  "name": "Benchmark",
+  "epithet": "Reference",
+  "concept": "The plain v17 fighter: a 20-card clash deck, the shared neutral core (Charge \u00d72, Read \u00d72) plus Rush, Wind-Up, Parry and Breakfall, two specials on the table (Rising Strike, Breaker) and a single-use Super.",
+  "hp": 38,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 2,
+      "chip": 1,
+      "copies": 4,
+      "icons": [
+        "starter",
+        "linker"
+      ]
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Sweep",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "counter"
+      ]
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ]
+    },
+    {
+      "name": "Guard",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 6
+    },
+    {
+      "name": "Charge",
+      "type": "neutral",
+      "copies": 2,
+      "now": {
+        "meter": 2
+      },
+      "flavour": "Build the bar.",
+      "orFetch": true
+    },
+    {
+      "name": "Read",
+      "type": "neutral",
+      "copies": 2,
+      "now": {
+        "draw": 1
+      },
+      "flavour": "Back off, watch, and reload.",
+      "orSelect": true
+    },
+    {
+      "name": "Rush",
+      "type": "neutral",
+      "copies": 2,
+      "thisRound": {
+        "pressureBuild": 3
+      },
+      "flavour": "Step in and lean on them."
+    },
+    {
+      "name": "Wind-Up",
+      "type": "neutral",
+      "copies": 2,
+      "thisRound": {
+        "convertChip": 3
+      },
+      "flavour": "Load the heavy one."
+    },
+    {
+      "name": "Parry",
+      "type": "neutral",
+      "copies": 1,
+      "thisRound": {
+        "parry": 1
+      },
+      "flavour": "Read the strike, turn it aside, and open them up."
+    },
+    {
+      "name": "Breakfall",
+      "type": "neutral",
+      "copies": 1,
+      "stays": true,
+      "prevent": "knockdown",
+      "flavour": "Roll out of it and stay on your feet."
+    },
+    {
+      "name": "Rising Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 19,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "Faster than anything they can throw out."
+    },
+    {
+      "name": "Breaker",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A quick heavy that cracks any guard."
+    }
+  ],
+  "super": {
+    "name": "Overdrive",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 10,
+    "chip": 5,
+    "icons": [
+      "ender"
+    ],
+    "meter": 2,
+    "onHit": "knockdown",
+    "flavour": "Once a game: ends a combo with a cash and a knockdown."
+  },
+  "notes": "Rules v17 (rules-overview 17.md), 1 November 2026."
+}

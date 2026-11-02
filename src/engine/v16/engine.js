@@ -42,7 +42,23 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 // card that stays in play per player (a new one replaces it).
 export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
-  splitDecks: true, neutralHand: 3 }
+  splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
+  initiative: false, tableCards: false, refillAtReveal: false }
+// Rules v17 switches (rules-overview 17.md), off for v16:
+//   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
+//     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
+//     Confiscate payments, discarding down to the hand limit.
+//   tableCards: a fighter's specials (cards marked special) and Super start face up on the table.
+//     Read (orSelect) may take one into your hand instead of drawing, paying its meter; Charge
+//     (orFetch) may put a special from your discard pile into your hand instead of gaining meter.
+//     A taken special is an ordinary clash card from then on. The Super, once taken, costs
+//     nothing to play and is removed from the game when played.
+//   refillAtReveal: the neutral hand is refilled as soon as the neutral cards resolve.
+// greyPerRound: grey each player adds to their own pile in the draw step (1 November: 1,
+//   with HP raised about a quarter, so Converts and Guards always have grey to work on).
+// confiscateFloor: Confiscate (the Warden) never takes a player below this many clash cards.
+// Test switches, off unless set: lateGrey (grey from a clash lands when it ends) and
+// guardHalf (a Guard clears half the pile, rounded up). Both tried 1 November, not adopted.
 export const STAGGER = 3
 
 // ---- randomness ------------------------------------------------------------
@@ -65,6 +81,7 @@ export function cloneP(X, lite = false) {
   const Y = { ...X, deck: lite ? X.deck : X.deck.slice(), discard: lite ? X.discard : X.discard.slice(), hand: X.hand.slice(),
            st: cloneSt(X.st), next: cloneSt(X.next), fx: { ...X.fx }, used: X.used.slice() }
   if (X.nhand) { Y.nhand = X.nhand.slice(); Y.ndeck = lite ? X.ndeck : X.ndeck.slice(); Y.ndiscard = lite ? X.ndiscard : X.ndiscard.slice(); Y.nused = X.nused.slice() }
+  if (X.table) Y.table = X.table.slice()
   return Y
 }
 export const card16 = (X, i) => (i === 'S' ? X.f.sup : X.f.cards[i])
@@ -121,15 +138,20 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
   const R = { s: seed >>> 0 }
   const mk = f => {
     const split = !!rules.splitDecks
-    const clash = split ? f.deck.filter(i => f.cards[i].t !== 'N') : f.deck.slice()
+    const clash = (split ? f.deck.filter(i => f.cards[i].t !== 'N') : f.deck.slice()).filter(i => !(rules.tableCards && f.cards[i].special))
     const X = { f, hp: f.hp, pile: 0, meter: 0, deck: shuffle(clash, R), hand: [], discard: [], st: {}, next: {}, fx: {}, used: [], reshuffles: 0, supersUsed: 0 }
+    if (rules.tableCards) {
+      X.table = f.cards.map((c, i) => (c.special ? i : null)).filter(i => i !== null)   // specials still on the table
+      X.superAt = f.sup ? 'table' : null                                               // 'table' | 'hand' | 'gone'
+    }
     if (split) { X.ndeck = shuffle(f.deck.filter(i => f.cards[i].t === 'N'), R); X.nhand = []; X.ndiscard = []; X.nused = [] }
     drawCards(X, rules.openingHand, R)
     if (split) drawNeutral(X, rules.neutralHand ?? 3, R)
     return X
   }
   const A = mk(fa), B = mk(fb)
-  return { A, B, round: 1, rules, rng: R.s, phase: 'neutral', result: null, pending: null, clash: null, neutral: null }
+  const init = rules.initiative ? (rnd(R) < 0.5 ? 0 : 1) : null
+  return { A, B, round: 1, rules, rng: R.s, phase: 'neutral', result: null, pending: null, clash: null, neutral: null, init }
 }
 
 // ---- 1. neutral phase ----------------------------------------------------------
@@ -149,7 +171,23 @@ export function neutralOptions16(X, rules = DEFAULT_RULES16) {
   return { skip: false, neutrals, maxBurn, canDraw: true, canFocus, superDone }
 }
 
-// acts: [actA, actB], each null (nothing), { kind: 'draw' } (the Breather), { kind: 'focus' }, { kind: 'neutral', i }
+// Rules v17: what a neutral card can do instead of its usual effect. Returns the options for
+// card i: 'base' (its printed effect), { take: j } (Read: take special j, or 'S' for the Super,
+// from the table, paying its meter) and { fetch: j } (Charge: put special j from your discard
+// pile into your hand).
+export function neutralModes16(X, i, rules) {
+  const c = X.f.cards[i], out = ['base']
+  if (!rules?.tableCards || !c) return out
+  if (c.orSelect) {
+    for (const j of X.table || []) if (X.meter >= X.f.cards[j].meter) out.push({ take: j })
+    if (X.superAt === 'table' && X.f.sup && X.meter >= X.f.sup.meter) out.push({ take: 'S' })
+  }
+  if (c.orFetch) for (const j of new Set(X.discard.filter(d => X.f.cards[d.i].special).map(d => d.i))) out.push({ fetch: j })
+  return out
+}
+export const tableCost = (X, j) => (j === 'S' ? X.f.sup.meter : X.f.cards[j].meter)
+
+// acts: [actA, actB], each null (nothing), { kind: 'draw' } (the Breather), { kind: 'focus' }, { kind: 'neutral', i, opt }
 // or { kind: 'burn', cards: [i, ...] } (only with burnMax above 0)
 export function applyNeutral16(G, acts) {
   const R = { s: G.rng }
@@ -172,6 +210,23 @@ export function applyNeutral16(G, acts) {
       }
       else { takeFromHand(X, act.i); X.used.push(act.i) }
       for (const [key, v] of Object.entries(c.thisRound || {})) X.fx[key] = (X.fx[key] || 0) + v
+      const opt = act.opt && act.opt !== 'base' ? act.opt : null
+      if (opt && !neutralModes16(X, act.i, G.rules).some(o => o !== 'base' && (o.take === opt.take && o.fetch === opt.fetch))) throw new Error(`${c.name} can't do that`)
+      if (opt?.take !== undefined) {
+        // Read: take a special or the Super from the table instead of drawing, paying its meter
+        X.meter -= tableCost(X, opt.take)
+        if (opt.take === 'S') X.superAt = 'hand'
+        else { X.table = X.table.filter(j => j !== opt.take); X.hand.push(opt.take) }
+        done.push({ kind: 'neutral', i: act.i, name: c.name, took: opt.take === 'S' ? X.f.sup.name : X.f.cards[opt.take].name, cost: tableCost(X, opt.take), sup: opt.take === 'S' })
+        continue
+      }
+      if (opt?.fetch !== undefined) {
+        // Charge: put a special from your discard pile into your hand instead of gaining meter
+        const at = X.discard.findIndex(d => d.i === opt.fetch)
+        X.discard.splice(at, 1); X.hand.push(opt.fetch)
+        done.push({ kind: 'neutral', i: act.i, name: c.name, fetched: X.f.cards[opt.fetch].name })
+        continue
+      }
       const superDone = G.rules.superUses > 0 && X.supersUsed >= G.rules.superUses
       const m = superDone ? 0 : Math.max(0, Math.min((G.rules.neutralMeter || 0) + (c.now?.meter || 0), meterMax - X.meter))
       gainMeter(X, m, G.rules)
@@ -193,6 +248,21 @@ export function applyNeutral16(G, acts) {
       done.push({ kind: 'burn', n, cards })
     } else done.push(act)
   }
+  // At the start of the clash step (after every On reveal effect): Shakedown's Confiscate
+  FLOOR = confiscateFloor(G.rules)
+  for (const k of [0, 1]) {
+    const a = done[k]
+    if (a?.kind !== 'neutral') continue
+    const c = P[k].f.cards[a.i]
+    for (let n = c.atClash?.confiscate || 0; n > 0; n--) owe(P[1 - k], 1, null, 1 - k, c.name)
+  }
+  // Rules v17: refill the neutral hand now (the draw step then has nothing to refill)
+  if (G.rules.refillAtReveal) for (const X of P) {
+    if (!X.nhand) continue
+    for (const i of X.nused) X.ndiscard.push(i)
+    X.nused = []
+    drawNeutral(X, Math.max(0, (G.rules.neutralHand ?? 3) - X.nhand.length), R)
+  }
   return { ...G, A: P[0], B: P[1], rng: R.s, phase: 'clash', neutral: done }
 }
 
@@ -204,9 +274,10 @@ function gainMeter(X, n, rules) {
 
 // ---- 2. clash ----------------------------------------------------------------
 // The distinct cards a player may set as their clash card ('S' = the Super)
-export const superReady = (X, rules) => !!X.f.sup && X.meter >= X.f.sup.meter && !(rules?.superUses > 0 && X.supersUsed >= rules.superUses)
+export const superReady = (X, rules) => (rules?.tableCards ? X.superAt === 'hand'
+  : !!X.f.sup && X.meter >= X.f.sup.meter && !(rules?.superUses > 0 && X.supersUsed >= rules.superUses))
 // …and playable this round (with one reveal, this round's meter isn't there yet)
-const superPlayable = (X, rules) => superReady(X, rules) && X.meter - (X.pendingMeter || 0) >= X.f.sup.meter
+const superPlayable = (X, rules) => superReady(X, rules) && (rules?.tableCards || X.meter - (X.pendingMeter || 0) >= X.f.sup.meter)
 
 // Every choice at the clash: the legal cards, plus the blank (null) where it's allowed.
 // A Dizzy player has no choice: they play nothing.
@@ -264,37 +335,78 @@ const bent = (X, c) => (c.t === 'C' && !!X.fx.armor) || (c.t === 'P' && !!X.fx.m
 export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0)
 
 // Who wins a same-type duel at equal speed: 0, 1, or -1 (cancel)
-export function tieWinner16(A, B, rules) {
+export function tieWinner16(A, B, rules, init = null) {
+  if (rules.speedTie === 'initiative' && (init === 0 || init === 1)) return init
   if (rules.speedTie !== 'lowhp' || A.hp === B.hp) return -1
   return A.hp < B.hp ? 0 : 1
 }
 
-function play(X, i, ev, side, how) {
-  if (i === 'S') { X.meter -= X.f.sup.meter; X.supersUsed = (X.supersUsed || 0) + 1 }
+function play(X, i, ev, side, how, rules = {}) {
+  if (i === 'S' && rules.tableCards) { X.superAt = 'gone'; X.supersUsed = (X.supersUsed || 0) + 1 }       // paid when taken; used once
+  else if (i === 'S') { X.meter -= X.f.sup.meter; X.supersUsed = (X.supersUsed || 0) + 1 }
   else takeFromHand(X, i)
   X.used.push(i)
   const c = card16(X, i)
   if (c.cost) applyStatus(X.next, c.cost)
-  ev.push({ side, kind: 'play', how, name: c.name, t: c.t, sup: i === 'S' })
+  ev.push({ side, kind: 'play', how, name: c.name, t: c.t, sup: i === 'S', ...(i === 'S' && rules.tableCards ? { gone: true } : {}) })
   return c
 }
 
+// Confiscate: Y discards n clash cards of their choice, never going below the floor
+// (discardDownTo is exact: down to that many). Recorded as owed; paid with confiscate16.
+export const confiscateFloor = rules => rules?.confiscateFloor ?? 2
+let FLOOR = 2
+function owe(Y, n, ev, side, from, down = false) {
+  const h = Y.hand.length - (Y.owe || 0)
+  const k = down ? Math.min(n, h) : Math.min(n, Math.max(0, h - FLOOR))
+  if (k <= 0) return
+  Y.owe = (Y.owe || 0) + k
+  ev?.push({ side, kind: 'confiscate', n: k, from })
+}
+
+// The owed discards: a player discards the cards they choose (indices from hand)
+export function confiscate16(G, side, cards) {
+  const X = cloneP(side === 0 ? G.A : G.B)
+  if (cards.length !== (X.owe || 0)) throw new Error(`discard exactly ${X.owe || 0}`)
+  for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: false, confiscated: true }) }
+  X.confiscated = (X.confiscated || 0) + cards.length
+  X.owe = 0
+  return { ...G, [side === 0 ? 'A' : 'B']: X }
+}
+export const owes = G => [G.A.owe || 0, G.B.owe || 0]
+// The order players act in wherever an order is needed: the initiative holder first
+export const initOrder = G => (G.init === 1 ? [1, 0] : [0, 1])
+
 // One card resolving: its type effect, then its On hit status
-function hit(X, Y, c, ev, side, how) {
+function hit(X, Y, c, ev, side, how, rules = {}) {
   const e = { side, kind: 'hit', how, name: c.name, t: c.t }
   if (c.t === 'P') {
     e.build = c.build + (X.fx.pressureBuild || 0)
     e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0)
-    Y.pile += e.build; Y.hp -= e.chip
+    // lateGrey (under test): grey from this clash lands when the clash ends, so an Ender cashes only what was already there
+    if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else Y.pile += e.build
+    Y.hp -= e.chip
   } else if (c.t === 'C') {
     e.cash = Y.pile
     e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0)
     Y.pile = 0; Y.hp -= e.cash + e.chip
   } else if (c.t === 'R') {
-    e.cleared = X.pile; X.pile = 0
+    // guardHalf (under test): a Guard clears half the pile, rounded up, so grey can build across exchanges
+    e.cleared = rules.guardHalf ? Math.ceil(X.pile / 2) : X.pile; X.pile -= e.cleared
     if (c.chip) { e.chip = c.chip; Y.hp -= c.chip }            // a Recover Super's second verb
   }
   ev.push(e)
+  // Confiscate (the Warden): the target owes discards, chosen by them once the clash is over.
+  // Their hand can't change before then, so the floor is checked now.
+  let conf = (c.confiscate || 0) + (c.kind === 'grab' ? (X.fx.grabConfiscate || 0) : 0)
+  for (; conf > 0; conf--) owe(Y, 1, ev, 1 - side, c.name)
+  if (c.discardDownTo != null) { const h = Y.hand.length - (Y.owe || 0); if (h > c.discardDownTo) owe(Y, h - c.discardDownTo, ev, 1 - side, c.name, true) }
+  // A card in play that ends when the opponent's Pressure hits (Shackles)
+  const held = Y.inPlay != null ? Y.f.cards[Y.inPlay] : null
+  if (c.t === 'P' && held?.endsOn === 'pressureHit') {
+    Y.ndiscard = [...Y.ndiscard, Y.inPlay]; Y.inPlay = null
+    ev.push({ side: 1 - side, kind: 'ended', name: held.name, by: c.name })
+  }
   const ward = Y.inPlay != null ? Y.f.cards[Y.inPlay] : null
   if (c.onHit && c.t !== 'N' && ward?.prevent && (ward.prevent === c.onHit || (ward.prevent === 'lock' && c.onHit.lock))) {
     // a card in play (Breakfall) stops the status, and goes to the neutral discard
@@ -312,10 +424,11 @@ const resultOf = (A, B) => { const k = ko(A, B); return k === null ? null : k ==
 // Set both clash cards and resolve the clash. Returns the game waiting on a
 // decision (G.pending: a follow-up, a Linker or an Ender) or with the clash done.
 export function startClash16(G, a, b, lite = false) {
+  FLOOR = confiscateFloor(G.rules)
   const A = cloneP(G.A, lite), B = cloneP(G.B, lite)
   const P = [A, B], ev = []
   const picks = [a ?? null, b ?? null]
-  const played = picks.map((p, k) => (p === null ? null : play(P[k], p, ev, k, 'clash')))
+  const played = picks.map((p, k) => (p === null ? null : play(P[k], p, ev, k, 'clash', G.rules)))
   // Lock: a card of a Locked type is spent but does nothing, as if nothing were played
   const voided = played.map((c, k) => !!c && locked(P[k], c.t))
   voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: 'voided', name: played[k].name, t: played[k].t }) })
@@ -342,16 +455,16 @@ export function startClash16(G, a, b, lite = false) {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
     if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
     else {
-      const tw = tieWinner16(G.A, G.B, G.rules)
+      const tw = tieWinner16(G.A, G.B, G.rules, G.init)
       if (tw < 0) outcome = 'cancel'
       else { winner = tw; outcome = 'tie' }
     }
     ev.push({ kind: 'speeds', speeds: [sa, sb] })
   }
-  if (outcome === 'guards') { hit(A, B, ca, ev, 0, 'clash'); hit(B, A, cb, ev, 1, 'clash') }
+  if (outcome === 'guards') { hit(A, B, ca, ev, 0, 'clash', G.rules); hit(B, A, cb, ev, 1, 'clash', G.rules) }
   else if (winner >= 0) {
     const W = P[winner], L = P[1 - winner]
-    hit(W, L, cards[winner], ev, winner, 'clash')
+    hit(W, L, cards[winner], ev, winner, 'clash', G.rules)
     const lc = cards[1 - winner]
     if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf }) }
   }
@@ -377,20 +490,22 @@ function ask(G, stage, side) {
 }
 
 function finishClash(G) {
+  if (G.A.fresh || G.B.fresh) G = { ...G, A: { ...G.A, pile: G.A.pile + (G.A.fresh || 0), fresh: 0 }, B: { ...G.B, pile: G.B.pile + (G.B.fresh || 0), fresh: 0 } }
   return { ...G, pending: null, clash: { ...G.clash, done: true }, phase: G.result !== null ? 'over' : 'draw' }
 }
 
 // The player answers G.pending: a card index, 'S', or null (none / skip)
 export function decideClash16(G, choice, lite = false) {
   const { stage, side, options } = G.pending
+  FLOOR = confiscateFloor(G.rules)
   if (choice === undefined) choice = null
   if (choice !== null && !options.includes(choice)) throw new Error(`can't play that as a ${stage}`)
   if (choice === null) return stage === 'link' ? ask({ ...G, pending: null }, 'end', side) : finishClash(G)
   const A = cloneP(G.A, lite), B = cloneP(G.B, lite)
   const P = [A, B]
   const ev = G.clash.events.slice()
-  const c = play(P[side], choice, ev, side, stage)
-  hit(P[side], P[1 - side], c, ev, side, stage)
+  const c = play(P[side], choice, ev, side, stage, G.rules)
+  hit(P[side], P[1 - side], c, ev, side, stage, G.rules)
   const clash = { ...G.clash, events: ev }
   if (stage === 'follow') clash.follow = { side, name: c.name, t: c.t }
   else clash.combo = [...clash.combo, { side, stage, name: c.name, t: c.t }]
@@ -410,7 +525,7 @@ export function runClash16(G, a, b, decide, lite = false) {
 
 // ---- 3. draw phase ---------------------------------------------------------------
 // Discard what was used (in the order played; the Super returns beside the deck),
-// draw 1, and work out who must discard down to the hand limit.
+// draw 1, take grey (greyPerRound), and work out who must discard down to the hand limit.
 export function startDraw16(G) {
   const R = { s: G.rng }
   const P = [cloneP(G.A), cloneP(G.B)]
@@ -418,15 +533,23 @@ export function startDraw16(G) {
     for (const i of X.used) if (i !== 'S') X.discard.push({ i, burned: false })
     X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
+    if (G.rules.greyPerRound) X.pile += G.rules.greyPerRound      // everyone takes grey with their draw
     if (X.nhand) {
       for (const i of X.nused) X.ndiscard.push(i)
       X.nused = []
       drawNeutral(X, Math.max(0, (G.rules.neutralHand ?? 3) - X.nhand.length), R)
     }
   }
-  const over = P.map(X => Math.max(0, X.hand.length - (G.rules.handLimit ?? 8)))
+  const over = P.map((X, k) => Math.max(0, X.hand.length - handLimitOf(X, P[1 - k], G.rules)))
   const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over }
   return over.some(n => n > 0) ? g : finishRound16(g)
+}
+
+// A player's clash hand limit: the rule, or lower under the opponent's card in play (Shackles)
+export function handLimitOf(X, Y, rules) {
+  const lim = rules.handLimit ?? 8
+  const held = Y?.inPlay != null ? Y.f.cards[Y.inPlay] : null
+  return held?.capHand ? Math.min(lim, held.capHand) : lim
 }
 
 // A player discards cards (indices from hand) down to the hand limit
@@ -446,7 +569,8 @@ export function finishRound16(G) {
   for (const X of P) { X.st = X.next; X.next = {} }
   const round = G.round + 1
   const result = round > (G.rules.maxRounds ?? 60) ? 0.5 : null
-  return { ...G, A: P[0], B: P[1], round, phase: result === null ? 'neutral' : 'over', result, neutral: null, clash: null, pending: null, discardDown: null }
+  const init = G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init ?? null
+  return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? 'neutral' : 'over', result, neutral: null, clash: null, pending: null, discardDown: null }
 }
 
 // ---- what a player can see -------------------------------------------------------

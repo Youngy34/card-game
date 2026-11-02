@@ -43,7 +43,9 @@ export function Settings16() {
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
-        ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 4.')}
+        ${num('greyPerRound', 0, 3, 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
+        ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
+        ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}
       </div>
@@ -56,6 +58,7 @@ export function Settings16() {
         <select id="s-tie" value=${d.rules.speedTie} onChange=${e => rule({ speedTie: e.target.value })}>
           <option value="cancel">They cancel: neither lands</option>
           <option value="lowhp">The player on less HP wins the tie; on equal HP they cancel</option>
+          ${d.rules.initiative ? html`<option value="initiative">The initiative holder wins the tie (v17)</option>` : null}
         </select></label>
     </fieldset>
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>

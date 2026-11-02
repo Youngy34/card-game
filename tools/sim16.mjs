@@ -22,10 +22,15 @@ const flag = name => { const i = args.indexOf(name); if (i >= 0) { args.splice(i
 const n = +opt('-n', 100), seed = +opt('--seed', 5), tie = opt('--tie', 'cancel'), levels = opt('--levels', 'hard,hard').split(',')
 const json = flag('--json')
 const settings = JSON.parse(fs.readFileSync(`${root}/data/v16/settings.json`, 'utf8'))
-const rules = { ...settings.rules, speedTie: tie }
-for (const k of ['openingHand', 'handLimit', 'meterMax', 'burnMax', 'superUses', 'maxRounds', 'oneReveal', 'neutralMeter', 'burnNeutrals', 'focusMeter']) { const v = opt('--' + k, null); if (v !== null) rules[k] = +v }
+const rules = { ...settings.rules, ...(tie !== 'cancel' ? { speedTie: tie } : {}) }
+const setFile = opt('--settings', null)              // e.g. v17/settings.json
+if (setFile) Object.assign(rules, JSON.parse(fs.readFileSync(`${root}/data/${setFile}`, 'utf8')).rules)
+// (the settings file first, so flags like --confiscateFloor override it)
+for (const k of ['openingHand', 'handLimit', 'meterMax', 'burnMax', 'superUses', 'maxRounds', 'oneReveal', 'neutralMeter', 'burnNeutrals', 'focusMeter', 'greyPerRound', 'confiscateFloor', 'lateGrey', 'guardHalf', 'initiative', 'tableCards', 'refillAtReveal']) { const v = opt('--' + k, null); if (v !== null) rules[k] = +v }
+const ban = opt('--ban', null)                      // side 0 won't play this neutral card (barred-card tests)
 const W = { ...DEFAULT_W16, ...settings.ai }
 for (const k of Object.keys(DEFAULT_W16)) { const v = opt('--' + k, null); if (v !== null) W[k] = +v }
+if (ban) { W.ban = ban; W.banSide = 0 }
 const mode = args[0]
 
 function load(name) {
@@ -62,6 +67,11 @@ function report(r) {
   console.log(`Guard beats Pressure ${pct(r.guardWins / R)} of rounds: follow-up ${pct(r.follows / Math.max(r.guardWins, 1))} (${pct(r.followC / Math.max(r.follows, 1))} Converts, ${(r.followDmg / Math.max(r.follows, 1)).toFixed(1)} HP each), no Counter in hand ${pct(r.guardWinsNoCounter / Math.max(r.guardWins, 1))}`)
   console.log(`Starter wins ${pct(r.starterWins / R)} of rounds; combos ${pct(r.combos / R)} of rounds, ${(r.comboLen / Math.max(r.combos, 1)).toFixed(2)} cards, ${(r.comboDmg / Math.max(r.combos, 1)).toFixed(1)} HP each; ends: ${share(r.comboEnds, Math.max(r.combos, 1))}`)
   console.log(`statuses inflicted (per game): ${Object.entries(r.statuses).map(([k, v]) => `${k} ${(v / r.games).toFixed(2)}`).join(', ')}`)
+  if (r.took) console.log(`taken from the table (a game): ${[0, 1].map(k => `side ${k}: ${share(Object.fromEntries(Object.entries(r.took[k]).map(([n, v]) => [n, v])), r.games).replace(/%/g, '').replace(/(\d+\.\d)/g, x => (x / 100).toFixed(2))}, fetched ${(r.fetched[k] / r.games).toFixed(2)}`).join(' · ')} · ties won by the initiative: ${r.tieByInit[0] + r.tieByInit[1]} (${pct((r.tieByInit[0] + r.tieByInit[1]) / R)} of rounds)`)
+  for (const k of [0, 1]) {
+    const dist = Object.entries(r.handClashDist[k]).sort((a, b) => a[0] - b[0]).map(([h, p]) => `${h}:${(100 * p).toFixed(0)}`).join(' ')
+    console.log(`side ${k}: hand at the clash ${r.handClashAvg[k].toFixed(2)} [${dist}] · confiscated ${(r.conf[k] / r.games).toFixed(2)} a game (${(r.confPre[k] / r.games).toFixed(2)} before the clash): ${share(r.confCards[k], Math.max(r.conf[k], 1))} · in play after a round: ${share(r.inPlay[k], R)}`)
+  }
 }
 
 const t0 = Date.now()

@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 3,
+  "rules": 16,
+  "id": "warden17",
+  "name": "The Warden",
+  "epithet": "Grappler",
+  "concept": "A grappler with chains. Grabs beat Guards and every Counter is a grab. Shakedown takes a card before the clash, Coil takes one on hit, Shackles caps the opponent's clash hand at 5; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
+  "hp": 34,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Chain Lash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "copies": 4
+    },
+    {
+      "name": "Ankle Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown",
+      "copies": 2
+    },
+    {
+      "name": "Haul In",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 9,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "copies": 4
+    },
+    {
+      "name": "Coil",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 4,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "confiscate": 1,
+      "copies": 2
+    },
+    {
+      "name": "Slam",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 2,
+      "chip": 4,
+      "icons": [
+        "counter"
+      ],
+      "copies": 2
+    },
+    {
+      "name": "Chain Guard",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 6
+    },
+    {
+      "name": "Charge",
+      "type": "neutral",
+      "now": {
+        "meter": 2
+      },
+      "copies": 2,
+      "orFetch": true
+    },
+    {
+      "name": "Read",
+      "type": "neutral",
+      "now": {
+        "draw": 1
+      },
+      "copies": 2,
+      "orSelect": true
+    },
+    {
+      "name": "Shakedown",
+      "type": "neutral",
+      "atClash": {
+        "confiscate": 1
+      },
+      "copies": 3
+    },
+    {
+      "name": "Shackles",
+      "type": "neutral",
+      "stays": true,
+      "capHand": 5,
+      "endsOn": "pressureHit",
+      "copies": 3
+    },
+    {
+      "name": "Iron Haul",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 10,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "confiscate": 1,
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "The chain finds you before you move."
+    },
+    {
+      "name": "Chain Whip",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A crack of the chain from out of reach."
+    }
+  ],
+  "super": {
+    "name": "Chain Prison",
+    "type": "convert",
+    "kind": "grab",
+    "speed": 10,
+    "chip": 3,
+    "icons": [
+      "counter"
+    ],
+    "meter": 2,
+    "discardDownTo": 3
+  },
+  "notes": "Rules v17 (rules-overview 17.md), 1 November 2026: the shared neutral core (Charge \u00d72, Read \u00d72); Shackles \u00d73 takes the third Charge's slot. HP 34 (provisional): at 38 he won 66% against the v17 Benchmark in sim."
+}

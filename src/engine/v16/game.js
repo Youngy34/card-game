@@ -1,8 +1,8 @@
 // Rules v16: whole games between sparring partners (or bots), round records
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
-import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16 } from './engine.js'
-import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16 } from './ai.js'
+import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder } from './engine.js'
+import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16 } from './ai.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -15,7 +15,20 @@ export function mulberry(seed) {
   }
 }
 
-export const snap16 = X => ({ hp: X.hp, pile: X.pile, hand: X.hand.length, meter: X.meter, deck: X.deck.length })
+export const snap16 = X => ({ hp: X.hp, pile: X.pile, hand: X.hand.length, meter: X.meter, deck: X.deck.length, inPlay: X.inPlay != null ? X.f.cards[X.inPlay].name : null })
+
+// Pay any owed Confiscates (each victim chooses), returning the game and what went
+function payConfiscates(G, levels, W, rng) {
+  const paid = [[], []]
+  for (const k of initOrder(G)) {
+    const X = k === 0 ? G.A : G.B
+    if (!X.owe) continue
+    const cards = chooseConfiscate(G, k, X.owe, W, rng, levels[k], G.rules.confiscateBy || 'victim', levels[1 - k])
+    paid[k] = cards.map(i => X.f.cards[i].name)
+    G = confiscate16(G, k, cards)
+  }
+  return { G, paid }
+}
 
 // The damage each side took this round, split by where it came from
 function damageBy(ev) {
@@ -37,7 +50,7 @@ export function roundRecord16(n, before, G, neutral) {
   const dmg = damageBy(ev)
   return {
     n,
-    neutral: neutral.map(a => (a ? { kind: a.kind, ...(a.name ? { name: a.name } : {}), ...(a.n !== undefined ? { n: a.n } : {}), ...(a.why ? { why: a.why } : {}) } : { kind: 'none' })),
+    neutral: neutral.map(a => (a ? { kind: a.kind, ...(a.name ? { name: a.name } : {}), ...(a.n !== undefined ? { n: a.n } : {}), ...(a.why ? { why: a.why } : {}), ...(a.took ? { took: a.took, sup: !!a.sup } : {}), ...(a.fetched ? { fetched: a.fetched } : {}) } : { kind: 'none' })),
     cards: c.names, types: c.types, supers: c.picks.map(p => p === 'S'),
     outcome: c.outcome, winner: c.winner,
     speeds: ev.find(e => e.kind === 'speeds')?.speeds || null,
@@ -109,16 +122,28 @@ export function playGame16(fa, fb, { rules = DEFAULT_RULES16, W = DEFAULT_W16, l
       picks = both.map(b => b.pick)
     } else {
       const acts = [0, 1].map(k => aiNeutral(G, k, levels[k], W, rng))
+      // Rules v17: options are chosen after the reveal, in initiative order
+      if (rules.tableCards) for (const k of initOrder(G)) {
+        if (acts[k]?.kind === 'neutral' && !BOTS16[levels[k]]) { const opt = chooseMode16(G, k, acts, W, rng); acts[k] = { ...acts[k], opt } }
+      }
       G = applyNeutral16(G, acts)
+      var pre = payConfiscates(G, levels, W, rng); G = pre.G
       picks = [0, 1].map(k => aiClash(G, k, levels[k], W, rng))
     }
-    const neutral = G.neutral
+    const neutral = G.neutral, initHeld = G.init
+    const handAtClash = [G.A.hand.length, G.B.hand.length]
     G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, W))
-    rounds.push(roundRecord16(G.round, before, G, neutral))
+    const post = payConfiscates(G, levels, W, rng); G = post.G
+    const rec = roundRecord16(G.round, before, G, neutral)
+    rec.handAtClash = handAtClash
+    if (rules.initiative) rec.init = initHeld
+    rec.confiscated = [0, 1].map(k => [...(pre?.paid[k] || []), ...post.paid[k]])
+    rec.confPre = [0, 1].map(k => (pre?.paid[k] || []).length)
+    rounds.push(rec)
     if (G.result !== null) break
     G = startDraw16(G)
     while (G.phase === 'draw') {
-      for (const k of [0, 1]) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
+      for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
     }
   }
   return { result: G.result, rounds, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
@@ -135,7 +160,8 @@ export function summarise16(games, fighters) {
     outcomes: {}, neutral: [{}, {}], types: [{}, {}], plays: [{}, {}],
     guardWins: 0, guardWinsWithFollow: 0, followDmg: 0, followC: 0, follows: 0, guardWinsNoCounter: 0,
     combos: 0, comboLen: 0, comboDmg: 0, comboEnds: {}, starterWins: 0,
-    statuses: {}, supers: [0, 0], burned: [0, 0], focused: [0, 0], reshuffles: [0, 0], handAfter: [[], []], sameType: 0, ties: 0 }
+    statuses: {}, supers: [0, 0], burned: [0, 0], focused: [0, 0], reshuffles: [0, 0], handAfter: [[], []], sameType: 0, ties: 0,
+    conf: [0, 0], confPre: [0, 0], confCards: [{}, {}], handAtClash: [[], []], inPlay: [{}, {}], hpLeft: [], took: [{}, {}], fetched: [0, 0], tieByInit: [0, 0] }
   for (const g of games) {
     R.win += g.result
     R.lengths.push(g.rounds.length)
@@ -147,7 +173,7 @@ export function summarise16(games, fighters) {
     for (const r of g.rounds) {
       if (r.quiet) R.quiet++
       R.outcomes[r.outcome] = (R.outcomes[r.outcome] || 0) + 1
-      if (r.outcome === 'speed' || r.outcome === 'cancel' || r.outcome === 'tie') { R.sameType++; if (r.outcome === 'cancel') R.ties++ }
+      if (r.outcome === 'speed' || r.outcome === 'cancel' || r.outcome === 'tie') { R.sameType++; if (r.outcome === 'cancel') R.ties++; if (r.outcome === 'tie' && r.winner >= 0) R.tieByInit[r.winner]++ }
       for (const k of [0, 1]) {
         const a = r.neutral[k]
         const key = a.kind === 'neutral' ? (a.name || 'neutral card') : a.kind === 'burn' ? `burn ${a.n}` : a.kind
@@ -159,6 +185,11 @@ export function summarise16(games, fighters) {
         if (r.cards[k]) R.plays[k][r.cards[k]] = (R.plays[k][r.cards[k]] || 0) + 1
         if (r.supers[k]) R.supers[k]++
         R.handAfter[k].push(r.after[k].hand)
+        if (r.handAtClash) R.handAtClash[k].push(r.handAtClash[k])
+        if (r.confiscated) { R.conf[k] += r.confiscated[k].length; R.confPre[k] += r.confPre[k]; for (const nm of r.confiscated[k]) R.confCards[k][nm] = (R.confCards[k][nm] || 0) + 1 }
+        if (r.neutral[k]?.took) R.took[k][r.neutral[k].took] = (R.took[k][r.neutral[k].took] || 0) + 1
+        if (r.neutral[k]?.fetched) R.fetched[k]++
+        if (r.after[k].inPlay) R.inPlay[k][r.after[k].inPlay] = (R.inPlay[k][r.after[k].inPlay] || 0) + 1
         for (const s of r.statuses[k]) R.statuses[s] = (R.statuses[s] || 0) + 1
       }
       const w = r.winner
@@ -182,6 +213,9 @@ export function summarise16(games, fighters) {
   R.median = median(R.lengths); R.p10 = pctile(R.lengths, 0.1); R.p90 = pctile(R.lengths, 0.9)
   R.margin = n ? 1.96 * Math.sqrt(Math.max(R.win * (1 - R.win), 0.01) / n) : 0
   R.handAvg = R.handAfter.map(a => a.reduce((s, v) => s + v, 0) / Math.max(a.length, 1))
+  R.handClashAvg = R.handAtClash.map(a => a.reduce((s, v) => s + v, 0) / Math.max(a.length, 1))
+  R.handClashDist = R.handAtClash.map(a => { const d = {}; for (const v of a) d[v] = (d[v] || 0) + 1; for (const x in d) d[x] /= a.length; return d })
+  delete R.handAtClash
   delete R.handAfter
   R.fighters = fighters
   return R

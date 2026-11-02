@@ -52,14 +52,20 @@ export const THIS_ROUND = {
   armor: { label: 'Armor', line: () => 'This round, your Converts (not your Super) also beat Pressures.' },
   mixup: { label: 'Mix-Up', line: () => 'This round, your Pressures (not your Super) also beat Guards.' },
   parry: { label: 'Parry', line: () => 'This round, if your Guard beats a Pressure, your follow-up can be any attack, and it can start a combo.' },
+  grabConfiscate: { label: 'Grabs Confiscate', line: () => 'This round, your Grabs Confiscate on hit.' },
 }
+// Neutral-card effects at the start of the clash step (after every On reveal effect)
+export const AT_CLASH = {
+  confiscate: { label: 'Confiscate', line: () => 'This round, at the start of the clash step: Confiscate.' },
+}
+export const CONFISCATE_LINE = 'Confiscate: they discard a clash card of their choice, unless they hold 2 or fewer.'
 // Neutral-card effects that happen as soon as it's revealed
 export const NOW = {
   draw: { label: 'Draw', line: n => `Draw ${n === 1 ? 'a' : n} clash card${n === 1 ? '' : 's'}.` },
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'art', 'flavour', 'notes']
 
 const isInt = v => Number.isInteger(v)
 const statusName = s => (typeof s === 'string' ? STATUSES[s]?.label : s && s.lock ? `Lock ${LABEL16[LOCKABLE[s.lock]]}` : null)
@@ -78,10 +84,18 @@ export function cardLines16(c, { isSuper = false } = {}) {
   const t = T16[c.type]
   if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
   if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
-  if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' '))
+  if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' ')
+    + (c.orSelect ? ' Or take a special or your Super from the table instead, paying its meter.' : '')
+    + (c.orFetch ? ' Or put a special from your discard pile into your hand instead.' : ''))
+  if (c.capHand) text.push(`Their clash hand limit is ${c.capHand}.`)
+  if (c.endsOn === 'pressureHit') text.push('Discard this when one of their Pressures hits you.')
   if (c.thisRound) for (const [k, v] of Object.entries(c.thisRound)) if (THIS_ROUND[k] && v) text.push(THIS_ROUND[k].line(v))
+  if (c.atClash) for (const [k, v] of Object.entries(c.atClash)) if (AT_CLASH[k] && v) text.push(AT_CLASH[k].line(v))
+  if (c.confiscate) text.push(`On hit: Confiscate${c.confiscate > 1 ? ` ×${c.confiscate}` : ''}.`)
+  if (c.discardDownTo != null) text.push(`On hit: they discard down to ${c.discardDownTo} clash cards.`)
   if (c.onHit) text.push(typeof c.onHit === 'string' ? `On hit: ${STATUSES[c.onHit]?.label}.` : `On hit: ${statusText(c.onHit)} (no ${LABEL16[LOCKABLE[c.onHit.lock]]}s for them next round).`)
   if (isSuper && c.meter) cost.push(`${c.meter} meter.`)
+  if (c.special) cost.push(`Special: take it from the table for ${c.meter ?? 1} meter.`)
   if (c.cost) cost.push(typeof c.cost === 'string' ? `Next round, you're ${STATUSES[c.cost]?.label}.` : `Next round, you can't play a ${LABEL16[LOCKABLE[c.cost.lock]]}.`)
   if (c.onLossSelf) cost.push(`On loss: add ${c.onLossSelf} token${c.onLossSelf > 1 ? 's' : ''} to your own pile.`)
   return { text, cost }
@@ -123,11 +137,19 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.onHit !== undefined) { validStatus(c.onHit, E, 'onHit'); if (t === 'N') E('A neutral card never hits.'); if (c.onHit === 'dizzy' && !isSuper) E('Dizzy only appears on Supers.') }
   if (c.cost !== undefined) validStatus(c.cost, E, 'cost')
   if (c.onLossSelf !== undefined && (!isInt(c.onLossSelf) || c.onLossSelf < 1)) E('onLossSelf must be 1 or more.')
-  if (c.meter !== undefined) { if (!isSuper) E('Only a Super costs meter.'); else if (!isInt(c.meter) || c.meter < 1 || c.meter > 5) E('meter must be 1–5.') }
+  if (c.meter !== undefined) { if (!isSuper && !c.special) E('Only a Super or a special costs meter.'); else if (!isInt(c.meter) || c.meter < 1 || c.meter > 5) E('meter must be 1–5.') }
+  if (c.special !== undefined && (t === 'N' || t === 'R' || c.special !== true || (!isSuper && c.copies !== 1))) E('special is true, on an attack with 1 copy.')
+  if (c.orSelect !== undefined && (t !== 'N' || c.orSelect !== true)) E('orSelect is true, on a neutral card.')
+  if (c.orFetch !== undefined && (t !== 'N' || c.orFetch !== true)) E('orFetch is true, on a neutral card.')
   if (c.thisRound !== undefined) {
     if (t !== 'N') E('Only neutral cards have this-round effects.')
     else if (!c.thisRound || typeof c.thisRound !== 'object' || Object.keys(c.thisRound).some(k => !THIS_ROUND[k] || !isInt(c.thisRound[k]) || c.thisRound[k] < 1)) E(`thisRound takes ${Object.keys(THIS_ROUND).join(', ')}, each a whole number of 1 or more.`)
-  } else if (t === 'N' && !c.now && !c.prevent) W('This neutral card does nothing.')
+  } else if (t === 'N' && !c.now && !c.prevent && !c.atClash && !c.capHand) W('This neutral card does nothing.')
+  if (c.confiscate !== undefined && (t === 'N' || t === 'R' || !isInt(c.confiscate) || c.confiscate < 1)) E('confiscate is a whole number of 1 or more, on attacks only.')
+  if (c.discardDownTo !== undefined && (t === 'N' || !isInt(c.discardDownTo) || c.discardDownTo < 0)) E('discardDownTo is a whole number, on attacks only.')
+  if (c.atClash !== undefined && (t !== 'N' || !c.atClash || Object.keys(c.atClash).some(k => !AT_CLASH[k] || !isInt(c.atClash[k]) || c.atClash[k] < 1))) E('atClash takes confiscate (a whole number), on neutral cards only.')
+  if (c.capHand !== undefined && (t !== 'N' || !c.stays || !isInt(c.capHand) || c.capHand < 1)) E('capHand belongs on a neutral card that stays in play.')
+  if (c.endsOn !== undefined && (t !== 'N' || !c.stays || c.endsOn !== 'pressureHit')) E('endsOn is pressureHit, on a neutral card that stays in play.')
   if (c.stays !== undefined && (t !== 'N' || typeof c.stays !== 'boolean')) E('stays is true or false, on neutral cards only.')
   if (c.prevent !== undefined) {
     if (t !== 'N' || !c.stays) E('prevent belongs on a neutral card that stays in play.')
@@ -183,7 +205,8 @@ function norm(c, isSuper) {
     build: c.build ?? 0, chip: c.chip ?? 0, copies: isSuper ? 0 : c.copies,
     starter: icons.has('starter'), linker: icons.has('linker'), ender: icons.has('ender'), counter: icons.has('counter'),
     onHit: c.onHit ?? null, cost: c.cost ?? null, onLossSelf: c.onLossSelf ?? 0,
-    meter: isSuper ? (c.meter ?? 3) : 0, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
+    meter: isSuper ? (c.meter ?? 3) : c.special ? (c.meter ?? 1) : 0, special: !!c.special, orSelect: !!c.orSelect, orFetch: !!c.orFetch, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
+    confiscate: c.confiscate ?? 0, discardDownTo: c.discardDownTo ?? null, atClash: c.atClash ?? null, capHand: c.capHand ?? null, endsOn: c.endsOn ?? null,
     sup: isSuper, src: c,
   }
 }

@@ -29,8 +29,16 @@ export const EDITIONS = {
     title: 'Yomi Playtest v16', subtitle: 'rules v16', out: 'yomi-playtest-v16.html', settings: 'v16/settings.json',
     fighters: [],
     reference: [['v16', 'benchmark']],
-    drafts: [],
+    drafts: [['v16', 'warden']],
     labels: {},
     defaultSides: ['benchmark16', 'benchmark16'],
+  },
+  v17: {
+    title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
+    fighters: [],
+    reference: [['v17', 'benchmark']],
+    drafts: [['v17', 'warden']],
+    labels: {},
+    defaultSides: ['benchmark17', 'benchmark17'],
   },
 }

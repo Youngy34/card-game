@@ -79,7 +79,7 @@ export function Log16() {
             <button class="link" onClick=${() => setAsk(g.id)}>Delete</button>
           </div>
           ${open === g.id ? html`<div style=${{ gridColumn: '1 / -1' }} class="small stack">${g.rounds.map(r => html`<div>
-            <b>${r.n}.</b> ${r.neutral.map(a => a.kind === 'neutral' ? a.name : a.kind === 'burn' ? `burn ${a.n}` : a.kind).join(' / ')} · ${r.cards[0] || 'nothing'} vs ${r.cards[1] || 'nothing'} (${r.outcome})${r.follow ? ` · follow-up ${r.follow.name}` : ''}${r.combo.length ? ` · combo ${r.combo.map(x => x.name).join(' → ')}` : ''}${r.statuses.some(x => x.length) ? ` · next: ${r.statuses.map(x => x.join(', ') || '—').join(' / ')}` : ''} · <span class="muted num">${r.after[0].hp}/${r.after[0].pile} — ${r.after[1].hp}/${r.after[1].pile}</span>
+            <b>${r.n}.</b> ${r.neutral.map(a => a.kind === 'neutral' ? `${a.name}${a.took ? ` (took ${a.took})` : a.fetched ? ` (fetched ${a.fetched})` : ''}` : a.kind === 'burn' ? `burn ${a.n}` : a.kind).join(' / ')} · ${r.cards[0] || 'nothing'} vs ${r.cards[1] || 'nothing'} (${r.outcome})${r.follow ? ` · follow-up ${r.follow.name}` : ''}${r.combo.length ? ` · combo ${r.combo.map(x => x.name).join(' → ')}` : ''}${r.statuses.some(x => x.length) ? ` · next: ${r.statuses.map(x => x.join(', ') || '—').join(' / ')}` : ''} · <span class="muted num">${r.after[0].hp}/${r.after[0].pile} — ${r.after[1].hp}/${r.after[1].pile}</span>
           </div>`)}</div>` : null}
         </div>`)}
       </div>

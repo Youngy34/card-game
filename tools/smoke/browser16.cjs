@@ -45,13 +45,14 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 
   // Play one whole game against the partner (or two players), answering every prompt
   async function playGame(page, { hotseat = false, shots = false, maxSteps = 600 } = {}) {
-    const seen = { neutralCard: 0, focus: 0, breather: 0, blank: 0, follow: 0, link: 0, end: 0, discard: 0, pass: 0, rounds: 0 }
+    const seen = { neutralCard: 0, focus: 0, breather: 0, blank: 0, follow: 0, link: 0, end: 0, discard: 0, confiscate: 0, capped: 0, pass: 0, rounds: 0 }
     let shotN = 0
     const shot = async name => { if (shots && SHOTS && shotN < 12) { shotN++; await page.screenshot({ path: `${SHOTS}${name}.png`, fullPage: true }) } }
     for (let step = 0; step < maxSteps; step++) {
       const t = (await page.locator('main').innerText()).toLowerCase()
       if (await page.locator('.overlay').count()) { seen.pass++; await page.locator('.overlay .btn').click(); continue }
       if (t.includes('k.o.') || (t.includes('round limit reached'))) return seen
+      if (t.includes('hand limit 5')) seen.capped++
       const nhand = page.locator('.neutral-hand button.card')
       if (await nhand.count()) {
         const n = await nhand.count()
@@ -80,15 +81,18 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         continue
       }
       if (await page.locator('.actions .btn', { hasText: /^Discard \d/ }).count()) {
-        seen.discard++
+        const h = (await page.locator('.hand-wrap h3').first().innerText()).toLowerCase()
+        if (h.startsWith('confiscate')) { seen.confiscate++; if (seen.confiscate === 1) await shot('05-confiscate') } else seen.discard++
         const need = Number((await page.locator('.actions .btn', { hasText: /^Discard \d/ }).innerText()).match(/\d+/)[0])
         for (let k = 0; k < need; k++) await page.locator('.hand button.card').nth(k).click()
         await page.locator('.actions .btn', { hasText: /^Discard \d/ }).click(); continue
       }
-      if (await btn(page, 'Draw · next round').count()) {
+      const draw = page.getByRole('button', { name: /^Draw · / })
+      if (await draw.count()) {
         seen.rounds++
         if (seen.rounds === 2) await shot('05-reveal')
-        await btn(page, 'Draw · next round').click(); continue
+        seen.drawLabel = await draw.first().innerText()
+        await draw.first().click(); continue
       }
       await page.waitForTimeout(50)
     }
@@ -101,6 +105,8 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok((await body()).includes('rules v16'), 'header says rules v16')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
   ok((await body()).includes('20 clash + 10 neutral cards'), 'the picker shows both deck sizes')
+  ok((await body()).includes('the warden'), 'the Warden is in the picker')
+  ok((await body()).includes('each player takes 1 grey with their draw'), 'setup states grey each round')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })
 
   await btn(page, 'Start the match').click()
@@ -114,6 +120,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   console.log('vs Hard:', JSON.stringify({ ...seen, names: [...(seen.names || [])] }))
   ok(seen.rounds > 3, 'played several rounds')
   ok(seen.names && seen.names.size >= 2, 'played at least two different neutral cards')
+  ok((seen.drawLabel || '').toLowerCase() === 'draw · take 1 grey · next round', `the draw button names the grey (${seen.drawLabel})`)
   SHOTS && await page.screenshot({ path: SHOTS + '06-over.png', fullPage: true })
   await page.waitForSelector('text=Saved to the playtest log', { timeout: 5000 }).catch(() => {})
   ok((await body()).includes('saved to the playtest log'), 'the game is logged')
@@ -128,10 +135,25 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   console.log('4 more games:', JSON.stringify(more))
   ok(seen.follow + seen.link + seen.end + more.follow + more.link + more.end > 0, 'was offered a follow-up or a combo')
 
+  // against the Warden: Confiscate prompts, Shackles' hand limit
+  await btn(page, 'New match').click()
+  await page.locator('.pickers .fighters').nth(1).locator('.fpick', { hasText: 'The Warden' }).click()
+  await btn(page, 'Start the match').click()
+  await page.waitForSelector('.neutral-hand button.card')
+  let w = { confiscate: 0, capped: 0, rounds: 0, discard: 0 }
+  for (let g = 0; g < 3; g++) {
+    if (g) await btn(page, 'Rematch').click()
+    const s = await playGame(page, { shots: g === 0 })
+    for (const k of Object.keys(w)) w[k] += s[k]
+  }
+  console.log('3 games vs the Warden:', JSON.stringify(w))
+  ok(w.confiscate > 0, 'the Warden Confiscates: you pick what to discard')
+  ok(w.capped > 0, 'Shackles shows your hand limit of 5')
+
   // the log
   await page.getByRole('button', { name: 'Playtest log' }).click()
   await page.waitForSelector('text=How games end')
-  ok((await page.locator('.game-row').count()) >= 5, 'five games in the log')
+  ok((await page.locator('.game-row').count()) >= 8, 'eight games in the log')
   await page.locator('.game-row .link', { hasText: 'Rounds' }).first().click()
   ok((await body()).includes(' vs '), 'a logged game expands to its rounds')
   SHOTS && await page.screenshot({ path: SHOTS + '07-log.png', fullPage: true })
@@ -158,6 +180,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   // settings
   await btn(page, 'Settings').click()
   ok(await page.locator('#s-burnMax').inputValue() === '0' && await page.locator('#s-meterMax').inputValue() === '3', 'defaults: no burning, meter track 0–3')
+  ok(await page.locator('#s-greyPerRound').inputValue() === '1' && await page.locator('#s-confiscateFloor').inputValue() === '2', 'defaults: 1 grey a round, Confiscate floor 2')
   const lim = page.locator('#s-handLimit')
   await lim.click(); await page.keyboard.press('End'); await page.keyboard.press('Backspace')
   ok(await lim.inputValue() === '', 'an emptied field stays empty while typing')
@@ -204,7 +227,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const { page: phone } = await newPage(390, 844)
   await phone.locator('.seg button', { hasText: 'Watch the sparring partner' }).click()
   await btn(phone, 'Start the match').click()
-  for (let k = 0; k < 6; k++) { await phone.waitForSelector('text=Draw · next round'); await btn(phone, 'Draw · next round').click() }
+  for (let k = 0; k < 6; k++) { await phone.waitForSelector('text=/^Draw · /'); await phone.getByRole('button', { name: /^Draw · / }).first().click() }
   const sw = await phone.evaluate(() => document.documentElement.scrollWidth)
   ok(sw <= 391, `no horizontal scroll at phone width (${sw})`)
   SHOTS && await phone.screenshot({ path: SHOTS + '10-phone.png', fullPage: true })

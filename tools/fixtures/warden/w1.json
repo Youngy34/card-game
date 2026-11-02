@@ -1,0 +1,13 @@
+{"schemaVersion": 3, "rules": 16, "id": "warden16", "name": "The Warden", "epithet": "Grappler", "concept": "Grabs beat Guards, every Counter is a grab, and three neutral cards work on the opponent's clash hand: Shakedown takes a card, Death Grip makes his grabs take cards, Shackles caps their hand at 5. Chain Prison cuts their hand to 3.", "hp": 38, "passive": null, "cards": [
+  {"name": "Chain Lash", "type": "pressure", "kind": "strike", "speed": 15, "build": 3, "chip": 1, "icons": ["starter", "linker"], "copies": 4},
+  {"name": "Ankle Hook", "type": "pressure", "kind": "strike", "speed": 12, "build": 3, "chip": 1, "icons": ["ender"], "onHit": "knockdown", "copies": 2},
+  {"name": "Haul In", "type": "convert", "kind": "grab", "speed": 9, "chip": 2, "icons": ["counter"], "copies": 4},
+  {"name": "Coil", "type": "convert", "kind": "grab", "speed": 4, "chip": 3, "icons": ["ender", "counter"], "confiscate": 1, "copies": 2},
+  {"name": "Slam", "type": "convert", "kind": "grab", "speed": 2, "chip": 4, "icons": ["counter"], "copies": 2},
+  {"name": "Chain Guard", "type": "recover", "kind": "guard", "copies": 6},
+  {"name": "Charge", "type": "neutral", "now": {"meter": 1}, "copies": 3},
+  {"name": "Read", "type": "neutral", "now": {"draw": 2}, "copies": 1},
+  {"name": "Shakedown", "type": "neutral", "atClash": {"confiscate": 1}, "copies": 2},
+  {"name": "Death Grip", "type": "neutral", "thisRound": {"grabConfiscate": 1}, "copies": 2},
+  {"name": "Shackles", "type": "neutral", "stays": true, "capHand": 5, "endsOn": "pressureHit", "copies": 2}
+], "super": {"name": "Chain Prison", "type": "convert", "kind": "grab", "speed": 10, "chip": 3, "icons": ["counter"], "meter": 3, "discardDownTo": 3}, "notes": "Draft 1 November 2026 (character-warden v16 draft.md)." }

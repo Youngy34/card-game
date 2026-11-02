@@ -256,7 +256,7 @@ function setup(handA, handB, patch = {}) {
   let R2 = newGame16(FN, FN, W, 3)
   R2 = { ...R2, A: { ...R2.A, hand: [J], nhand: [RU, CH, CH] }, B: { ...R2.B, hand: [TH], pile: 0 } }
   R2 = startClash16(applyNeutral16(R2, [{ kind: 'neutral', i: RU }, null]), J, TH)
-  ok(R2.clash.winner === 0 && R2.B.pile === 5 && R2.B.hp === 29, 'Rush: a Jab builds 2 + 3')
+  ok(R2.clash.winner === 0 && R2.B.pile === 5 && R2.B.hp === R2.B.f.hp - 1, 'Rush: a Jab builds 2 + 3')
   let R3 = newGame16(FN, FN, W, 3)
   R3 = { ...R3, A: { ...R3.A, hand: [J], nhand: [RU, CH, CH] }, B: { ...R3.B, hand: [GU] } }
   R3 = startClash16(applyNeutral16(R3, [{ kind: 'neutral', i: RU }, null]), J, GU)
@@ -264,7 +264,7 @@ function setup(handA, handB, patch = {}) {
   let W2 = newGame16(FN, FN, W, 3)
   W2 = { ...W2, A: { ...W2.A, hand: [TH], nhand: [WU, CH, CH] }, B: { ...W2.B, hand: [GU], pile: 2 } }
   W2 = startClash16(applyNeutral16(W2, [{ kind: 'neutral', i: WU }, null]), TH, GU)
-  ok(W2.clash.winner === 0 && W2.B.hp === 30 - 2 - 5, 'Wind-Up: a Throw cashes 2 and chips 2 + 3')
+  ok(W2.clash.winner === 0 && W2.B.hp === W2.B.f.hp - 2 - 5, 'Wind-Up: a Throw cashes 2 and chips 2 + 3')
   // Breakfall stays in play, stops one knockdown, then goes to the neutral discard
   let B1 = newGame16(FN, FN, W, 3)
   B1 = { ...B1, A: { ...B1.A, hand: [SWP] }, B: { ...B1.B, hand: [TH], nhand: [BF, CH, CH] } }

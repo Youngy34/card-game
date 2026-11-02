@@ -7,7 +7,7 @@ import { settings16, toFighter16 } from './fighters16.js'
 import { runBalance16 } from '../../engine/v16/game.js'
 import { LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
 import { Seg, StatusChip, NumField } from '../ui.js'
-import { neutralRule } from './play16.js'
+import { neutralRule, greyRule } from './play16.js'
 
 const SIZES = [[100, '100'], [300, '300'], [500, '500'], [1000, '1,000']]
 const ALL_LEVELS = { ...LEVELS16, ...BOTS16 }
@@ -37,7 +37,7 @@ export function Lab16({ state, setState }) {
     const ra = fighter(a)
     const f = toFighter16(ra.fighter)
     ctl.current = new AbortController()
-    const bots = ['pressure', 'attack', 'guard', 'random', 'easy']
+    const bots = ['pressure', 'attack', 'guard', 'convert', 'random', 'easy']
     const rows = []
     for (let k = 0; k < bots.length; k++) {
       if (ctl.current.signal.aborted) break
@@ -64,7 +64,7 @@ export function Lab16({ state, setState }) {
         <label class="field"><span>Seed</span><${NumField} id="lab-seed" lo=${0} value=${seed} onValue=${v => upd({ seed: v })} /></label>
       </div>
       <div class="row"><span class="label">Games</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (${neutralRule(s.rules)}, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (${neutralRule(s.rules)}${greyRule(s.rules)}, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
       <div class="actions">
         <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${check}>Run the exploit check</button>
@@ -116,7 +116,10 @@ function Report16({ r }) {
           <p class="small"><span class="label">Clash types</span><br />${share(Object.fromEntries(Object.entries(r.types[k]).map(([t, v]) => [{ P: 'Pressure', C: 'Convert', R: 'Guard', '-': 'nothing' }[t] || t, v])), T)}</p>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Clash card</th><th class="r">Share</th></tr></thead>
             <tbody>${Object.entries(r.plays[k]).sort((x, y) => y[1] - x[1]).map(([c, v]) => html`<tr><td>${c}</td><td class="r">${pct(v / T)}</td></tr>`)}</tbody></table></div>
-          <p class="small muted">Hand after a round: ${r.handAvg[k].toFixed(1)} cards · reshuffles ${(r.reshuffles[k] / n).toFixed(2)} a game</p>
+          <p class="small muted">Hand after a round: ${r.handAvg[k].toFixed(1)} cards${r.handClashAvg ? ` · at the clash: ${r.handClashAvg[k].toFixed(1)}` : ''} · reshuffles ${(r.reshuffles[k] / n).toFixed(2)} a game</p>
+          ${r.conf?.[k] ? html`<p class="small muted">Confiscated: ${(r.conf[k] / n).toFixed(1)} cards a game (${(r.confPre[k] / n).toFixed(1)} before the clash): ${share(r.confCards[k], r.conf[k])}</p>` : null}
+          ${Object.keys(r.inPlay?.[k] || {}).length ? html`<p class="small muted">In play after a round: ${share(r.inPlay[k], R)}</p>` : null}
+          ${Object.keys(r.took?.[k] || {}).length || r.fetched?.[k] ? html`<p class="small muted">Taken from the table, a game: ${Object.entries(r.took[k]).map(([nm, v]) => `${nm} ${(v / n).toFixed(2)}`).join(', ') || 'nothing'} · fetched from the discard ${(r.fetched[k] / n).toFixed(2)}</p>` : null}
         </div>`
       })}
     </div>

@@ -30,7 +30,7 @@ function start(boot) {
     initData(data)
     const el = document.getElementById('app')
     el.textContent = ''                      // drop the loading line, which Preact would otherwise leave behind
-    const Shell = data.edition?.key === 'v16' ? App16 : App
+    const Shell = ['v16', 'v17'].includes(data.edition?.key) ? App16 : App
     render(html`<${Shell} boot=${boot || {}} />`, el)
     connect()
   }, e => {

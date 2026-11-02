@@ -5,7 +5,7 @@
   "name": "Benchmark",
   "epithet": "Reference",
   "concept": "The plain v16 fighter: a 20-card clash deck and a 10-card neutral deck. Jab starts combos; Big Swing ends them with a cash, Sweep with a knockdown. Throw stands alone. 8 Counters. Neutral: Charge and Read for resources, Rush and Wind-Up to power up a type, Parry, and Breakfall to stay on your feet.",
-  "hp": 30,
+  "hp": 38,
   "passive": null,
   "cards": [
     {
@@ -143,5 +143,5 @@
     "onHit": "knockdown",
     "flavour": "Ends a combo with a cash and a knockdown."
   },
-  "notes": "Added 31 Oct 2026 from rules-overview 16.md."
+  "notes": "Added 31 Oct 2026 from rules-overview 16.md. HP 30 -> 38 with grey each round (1 Nov)."
 }

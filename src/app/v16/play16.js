@@ -7,8 +7,8 @@ import { LifeBar, Tokens, Seg, StatusChip } from '../ui.js'
 import { roster, saveGame, newId } from '../store.js'
 import { settings16 } from './fighters16.js'
 import * as M from './match16.js'
-import { card16, neutralOptions16, statusList, superReady } from '../../engine/v16/engine.js'
-import { ICONS, LABEL16, STATUSES } from '../../engine/v16/cards.js'
+import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost } from '../../engine/v16/engine.js'
+import { ICONS, LABEL16, STATUSES, CONFISCATE_LINE } from '../../engine/v16/cards.js'
 import { deckSize } from '../../engine/v16/cards.js'
 import { narrate16, outcomeTitle16, neutralLine16 } from './narrate16.js'
 
@@ -32,7 +32,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card, or Focus: draw a card and gain 1 meter), the clash, and a draw. Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
+      <p class="lede">${s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -63,7 +63,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
       <label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you choose (lethal range, live Supers, statuses, Counters they could hold, speed duels)</label>
       <label class="check"><input type="checkbox" checked=${!!prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the sparring partner's mix after each reveal</label>
       ${prefs.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${!!prefs.showHands} onChange=${e => setPrefs({ ...prefs, showHands: e.target.checked })} /> Show both hands</label>` : null}
-      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${s.rules.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel'}. Change these in Settings.</p>
+      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}${greyRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.tableCards ? 'taken from the table and used once' : s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${tieRule(s.rules)}. Change these in Settings.</p>
       <div class="actions"><button class="btn" onClick=${start}>Start the match</button></div>
     </div>
   </div>`
@@ -104,7 +104,7 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <section class="hand-wrap" aria-label="Your move">
         ${myTurn ? html`<${Action16} m=${m} setM=${setM} side=${m.turn} prefs=${prefs} names=${names} who=${who} />` : null}
         ${!myTurn && m.phase === 'reveal' ? html`<div class="actions">
-          <button class="btn" onClick=${() => setM(M.nextRound16(m))}>Draw · next round</button>
+          <button class="btn" onClick=${() => setM(M.nextRound16(m))}>${(m.G.rules.greyPerRound ?? 0) > 0 ? `Draw · take ${m.G.rules.greyPerRound} grey · ${m.G.rules.initiative ? 'pass the initiative' : 'next round'}` : 'Draw · next round'}</button>
           ${m.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${auto} onChange=${e => setAuto(e.target.checked)} /> Play on automatically</label>` : null}
         </div>` : null}
         ${m.phase === 'over' ? html`<div class="spread">
@@ -130,7 +130,7 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <div class="overlay-box">
         <span class="label">Round ${m.G.round}</span>
         <h2>Pass the device to ${who[m.turn]}</h2>
-        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
+        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
         <button class="btn" onClick=${() => setM(M.continueAfterPass(m))}>I'm ${who[m.turn]}</button>
       </div>
     </div>` : null}
@@ -139,6 +139,8 @@ export function Table16({ m, setM, prefs, onEnd }) {
 
 function Hud16({ X, who, m }) {
   const top = X.discard.length ? X.discard[X.discard.length - 1] : null
+  const Y = X === m.G.A ? m.G.B : m.G.A
+  const cap = Y.inPlay != null && Y.f.cards[Y.inPlay].capHand ? handLimitOf(X, Y, m.G.rules) : null
   const now = statusList(X.st), next = m.phase === 'reveal' || m.phase === 'over' ? statusList(X.next) : []
   const sup = X.f.sup
   return html`<section class="hud" aria-label=${`${X.f.name}'s side`}>
@@ -146,9 +148,10 @@ function Hud16({ X, who, m }) {
       <span class="hud-name">${X.f.name}</span>
       <span class="hud-who">${who}</span>
       <span class="hud-flags">
+        ${m.G.rules.initiative && m.G.init === (X === m.G.A ? 0 : 1) ? html`<span class="flag sup ready" title="Wins speed ties this round; goes first wherever there's an order">Initiative</span>` : null}
         ${now.map(s => html`<span class="flag status" title="This round">${s}</span>`)}
         ${next.map(s => html`<span class="flag status next" title="Next round">Next: ${s}</span>`)}
-        ${sup ? html`<span class=${cx('flag sup', superReady(X, m.G.rules) && 'ready', m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses && 'spent')} title=${`${sup.name}: ${sup.meter} meter`}>${sup.name} ${superReady(X, m.G.rules) ? 'ready' : m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses ? 'used' : `${Math.min(X.meter, sup.meter)}/${sup.meter}`}</span>` : null}
+        ${sup && !m.G.rules.tableCards ? html`<span class=${cx('flag sup', superReady(X, m.G.rules) && 'ready', m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses && 'spent')} title=${`${sup.name}: ${sup.meter} meter`}>${sup.name} ${superReady(X, m.G.rules) ? 'ready' : m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses ? 'used' : `${Math.min(X.meter, sup.meter)}/${sup.meter}`}</span>` : null}
       </span>
     </div>
     <${LifeBar} X=${X} />
@@ -158,10 +161,16 @@ function Hud16({ X, who, m }) {
     </div>
     <div class="hud-row small">
       <span class="count"><b>${X.hand.length}</b> in hand</span>
+      ${cap !== null ? html`<span class="flag status" title=${`${Y.f.cards[Y.inPlay].name}: discard down to ${cap} in the draw step`}>Hand limit ${cap}</span>` : null}
       <span class="count"><b>${X.deck.length}</b> in deck</span>
       <span class="count"><b>${X.discard.length}</b> discarded${top ? html`<span class="muted"> · top: ${top.burned ? 'a burned card' : X.f.cards[top.i].name}</span>` : null}</span>
       ${X.reshuffles ? html`<span class="count muted">reshuffled ${X.reshuffles}×</span>` : null}
     </div>
+    ${X.table ? html`<div class="hud-row small neutral-row" aria-label="On the table">
+      <span class="label">Table</span>
+      ${X.f.cards.map((c, i) => (c.special ? html`<span class=${cx('flag', X.table.includes(i) ? 'status' : 'sup')} title=${X.table.includes(i) ? `Read can take it for ${c.meter} meter` : 'Taken: in their deck for the game'}>${c.name} ${X.table.includes(i) ? `· ${c.meter} meter` : '· taken'}</span>` : null))}
+      ${sup ? html`<span class=${cx('flag sup', X.superAt === 'hand' && 'ready', X.superAt === 'gone' && 'spent')} title="Their Super: taken from the table by Read, used once">${sup.name} ${X.superAt === 'table' ? `· ${sup.meter} meter` : X.superAt === 'hand' ? '· in hand' : '· used'}</span>` : null}
+    </div>` : null}
     ${X.nhand ? html`<div class="hud-row small neutral-row">
       ${X.inPlay != null ? html`<span class="flag status" title=${X.f.cards[X.inPlay].src ? '' : ''}>In play: ${X.f.cards[X.inPlay].name}</span>` : null}
       <span class="count"><b>${X.nhand.length}</b> neutral in hand</span>
@@ -174,8 +183,8 @@ function Hud16({ X, who, m }) {
 function Stage16({ m, names, prefs }) {
   const G = m.G
   const shown = m.last && (m.phase === 'reveal' || m.phase === 'over')
-  const neutral = shown ? m.last.neutral : G.neutral
-  const clash = shown ? m.last.clash : (m.phase === 'stage' ? G.clash : null)
+  const neutral = shown ? m.last.neutral : m.phase === 'option' ? m.acts.map((a, k) => (a?.kind === 'neutral' ? { kind: 'neutral', name: P16(m, { ...a, side: k }).name, pending: true } : a ? a : { kind: 'none' })) : G.neutral
+  const clash = shown ? m.last.clash : (m.phase === 'stage' || (m.phase === 'confiscate' && m.confNext === 'finish') ? G.clash : null)
   const res = m.result
   return html`<section class="clash" aria-label="The round" aria-live="polite">
     ${m.phase === 'over' ? html`<div class="outcome">
@@ -183,12 +192,12 @@ function Stage16({ m, names, prefs }) {
       <b>${res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
       <span>Round ${G.round}.</span>
     </div>` : null}
-    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result' }[m.phase]}</span>
+    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal' }[m.phase]}</span>
     ${neutral ? html`<div class="neutral-line">${[1, 0].map(k => html`<div><b>${names[k]}</b> <span>${neutralLine16(neutral[k], m.G[k === 0 ? 'A' : 'B'].f)}</span></div>`)}</div>` : null}
     ${!clash ? html`<div class="clash-cards">
       ${[1, 0].map((k, n) => html`${n ? html`<span class="vs">VS</span>` : null}<div class="card card-back" style=${{ opacity: (m.phase === 'clash' && m.picks[k] !== undefined) ? 1 : 0.35 }}><span>${m.phase === 'clash' && m.picks[k] !== undefined ? 'YOMI' : '?'}</span></div>`)}
     </div>
-    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? 'Both clash cards reveal together.' : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
+    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? 'Both clash cards reveal together.' : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
   </section>`
 }
 
@@ -213,6 +222,7 @@ function ClashView({ m, clash, names, prefs }) {
       <span class="label">${{ follow: 'Follow-up', link: 'Linker', end: 'Ender' }[x.stage]}</span>
       <${Card16} card=${(x.name === X[x.side].f.sup?.name ? X[x.side].f.sup : X[x.side].f.cards.find(c => c.name === x.name)).src} isSuper=${x.name === X[x.side].f.sup?.name} cls="won small" />
     </div>`)}</div>` : null}
+    ${m.phase === 'confiscate' ? html`<p class="followup-ask">${m.mode === 'ai' && m.turn === 0 ? 'You' : names[m.turn]} must discard to Confiscate.</p>` : null}
     ${m.phase === 'stage' ? html`<p class="followup-ask">${m.mode === 'ai' && m.turn === 0 ? 'You' : names[m.turn]} ${m.G.pending.stage === 'follow' ? 'may follow up with a Counter' : m.G.pending.stage === 'link' ? 'may combo: a Linker, then an Ender' : 'may end the combo with an Ender'}.</p>` : null}
     <ul class="narr16">${lines.map(l => html`<li>${l}</li>`)}</ul>
     ${prefs.odds && last?.mix && m.phase !== 'stage' ? html`<div class="mix">
@@ -222,7 +232,13 @@ function ClashView({ m, clash, names, prefs }) {
 }
 
 // A deck's size, as clash and neutral cards
-const splitSize = f => { const all = deckSize(f), n = (f.cards || []).filter(c => c.type === 'neutral').reduce((t, c) => t + (c.copies || 0), 0); return `${all - n} clash + ${n} neutral cards` }
+const splitSize = f => { const all = deckSize(f), n = (f.cards || []).filter(c => c.type === 'neutral').reduce((t, c) => t + (c.copies || 0), 0), sp = (f.cards || []).filter(c => c.special).length; return `${all - n - sp} clash + ${n} neutral cards${sp ? ` + ${sp} specials` : ''}` }
+
+const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?' }
+export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative holder' : R.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel')
+
+// The draw step's grey, in words ('' when off)
+export const greyRule = R => (R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : ''
 
 // The neutral step's options, in words
 export const neutralRule = R => R.splitDecks
@@ -297,7 +313,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
           stamp=${g.ok && X.st.lock?.[g.c.t] ? 'Locked: voided' : null}
           cls=${cx(!g.ok && 'off', sel === g.i && 'selected')} onClick=${() => g.ok && setSel(g.i)} /></div>`)}
-        ${sup ? html`<div key="S"><${Card16} as="button" card=${sup.src} isSuper=${true} disabled=${!ok.has('S')} why=${ok.has('S') ? null : `${X.meter} of ${sup.meter} meter`}
+        ${sup && (!m.G.rules.tableCards || X.superAt === 'hand') ? html`<div key="S"><${Card16} as="button" card=${sup.src} isSuper=${true} disabled=${!ok.has('S')} why=${ok.has('S') ? null : `${X.meter} of ${sup.meter} meter`}
           cls=${cx(!ok.has('S') && 'off', sel === 'S' && 'selected')} onClick=${() => ok.has('S') && setSel('S')} /></div>` : null}
       </div>`
   }
@@ -327,9 +343,30 @@ function Action16({ m, setM, side, prefs, names, who }) {
     const [pick, setPick] = [disc, setDisc]
     const hand = X.hand.map((i, pos) => ({ i, pos, c: X.f.cards[i] }))
     const toggle = pos => setPick(pick.includes(pos) ? pick.filter(p => p !== pos) : pick.length < need ? [...pick, pos] : pick)
-    return html`<div class="spread"><h3>Discard down to ${m.G.rules.handLimit}</h3>
+    const lim = handLimitOf(X, side === 0 ? m.G.B : m.G.A, m.G.rules)
+    const Y = side === 0 ? m.G.B : m.G.A
+    return html`<div class="spread"><h3>Discard down to ${lim}</h3>
         <div class="actions"><button class="btn" disabled=${pick.length !== need} onClick=${() => setM(M.chooseDiscard(m, side, pick.map(p => X.hand[p])))}>Discard ${need}</button></div></div>
-      <p class="small">You're over the hand limit: pick ${need} card${need > 1 ? 's' : ''} to discard (face up).</p>
+      <p class="small">You're over the hand limit${lim < (m.G.rules.handLimit ?? 8) ? ` (${lim}, under their ${Y.f.cards[Y.inPlay].name})` : ''}: pick ${need} card${need > 1 ? 's' : ''} to discard (face up).</p>
+      <div class="hand">${hand.map(h => html`<div key=${h.pos}><${Card16} as="button" card=${h.c.src} cls=${cx(pick.includes(h.pos) && 'selected')} onClick=${() => toggle(h.pos)} /></div>`)}</div>`
+  }
+  if (m.phase === 'option') {
+    const list = M.optionList(m, side)
+    const c = X.f.cards[m.acts[side].i]
+    return html`<div class="spread"><h3>${c.name}: choose</h3></div>
+      <p class="small">Both neutral cards are revealed. ${m.G.init === side ? 'You hold the initiative, so you choose first.' : 'Your opponent chose first (they hold the initiative).'} Meter ${X.meter} of ${m.G.rules.meterMax}.</p>
+      <div class="actions">${list.map((o, n) => html`<button class=${cx('btn', n && 'ghost')} onClick=${() => setM(M.chooseOption(m, side, o.opt))}>${o.label}</button>`)}</div>
+      ${list.some(o => o.card) ? html`<div class="hand">${list.filter(o => o.card).map(o => html`<div><${Card16} card=${o.card.src} isSuper=${!!o.sup} /></div>`)}</div>` : null}`
+  }
+  if (m.phase === 'confiscate') {
+    const need = X.owe || 0
+    const [pick, setPick] = [disc, setDisc]
+    const hand = X.hand.map((i, pos) => ({ i, pos, c: X.f.cards[i] }))
+    const toggle = pos => setPick(pick.includes(pos) ? pick.filter(p => p !== pos) : pick.length < need ? [...pick, pos] : pick)
+    const src = M.confiscateSource(m, side)
+    return html`<div class="spread"><h3>Confiscate: discard ${need}</h3>
+        <div class="actions"><button class="btn" disabled=${pick.length !== need} onClick=${() => setM(M.chooseConfiscated(m, side, pick.map(p => X.hand[p])))}>Discard ${need}</button></div></div>
+      <p class="small">Their ${src} ${m.confNext === 'clash' ? 'takes a card before the clash' : 'took cards'}: pick ${need} clash card${need > 1 ? 's' : ''} to discard, face up. ${CONFISCATE_LINE}</p>
       <div class="hand">${hand.map(h => html`<div key=${h.pos}><${Card16} as="button" card=${h.c.src} cls=${cx(pick.includes(h.pos) && 'selected')} onClick=${() => toggle(h.pos)} /></div>`)}</div>`
   }
   return null
@@ -348,7 +385,7 @@ function HandView({ X, title }) {
 
 function RoundLog16({ m, names }) {
   if (!m.history.length) return html`<div class="panel stack"><h3>Rounds</h3><p class="small muted">Each round's neutral actions, cards and the board after it appear here.</p></div>`
-  const nl = a => ({ draw: 'drew', focus: 'focus', neutral: a.name, burn: `burned ${a.n}`, none: '—', skip: a.why ? a.why.toLowerCase() : 'skipped' })[a.kind] || a.kind
+  const nl = a => ({ draw: 'drew', focus: 'focus', neutral: `${a.name}${a.took ? ` (took ${a.took})` : a.fetched ? ` (fetched ${a.fetched})` : ''}`, burn: `burned ${a.n}`, none: '—', skip: a.why ? a.why.toLowerCase() : 'skipped' })[a.kind] || a.kind
   return html`<div class="panel stack">
     <h3>Rounds</h3>
     <div class="log">
@@ -359,6 +396,7 @@ function RoundLog16({ m, names }) {
           <div class="vsline"><span class="tdot" data-t=${r.types[0] || 'T'}></span>${r.cards[0] || 'nothing'} <span class="muted">vs</span> <span class="tdot" data-t=${r.types[1] || 'T'}></span>${r.cards[1] || 'nothing'}
             ${r.follow ? html`<span class="muted">· follow-up:</span> ${r.follow.name}` : null}
             ${r.combo.length ? html`<span class="muted">· combo:</span> ${r.combo.map(x => x.name).join(' → ')}` : null}</div>
+          ${r.confiscated?.some(a => a.length) ? html`<div class="small muted">Confiscated: ${[0, 1].filter(k => r.confiscated[k].length).map(k => `${names[k]} ${r.confiscated[k].join(', ')}`).join(' · ')}</div>` : null}
           <div class="small muted num">${names[0]} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${names[1]} ${r.after[1].hp} HP · ${r.after[1].pile} grey</div>
         </div>
       </div>`)}
