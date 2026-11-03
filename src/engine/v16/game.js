@@ -1,8 +1,8 @@
 // Rules v16: whole games between sparring partners (or bots), round records
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
-import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder } from './engine.js'
-import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16 } from './ai.js'
+import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked } from './engine.js'
+import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18 } from './ai.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -147,6 +147,53 @@ export function playGame16(fa, fb, { rules = DEFAULT_RULES16, W = DEFAULT_W16, l
     }
   }
   return { result: G.result, rounds, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
+}
+
+// ---- rules v18: a whole game, one deck and one step a round ------------------------------
+// Both clash cards are placed and revealed; their On reveal riders fire in initiative order
+// (Read's choice made then, the holder first, the other seeing it); then the clash resolves as
+// before. The end of the round: discard, draw 1, grey, discard down, pass the token. The game
+// ends on a KO, or at the end of the round in which a player draws the last card of their deck.
+export function playGame18(fa, fb, { rules, W = DEFAULT_W16, levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed) } = {}) {
+  let G = newGame16(fa, fb, rules, seed)
+  const rounds = []
+  const none = [{ kind: 'none' }, { kind: 'none' }]
+  while (G.result === null) {
+    const before = [snap16(G.A), snap16(G.B)]
+    const picks = [0, 1].map(k => aiClash(G, k, levels[k], W, rng))
+    const opts = [undefined, undefined]
+    for (const k of initOrder(G)) {
+      if (!BOTS16[levels[k]]) opts[k] = chooseRead18(G, k, picks, opts, W)
+      else if (levels[k] === 'random') opts[k] = randomReveal18(G, k, picks[k], rng)     // the random bot's rider choices are random too
+    }
+    const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init
+    G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, W), false, opts)
+    const post = payConfiscates(G, levels, W, rng); G = post.G
+    const rec = roundRecord16(G.round, before, G, none)
+    rec.handAtClash = handAtClash
+    rec.init = initHeld
+    rec.confiscated = post.paid
+    rec.confPre = [0, 0]
+    rec.reveals = G.clash.events.filter(e => e.kind === 'reveal' || e.kind === 'brace')
+    rec.played = [0, 1].map(k => G.clash.events.filter(e => e.kind === 'play' && e.side === k).map(e => e.name))
+    rec.parry = [0, 1].map(k => G.clash.winner === k && !!card16(k === 0 ? G.A : G.B, G.clash.picks[k])?.parry && !!G.clash.follow)
+    rounds.push(rec)
+    if (G.result !== null) break
+    G = startDraw16(G)
+    while (G.phase === 'draw') {
+      for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
+    }
+  }
+  return { result: G.result, rounds, timedOut: !!G.timedOut, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
+}
+
+// The random bot's choice for its clash card's Read or Recall rider: any legal option, at random
+function randomReveal18(G, side, pick, rng) {
+  const X = side === 0 ? G.A : G.B
+  const c = pick === null || pick === undefined ? null : card16(X, pick)
+  if (!c?.reveal || locked(X, c.t)) return undefined
+  const modes = c.reveal.read ? readModes18(X) : c.reveal.recall ? recallModes18(X, c.reveal.recall === 'attack') : []
+  return modes.length ? modes[Math.floor(rng() * modes.length)] : undefined
 }
 
 // ---- the report ------------------------------------------------------------------

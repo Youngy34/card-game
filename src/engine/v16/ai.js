@@ -12,7 +12,7 @@
 // beyond the next round (a knockdown is worth only what the weights say).
 
 import { maximin } from '../lp.js'
-import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost } from './engine.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -306,6 +306,26 @@ export function chooseMode16(G, side, acts, W, rng) {
     if (v > bestV + 1e-9) { bestV = v; best = opt }
   }
   return best === 'base' ? undefined : best
+}
+
+// Rules v18: once both clash cards are face up, a Read rider chooses (the initiative holder first):
+// draw a card, or take a special or the Super from the table. The partner tries each and keeps the
+// one whose clash (follow-ups and combos included) it values most. opts: the choices made so far.
+export function chooseRead18(G, side, picks, opts, W) {
+  const X = side === 0 ? G.A : G.B
+  const pick = picks[side]
+  const c = pick === null || pick === undefined ? null : card16(X, pick)
+  if (!(c?.reveal?.read || c?.reveal?.recall) || locked(X, c.t)) return undefined
+  const modes = c.reveal.read ? readModes18(X) : recallModes18(X, c.reveal.recall === 'attack')
+  if (modes.length < 2) return undefined
+  let best = undefined, bestV = -Infinity
+  for (const o of modes) {
+    const os = opts.slice(); os[side] = o
+    const g = runClash16(G, picks[0], picks[1], (g, p) => bestChoice16(g, p, W), true, os)
+    const v = side === 0 ? value16(g, W) : 1 - value16(g, W)
+    if (v > bestV + 1e-9) { bestV = v; best = o }
+  }
+  return best
 }
 
 // ---- bots and small decisions ------------------------------------------------------

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "benchmark18",
+  "name": "Benchmark",
+  "epithet": "Reference",
+  "concept": "The plain v18 fighter: one 24-card deck (at most 3 of any card), the shared defence core (Guard, Parry, Brace), Charge on Wind-Up and Read on Shot (both full-strength cards), two specials on the table (Rising Strike, Breaker) and a single-use Super.",
+  "hp": 38,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ]
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Sweep",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 15,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Keep them out, watch, and reload.",
+      "icons": [
+        "starter"
+      ]
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "counter"
+      ]
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ]
+    },
+    {
+      "name": "Wind-Up",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 2,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Load the heavy one and build the bar."
+    },
+    {
+      "name": "Guard",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "flavour": "Cover up and wait for the opening."
+    },
+    {
+      "name": "Parry",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "parry": true,
+      "flavour": "Read the strike, turn it aside, and open them up."
+    },
+    {
+      "name": "Brace",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "brace": "reflect",
+      "flavour": "Plant your feet: the strike rebounds on them."
+    },
+    {
+      "name": "Rising Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 19,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "Faster than anything they can throw out."
+    },
+    {
+      "name": "Breaker",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A quick heavy that cracks any guard."
+    }
+  ],
+  "super": {
+    "name": "Overdrive",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 10,
+    "chip": 5,
+    "icons": [
+      "ender"
+    ],
+    "meter": 2,
+    "onHit": "knockdown",
+    "flavour": "Once a game: ends a combo with a cash and a knockdown."
+  },
+  "notes": "Rules v18 (rules-overview 18.md), 2 November 2026: one deck, riders on clash cards, the shared defence core."
+}

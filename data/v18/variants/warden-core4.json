@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "warden18-core4",
+  "name": "The Warden",
+  "epithet": "Grappler",
+  "concept": "A grappler with chains, on one 24-card deck. Grabs beat Guards and most Counters are grabs. Coil takes a card on hit, Shackles cuts their hand to 5 on hit, Chain Spin builds meter, Chain Toss reads; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
+  "hp": 36,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Chain Lash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "copies": 3
+    },
+    {
+      "name": "Ankle Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown",
+      "copies": 2
+    },
+    {
+      "name": "Chain Toss",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ]
+    },
+    {
+      "name": "Shakedown",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 8,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "reveal": {
+        "confiscate": 1
+      },
+      "copies": 2
+    },
+    {
+      "name": "Coil",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 4,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "confiscate": 1,
+      "copies": 2
+    },
+    {
+      "name": "Shackles",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 6,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "discardDownTo": 5,
+      "copies": 2,
+      "flavour": "Chained up, you can't carry much."
+    },
+    {
+      "name": "Chain Spin",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "copies": 3
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": true
+      }
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      }
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      }
+    },
+    {
+      "name": "Iron Haul",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 10,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "confiscate": 1,
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "The chain finds you before you move."
+    },
+    {
+      "name": "Chain Whip",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A crack of the chain from out of reach."
+    }
+  ],
+  "super": {
+    "name": "Chain Prison",
+    "type": "convert",
+    "kind": "grab",
+    "speed": 10,
+    "chip": 3,
+    "icons": [
+      "counter"
+    ],
+    "meter": 2,
+    "discardDownTo": 3
+  },
+  "notes": "Rules v18 (rules-overview 18.md), 2 November 2026. Shakedown is now a grab that Confiscates on reveal, replacing Haul In; Shackles is a grab that cuts their hand to 5 on hit; Slam left out to fit 24 cards. HP 36: at 34 he won 41% against the v18 Benchmark (HP 38) in sim, at 36 50%."
+}

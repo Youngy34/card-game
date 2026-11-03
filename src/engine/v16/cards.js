@@ -65,7 +65,16 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'core', 'art', 'flavour', 'notes']
+
+// Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
+export const REVEAL18 = {
+  meter: { label: 'Charge', line: n => `On reveal: gain ${n} meter.` },
+  read: { label: 'Read', line: () => 'On reveal: draw a card, or take a special or your Super from the table, paying its meter.' },
+  confiscate: { label: 'Shakedown', line: n => `On reveal: Confiscate${n > 1 ? ` ×${n}` : ''}.` },
+  recall: { label: 'Recall', line: v => `On reveal: put ${v === 'attack' ? 'an attack' : 'a card'} from your discard pile into your hand.` },
+}
+export const MAX_COPIES18 = 3
 
 const isInt = v => Number.isInteger(v)
 const statusName = s => (typeof s === 'string' ? STATUSES[s]?.label : s && s.lock ? `Lock ${LABEL16[LOCKABLE[s.lock]]}` : null)
@@ -82,7 +91,12 @@ export function statusText(s, self = false) {
 export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
-  if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
+  if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(REVEAL18[k].line(v))
+  if (t === 'R' && c.parry) text.push('If it beats a Pressure, you may follow up with any attack from your hand, and it can start a combo.')
+  else if (t === 'R' && c.brace === 'reflect') text.push("If it beats a Pressure: no follow-up; instead, the Pressure's Build goes onto its owner's pile.")
+  else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")
+  else if (t === 'R' && c.noFollow) text.push('No follow-up.')
+  else if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
   if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
   if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' ')
     + (c.orSelect ? ' Or take a special or your Super from the table instead, paying its meter.' : '')
@@ -159,6 +173,20 @@ export function validateCard16(c, { isSuper = false } = {}) {
     if (t !== 'N') E('Only neutral cards have reveal effects (now).')
     else if (!c.now || typeof c.now !== 'object' || Object.keys(c.now).some(k => !NOW[k] || !isInt(c.now[k]) || c.now[k] < 1)) E(`now takes ${Object.keys(NOW).join(', ')}, each a whole number of 1 or more.`)
   }
+  // Rules v18 riders
+  if (c.reveal !== undefined) {
+    if (t === 'N' || isSuper) E('reveal riders go on clash cards (not neutral cards or Supers).')
+    else if (!c.reveal || typeof c.reveal !== 'object' || !Object.keys(c.reveal).length) E('reveal takes meter, read, recall or confiscate.')
+    else for (const [k, v] of Object.entries(c.reveal)) {
+      if (!REVEAL18[k]) E(`reveal takes meter, read, recall or confiscate (not "${k}").`)
+      else if (k === 'read' ? v !== true : k === 'recall' ? !(v === true || v === 'attack') : !isInt(v) || v < 1) E(k === 'read' ? 'reveal.read is true.' : k === 'recall' ? 'reveal.recall is true (any card) or "attack" (attacks only).' : `reveal.${k} is a whole number of 1 or more.`)
+    }
+  }
+  if (c.parry !== undefined && (t !== 'R' || c.parry !== true)) E('parry is true, on a Recover.')
+  if (c.brace !== undefined && (t !== 'R' || !['reflect', 'stagger'].includes(c.brace))) E('brace is "reflect" or "stagger", on a Recover.')
+  if (c.parry && c.brace) E('A card is a Parry or a Brace, not both.')
+  if (c.noFollow !== undefined && (t !== 'R' || c.noFollow !== true || c.parry || c.brace)) E('noFollow is true, on a Recover that is neither a Parry nor a Brace.')
+  if (c.core !== undefined && c.core !== true) E('core is true (a card from the shared defence core).')
   return { errors, warnings }
 }
 
@@ -166,7 +194,8 @@ export function validateFighter16(f) {
   const errors = [], warnings = []
   const add = (where, r) => { r.errors.forEach(msg => errors.push({ where, msg })); r.warnings.forEach(msg => warnings.push({ where, msg })) }
   if (!f || typeof f !== 'object') return { errors: [{ where: 'Fighter', msg: 'Not an object.' }], warnings }
-  if (f.rules !== 16) errors.push({ where: 'Fighter', msg: 'rules must be 16.' })
+  const merged = f.rules === 18                     // rules v18: one deck, riders on clash cards
+  if (f.rules !== 16 && !merged) errors.push({ where: 'Fighter', msg: 'rules must be 16 (or 18 for a single v18 deck).' })
   if (!f.id || !/^[a-z0-9-]+$/.test(f.id)) errors.push({ where: 'Fighter', msg: 'id must be lower-case letters, numbers and dashes.' })
   if (!f.name) errors.push({ where: 'Fighter', msg: 'Needs a name.' })
   if (!isInt(f.hp) || f.hp < 1 || f.hp > 99) errors.push({ where: 'Fighter', msg: 'HP must be a whole number from 1 to 99.' })
@@ -185,11 +214,19 @@ export function validateFighter16(f) {
   }
   const size = deckSize(f)
   if (size < 12 || size > 40) errors.push({ where: 'Deck', msg: `A deck is 12–40 cards (this has ${size}).` })
-  const counters = f.cards.reduce((s, c) => s + ((c?.icons || []).includes('counter') ? c.copies || 0 : 0), 0)
+  const counters = f.cards.reduce((s, c) => s + ((c?.icons || []).includes('counter') && !(merged && c.special) ? c.copies || 0 : 0), 0)
   const neutral = f.cards.reduce((s, c) => s + (T16[c?.type] === 'N' && isInt(c?.copies) ? c.copies : 0), 0)
-  const clash = size - neutral
+  const specials = f.cards.reduce((s, c) => s + (c?.special ? c.copies || 0 : 0), 0)
+  const clash = size - neutral - (merged ? specials : 0)
   if (clash && counters / clash < 0.3) warnings.push({ where: 'Clash deck', msg: `${counters} Counters in ${clash} clash cards: aim for about a third, so a Guard usually has a punish.` })
-  if (neutral < 4) errors.push({ where: 'Neutral deck', msg: `Needs at least 4 neutral cards (a hand of 3, and one to draw); this has ${neutral}.` })
+  if (merged) {
+    // Rules v18: one deck of clash cards, at most 3 of any card; the riders replace the neutral deck
+    if (neutral) errors.push({ where: 'Deck', msg: 'A v18 deck has no neutral cards: put their effects on clash cards as riders.' })
+    for (const c of f.cards) if (isInt(c?.copies) && c.copies > MAX_COPIES18) errors.push({ where: c.name, msg: `At most ${MAX_COPIES18} copies of a card (this has ${c.copies}).` })
+    const riders = k => f.cards.reduce((s, c) => s + (c?.reveal?.[k] && !c.special ? c.copies || 0 : 0), 0)
+    if (!riders('meter')) warnings.push({ where: 'Deck', msg: 'No card gains meter (a Charge rider).' })
+    if (!riders('read')) warnings.push({ where: 'Deck', msg: 'No card can take from the table (a Read rider).' })
+  } else if (neutral < 4) errors.push({ where: 'Neutral deck', msg: `Needs at least 4 neutral cards (a hand of 3, and one to draw); this has ${neutral}.` })
   else if (neutral < 6) warnings.push({ where: 'Neutral deck', msg: `${neutral} neutral cards cycle very fast with a neutral hand of 3.` })
   for (const t of ['P', 'C', 'R']) if (!f.cards.some(c => T16[c?.type] === t)) warnings.push({ where: 'Deck', msg: `No ${LABEL16[t]}s.` })
   return { errors, warnings }
@@ -207,6 +244,7 @@ function norm(c, isSuper) {
     onHit: c.onHit ?? null, cost: c.cost ?? null, onLossSelf: c.onLossSelf ?? 0,
     meter: isSuper ? (c.meter ?? 3) : c.special ? (c.meter ?? 1) : 0, special: !!c.special, orSelect: !!c.orSelect, orFetch: !!c.orFetch, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
     confiscate: c.confiscate ?? 0, discardDownTo: c.discardDownTo ?? null, atClash: c.atClash ?? null, capHand: c.capHand ?? null, endsOn: c.endsOn ?? null,
+    reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow,
     sup: isSuper, src: c,
   }
 }

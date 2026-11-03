@@ -43,7 +43,22 @@ import { BEATS16, LABEL16, LOCKABLE } from './cards.js'
 export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burnMax: 0, superUses: 0, speedTie: 'cancel', maxRounds: 60,
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
-  initiative: false, tableCards: false, refillAtReveal: false }
+  initiative: false, tableCards: false, refillAtReveal: false,
+  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false }
+// Rules v18 switches (rules-overview 18.md), off for v16 and v17:
+//   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
+//     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
+//     card is your clash card and isn't voided), in initiative order: reveal.meter (Charge),
+//     reveal.read (Read: draw a card, or take a special or your Super from the table, paying its
+//     meter) and reveal.confiscate. A Recover with parry lets its follow-up be any attack and start
+//     a combo; one with brace gives no follow-up and instead reflects the beaten Pressure's Build
+//     onto its owner's pile ('reflect') or Staggers them ('stagger'); one with noFollow simply gives no follow-up.
+//   specialsReturn: a special that leaves your hand (played, discarded, Confiscated) goes back to
+//     the table, to be taken again; it never sits in the discard pile.
+//   timeout: the deck never reshuffles. When a player's deck is empty at the end of a round (they
+//     drew its last card), the game ends: the higher HP wins, equal HP is a draw.
+//   knockdownLocks: Knockdown means Lock Pressure next round (getting up, you can guard or go for
+//     a big reversal, but not a quick strike), since there is no neutral step to skip.
 // Rules v17 switches (rules-overview 17.md), off for v16:
 //   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
 //     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
@@ -92,7 +107,7 @@ function drawCards(X, n, R) {
   let drawn = 0
   for (let k = 0; k < n; k++) {
     if (!X.deck.length) {
-      if (!X.discard.length) break
+      if (X.noReshuffle || !X.discard.length) break         // rules v18 (timeout): one pass, no reshuffle
       X.deck = shuffle(X.discard.map(d => d.i), R)
       X.discard = []
       X.reshuffles = (X.reshuffles || 0) + 1
@@ -137,9 +152,10 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
   rules = { ...DEFAULT_RULES16, ...rules }
   const R = { s: seed >>> 0 }
   const mk = f => {
-    const split = !!rules.splitDecks
+    const split = !!rules.splitDecks && !rules.merged
     const clash = (split ? f.deck.filter(i => f.cards[i].t !== 'N') : f.deck.slice()).filter(i => !(rules.tableCards && f.cards[i].special))
     const X = { f, hp: f.hp, pile: 0, meter: 0, deck: shuffle(clash, R), hand: [], discard: [], st: {}, next: {}, fx: {}, used: [], reshuffles: 0, supersUsed: 0 }
+    if (rules.timeout) X.noReshuffle = true
     if (rules.tableCards) {
       X.table = f.cards.map((c, i) => (c.special ? i : null)).filter(i => i !== null)   // specials still on the table
       X.superAt = f.sup ? 'table' : null                                               // 'table' | 'hand' | 'gone'
@@ -151,7 +167,7 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
   }
   const A = mk(fa), B = mk(fb)
   const init = rules.initiative ? (rnd(R) < 0.5 ? 0 : 1) : null
-  return { A, B, round: 1, rules, rng: R.s, phase: 'neutral', result: null, pending: null, clash: null, neutral: null, init }
+  return { A, B, round: 1, rules, rng: R.s, phase: rules.merged ? 'clash' : 'neutral', result: null, pending: null, clash: null, neutral: null, init }
 }
 
 // ---- 1. neutral phase ----------------------------------------------------------
@@ -368,7 +384,7 @@ function owe(Y, n, ev, side, from, down = false) {
 export function confiscate16(G, side, cards) {
   const X = cloneP(side === 0 ? G.A : G.B)
   if (cards.length !== (X.owe || 0)) throw new Error(`discard exactly ${X.owe || 0}`)
-  for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: false, confiscated: true }) }
+  for (const i of cards) { takeFromHand(X, i); toDiscard(X, i, G.rules, { confiscated: true }) }
   X.confiscated = (X.confiscated || 0) + cards.length
   X.owe = 0
   return { ...G, [side === 0 ? 'A' : 'B']: X }
@@ -421,9 +437,88 @@ function hit(X, Y, c, ev, side, how, rules = {}) {
 const ko = (A, B) => (A.hp <= 0 ? 0 : B.hp <= 0 ? 1 : null)        // the side knocked out
 const resultOf = (A, B) => { const k = ko(A, B); return k === null ? null : k === 0 ? 0 : 1 }
 
+// Rules v18: what a Read rider can do: draw a card, or take a special or the Super from the
+// table, paying its meter
+export function readModes18(X) {
+  const out = ['draw']
+  for (const j of X.table || []) if (X.meter >= X.f.cards[j].meter) out.push({ take: j })
+  if (X.superAt === 'table' && X.f.sup && X.meter >= X.f.sup.meter) out.push({ take: 'S' })
+  return out
+}
+// The choice a Read rider makes when no one chooses for it: a special it can afford, then the Super, then a draw
+export const defaultRead18 = X => { const m = readModes18(X); return m.find(o => o !== 'draw' && o.take !== 'S') || m.find(o => o !== 'draw') || 'draw' }
+
+// Rules v18: the clash cards' On reveal riders, in initiative order (the holder's first).
+// opts[k] is Read's choice for side k ('draw' or { take: j }); undefined takes the default.
+// lite (the partner looking ahead): a drawn card is counted, not drawn, since it doesn't know its deck order.
+function revealRiders(G, P, cards, opts, lite, ev) {
+  const R = { s: G.rng }
+  const meterMax = G.rules.meterMax ?? 3
+  for (const k of initOrder(G)) {
+    const c = cards[k], X = P[k], Y = P[1 - k]
+    if (!c) continue
+    if (c.parry) X.fx.parry = 1
+    const rv = c.reveal
+    if (!rv) continue
+    if (rv.meter) {
+      const m = Math.max(0, Math.min(rv.meter, meterMax - X.meter))
+      X.meter += m
+      ev.push({ side: k, kind: 'reveal', what: 'meter', n: m, wasted: rv.meter - m, name: c.name })
+    }
+    if (rv.read) {
+      const modes = readModes18(X)
+      let o = opts?.[k]
+      if (o === undefined || o === null) o = defaultRead18(X)
+      if (o !== 'draw' && !modes.some(m => m !== 'draw' && m.take === o.take)) throw new Error(`${c.name} can't take that`)
+      if (o === 'draw') {
+        let n = 0
+        if (lite) { if (X.deck.length) { X.pendingDraw = (X.pendingDraw || 0) + 1; n = 1 } }
+        else n = drawCards(X, 1, R)
+        ev.push({ side: k, kind: 'reveal', what: 'draw', n, name: c.name })
+      } else {
+        const cost = tableCost(X, o.take)
+        X.meter -= cost
+        if (o.take === 'S') X.superAt = 'hand'
+        else { X.table = X.table.filter(j => j !== o.take); X.hand.push(o.take) }
+        ev.push({ side: k, kind: 'reveal', what: 'take', took: o.take === 'S' ? X.f.sup.name : X.f.cards[o.take].name, sup: o.take === 'S', cost, name: c.name })
+      }
+    }
+    if (rv.recall) {
+      // Recall: put a card of your choice from your discard pile into your hand (any card; specials never sit there)
+      const only = rv.recall === 'attack'
+      const modes = recallModes18(X, only)
+      if (modes.length) {
+        let o = opts?.[k]
+        if (!o || o.recall === undefined) o = defaultRecall18(X, only)
+        if (!modes.some(m => m.recall === o.recall)) throw new Error(`${c.name} can't recall that`)
+        const at = X.discard.findIndex(d => d.i === o.recall)
+        if (at < 0) throw new Error(`${c.name} can't recall that`)
+        X.discard = X.discard.slice(); X.discard.splice(at, 1); X.hand.push(o.recall)
+        ev.push({ side: k, kind: 'reveal', what: 'recall', recalled: X.f.cards[o.recall].name, name: c.name })
+      } else ev.push({ side: k, kind: 'reveal', what: 'recall', recalled: null, name: c.name })
+    }
+    if (rv.confiscate) for (let n = rv.confiscate; n > 0; n--) owe(Y, 1, ev, 1 - k, c.name)
+  }
+  return R.s
+}
+// Rules v18 (test): what a Recall rider can bring back, one option per distinct card in the discard pile
+// attacksOnly (a card with reveal.recall: 'attack'): Recovers can't be brought back
+export const recallModes18 = (X, attacksOnly = false) => [...new Set(X.discard.map(d => d.i))].filter(i => !attacksOnly || X.f.cards[i].t !== 'R').map(i => ({ recall: i }))
+// When no one chooses: the card with the most to offer (combo and Counter icons, then its numbers)
+export function defaultRecall18(X, attacksOnly = false) {
+  let best = null, bv = -Infinity
+  for (const o of recallModes18(X, attacksOnly)) {
+    const c = X.f.cards[o.recall]
+    const v = (c.starter ? 1 : 0) + (c.ender ? 1 : 0) + (c.counter ? 1 : 0) + (c.linker ? 0.5 : 0) + (c.t === 'R' ? 0.8 : 0) + ((c.build || 0) + (c.chip || 0)) / 4
+    if (v > bv) { bv = v; best = o }
+  }
+  return best
+}
+
 // Set both clash cards and resolve the clash. Returns the game waiting on a
 // decision (G.pending: a follow-up, a Linker or an Ender) or with the clash done.
-export function startClash16(G, a, b, lite = false) {
+// opts (rules v18): each side's Read choice, if its clash card has a Read rider.
+export function startClash16(G, a, b, lite = false, opts = null) {
   FLOOR = confiscateFloor(G.rules)
   const A = cloneP(G.A, lite), B = cloneP(G.B, lite)
   const P = [A, B], ev = []
@@ -433,6 +528,7 @@ export function startClash16(G, a, b, lite = false) {
   const voided = played.map((c, k) => !!c && locked(P[k], c.t))
   voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: 'voided', name: played[k].name, t: played[k].t }) })
   const cards = played.map((c, k) => (voided[k] ? null : c))
+  const rng = G.rules.merged ? revealRiders(G, P, cards, opts, lite, ev) : G.rng
   const [ca, cb] = cards
   let winner = -1, outcome
   if (!ca && !cb) outcome = 'none'
@@ -467,12 +563,19 @@ export function startClash16(G, a, b, lite = false) {
     hit(W, L, cards[winner], ev, winner, 'clash', G.rules)
     const lc = cards[1 - winner]
     if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf }) }
+    // Rules v18: a Brace that beats a Pressure gives no follow-up; instead the Pressure's Build
+    // goes onto its owner's pile (reflect), or they're Staggered next round (stagger)
+    const wcd = cards[winner]
+    if (outcome === 'triangle' && wcd.brace && wcd.t === 'R' && lc?.t === 'P') {
+      if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name }) }
+      else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
+    }
   }
   const clash = { picks, types: cards.map(c => c?.t ?? null), names: played.map(c => c?.name ?? null), voided, outcome, winner, events: ev, follow: null, combo: [] }
-  let next = { ...G, A, B, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
+  let next = { ...G, A, B, rng, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
-  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return ask(next, 'follow', winner)
+  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return wc.brace || wc.noFollow ? finishClash(next) : ask(next, 'follow', winner)
   if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }
@@ -517,8 +620,8 @@ export function decideClash16(G, choice, lite = false) {
 }
 
 // Run a whole clash, answering each decision with decide(G, pending)
-export function runClash16(G, a, b, decide, lite = false) {
-  let g = startClash16(G, a, b, lite)
+export function runClash16(G, a, b, decide, lite = false, opts = null) {
+  let g = startClash16(G, a, b, lite, opts)
   while (g.pending) g = decideClash16(g, decide(g, g.pending), lite)
   return g
 }
@@ -530,7 +633,7 @@ export function startDraw16(G) {
   const R = { s: G.rng }
   const P = [cloneP(G.A), cloneP(G.B)]
   for (const X of P) {
-    for (const i of X.used) if (i !== 'S') X.discard.push({ i, burned: false })
+    for (const i of X.used) if (i !== 'S') toDiscard(X, i, G.rules)
     X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
     if (G.rules.greyPerRound) X.pile += G.rules.greyPerRound      // everyone takes grey with their draw
@@ -545,6 +648,12 @@ export function startDraw16(G) {
   return over.some(n => n > 0) ? g : finishRound16(g)
 }
 
+// A card leaving play or hand: to the discard pile, or (rules v18, specialsReturn) a special back to the table
+function toDiscard(X, i, rules, extra = {}) {
+  if (rules?.specialsReturn && X.f.cards[i].special) { X.table = [...(X.table || []), i]; return }
+  X.discard.push({ i, burned: false, ...extra })
+}
+
 // A player's clash hand limit: the rule, or lower under the opponent's card in play (Shackles)
 export function handLimitOf(X, Y, rules) {
   const lim = rules.handLimit ?? 8
@@ -557,7 +666,7 @@ export function discardDown16(G, side, cards) {
   const X = cloneP(side === 0 ? G.A : G.B)
   const need = G.discardDown[side]
   if (cards.length !== need) throw new Error(`discard exactly ${need}`)
-  for (const i of cards) { takeFromHand(X, i); X.discard.push({ i, burned: false }) }
+  for (const i of cards) { takeFromHand(X, i); toDiscard(X, i, G.rules) }
   const dd = G.discardDown.slice(); dd[side] = 0
   const g = { ...G, [side === 0 ? 'A' : 'B']: X, discardDown: dd }
   return dd.some(n => n > 0) ? g : finishRound16(g)
@@ -566,11 +675,21 @@ export function discardDown16(G, side, cards) {
 // Statuses move on (next round's become this round's), and the next round begins
 export function finishRound16(G) {
   const P = [cloneP(G.A, true), cloneP(G.B, true)]
-  for (const X of P) { X.st = X.next; X.next = {} }
+  for (const X of P) {
+    X.st = X.next; X.next = {}
+    // Rules v18: Knockdown is Lock Pressure next round
+    if (G.rules.knockdownLocks && X.st.knockdown) X.st = { ...X.st, lock: { ...(X.st.lock || {}), P: true } }
+  }
   const round = G.round + 1
-  const result = round > (G.rules.maxRounds ?? 60) ? 0.5 : null
+  let result = round > (G.rules.maxRounds ?? 60) ? 0.5 : null
+  // Rules v18: a deck that's run out ends the game at the end of the round; the higher HP wins
+  let timedOut = false
+  if (result === null && G.rules.timeout && (!P[0].deck.length || !P[1].deck.length)) {
+    timedOut = true
+    result = P[0].hp > P[1].hp ? 1 : P[0].hp < P[1].hp ? 0 : 0.5
+  }
   const init = G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init ?? null
-  return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? 'neutral' : 'over', result, neutral: null, clash: null, pending: null, discardDown: null }
+  return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? (G.rules.merged ? 'clash' : 'neutral') : 'over', result, ...(timedOut ? { timedOut } : {}), neutral: null, clash: null, pending: null, discardDown: null }
 }
 
 // ---- what a player can see -------------------------------------------------------
