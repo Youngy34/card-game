@@ -46,7 +46,7 @@ Card by card in `rules-overview 18.md`, The Fighters.
 
 - `node tools/test18.mjs`: 64 pass; `test17` (36), `test16` (96), `test16-warden` (28) still pass.
 - The match logic, driven through 30 whole games (partner v partner, a scripted person, hot-seat): every phase reached, including the rider choice, Confiscate and time-outs.
-- Browser smoke `tools/smoke/browser18.cjs`: every check passes, over six runs (about 300 checks a run; the count varies with what the games offer) (whole games against Hard and against the Warden, the Read and Recall prompts, taking from the table, the time-out note and result, the log, Decks, Settings, the Lab, hot-seat, phone width).
+- Browser smoke `tools/smoke/browser18.cjs`: every check passed on the last three runs, about 300 a run (the count varies with what the games offer; one earlier run missed a rare prompt by chance, so the test now plays on until each has come up) (whole games against Hard and against the Warden, the Read and Recall prompts, taking from the table, the time-out note and result, the log, Decks, Settings, the Lab, hot-seat, phone width).
 
 ## Known limits
 
