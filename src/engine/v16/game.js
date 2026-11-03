@@ -18,12 +18,13 @@ export function mulberry(seed) {
 export const snap16 = X => ({ hp: X.hp, pile: X.pile, hand: X.hand.length, meter: X.meter, deck: X.deck.length, inPlay: X.inPlay != null ? X.f.cards[X.inPlay].name : null })
 
 // Pay any owed Confiscates (each victim chooses), returning the game and what went
+// W may be one set of weights or a pair, one for each side (the victim's are used)
 function payConfiscates(G, levels, W, rng) {
   const paid = [[], []]
   for (const k of initOrder(G)) {
     const X = k === 0 ? G.A : G.B
     if (!X.owe) continue
-    const cards = chooseConfiscate(G, k, X.owe, W, rng, levels[k], G.rules.confiscateBy || 'victim', levels[1 - k])
+    const cards = chooseConfiscate(G, k, X.owe, Array.isArray(W) ? W[k] : W, rng, levels[k], G.rules.confiscateBy || 'victim', levels[1 - k])
     paid[k] = cards.map(i => X.f.cards[i].name)
     G = confiscate16(G, k, cards)
   }
@@ -154,21 +155,22 @@ export function playGame16(fa, fb, { rules = DEFAULT_RULES16, W = DEFAULT_W16, l
 // (Read's choice made then, the holder first, the other seeing it); then the clash resolves as
 // before. The end of the round: discard, draw 1, grey, discard down, pass the token. The game
 // ends on a KO, or at the end of the round in which a player draws the last card of their deck.
-export function playGame18(fa, fb, { rules, W = DEFAULT_W16, levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed) } = {}) {
+// Ws (optional): a set of weights for each side, to pit two partners against each other
+export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed) } = {}) {
   let G = newGame16(fa, fb, rules, seed)
   const rounds = []
   const none = [{ kind: 'none' }, { kind: 'none' }]
   while (G.result === null) {
     const before = [snap16(G.A), snap16(G.B)]
-    const picks = [0, 1].map(k => aiClash(G, k, levels[k], W, rng))
+    const picks = [0, 1].map(k => aiClash(G, k, levels[k], Ws[k], rng))
     const opts = [undefined, undefined]
     for (const k of initOrder(G)) {
-      if (!BOTS16[levels[k]]) opts[k] = chooseRead18(G, k, picks, opts, W)
+      if (!BOTS16[levels[k]]) opts[k] = chooseRead18(G, k, picks, opts, Ws[k])
       else if (levels[k] === 'random') opts[k] = randomReveal18(G, k, picks[k], rng)     // the random bot's rider choices are random too
     }
     const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init
-    G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, W), false, opts)
-    const post = payConfiscates(G, levels, W, rng); G = post.G
+    G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, Ws[p.side]), false, opts)
+    const post = payConfiscates(G, levels, Ws, rng); G = post.G
     const rec = roundRecord16(G.round, before, G, none)
     rec.handAtClash = handAtClash
     rec.init = initHeld
@@ -188,7 +190,7 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, levels = ['hard', '
 }
 
 // The random bot's choice for its clash card's Read or Recall rider: any legal option, at random
-function randomReveal18(G, side, pick, rng) {
+export function randomReveal18(G, side, pick, rng) {
   const X = side === 0 ? G.A : G.B
   const c = pick === null || pick === undefined ? null : card16(X, pick)
   if (!c?.reveal || locked(X, c.t)) return undefined
@@ -209,7 +211,9 @@ export function summarise16(games, fighters) {
     combos: 0, comboLen: 0, comboDmg: 0, comboEnds: {}, starterWins: 0,
     statuses: {}, supers: [0, 0], burned: [0, 0], focused: [0, 0], reshuffles: [0, 0], handAfter: [[], []], sameType: 0, ties: 0,
     conf: [0, 0], confPre: [0, 0], confCards: [{}, {}], handAtClash: [[], []], inPlay: [{}, {}], hpLeft: [], took: [{}, {}], fetched: [0, 0], tieByInit: [0, 0] }
+  R.timeouts = 0
   for (const g of games) {
+    if (g.timedOut) R.timeouts++
     R.win += g.result
     R.lengths.push(g.rounds.length)
     R.totalRounds += g.rounds.length
@@ -275,7 +279,7 @@ export async function runBalance16(fa, fb, { n = 100, seed = 1, rules, W, levels
   let t0 = Date.now()
   for (let i = 0; i < n; i++) {
     if (signal?.aborted) break
-    const g = playGame16(fa, fb, { rules, W, levels, seed: seed * 100003 + i, rng })
+    const g = (rules?.merged ? playGame18 : playGame16)(fa, fb, { rules, W, levels, seed: seed * 100003 + i, rng })
     games.push(g)
     if (Date.now() - t0 > 60) { onProgress?.(i + 1); await new Promise(r => setTimeout(r, 0)); t0 = Date.now() }
   }

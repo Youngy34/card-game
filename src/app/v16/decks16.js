@@ -13,7 +13,7 @@ const clone = v => JSON.parse(JSON.stringify(v))
 const same = (a, b) => stableStringify(a) === stableStringify(b)
 
 export function Decks16({ selected, setSelected }) {
-  const list = roster().filter(r => r.rules === 16)
+  const list = roster().filter(r => r.rules >= 16)
   const entry = list.find(r => r.id === selected) || list[0]
   return html`<div class="ed">
     <nav class="ed-list" aria-label="Fighters">

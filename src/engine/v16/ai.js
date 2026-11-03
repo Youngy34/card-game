@@ -11,8 +11,8 @@
 // in the neutral phase when weighing its own action, and it can't see payoffs
 // beyond the next round (a knockdown is worth only what the weights say).
 
-import { maximin } from '../lp.js'
-import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked } from './engine.js'
+import { maximin, bayesMaximin, bayesGame } from '../lp.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -124,6 +124,7 @@ export function clashMix16(G, side, W, rng, level = 'hard', hands = null) {
   const op = side === 0 ? G.B : G.A
   const pool = unseenPool(op)
   const K = hands ? hands.length : W.samples
+  if (W.pooled) return pooledMix16(G, side, W, rng, level, hands, pool, K)
   let rows = null, x = null, util = null, value = 0
   for (let s = 0; s < K; s++) {
     const hand = hands ? hands[s] : dealHand(pool, op.hand.length, rng)
@@ -144,6 +145,32 @@ export function clashMix16(G, side, W, rng, level = 'hard', hands = null) {
   const lambda = LEVELS16[level]?.lambda
   if (lambda) x = softmax(util, lambda)
   return { options: rows, x, value, util }
+}
+
+// W.pooled (rules v18): one solve over all the dealt hands, rather than a separate solve for each
+// and the average of the answers. The opponent's hand is one of K dealt hands (they know which).
+// With W.mySamples > 1, our own hand is hidden too: to them it's one of mySamples hands (ours and
+// some dealt from what they can't see of ours), and the mix is the one for our real hand in the
+// solve over every pairing (bayesGame), so we don't guard against threats they can't see.
+// Dealt hands keep the cards each side knows about (hiddenSplit). util[i] is row i's average
+// against their replies (the dual prices), so the looser levels soften the same answer.
+const withHands = (G, side, mine, theirs) => side === 0
+  ? { ...G, A: { ...G.A, hand: mine }, B: { ...G.B, hand: theirs } }
+  : { ...G, A: { ...G.A, hand: theirs }, B: { ...G.B, hand: mine } }
+const dealer = (Y, rng) => { const { known, pool } = hiddenSplit(Y); return () => known.concat(dealHand(pool, Y.hand.length - known.length, rng)) }
+function pooledMix16(G, side, W, rng, level, hands, pool, K) {
+  const me = side === 0 ? G.A : G.B, op = side === 0 ? G.B : G.A
+  const theirs = hands || Array.from({ length: K }, dealer(op, rng))
+  const A = Math.max(1, W.mySamples || 1)
+  const mine = [me.hand, ...Array.from({ length: A - 1 }, dealer(me, rng))]
+  const grids = mine.map(mh => theirs.map(oh => grid(withHands(G, side, mh, oh), side, W)))
+  const rows = grids[0][0].rows
+  let x, v, y
+  if (A === 1) ({ x, v, y } = bayesMaximin(grids[0].map(g => g.M)))
+  else { const sol = bayesGame(grids.map(r => r.map(g => g.M))); x = sol.x[0]; v = sol.v; y = sol.y }
+  const util = rows.map((_, i) => grids[0].reduce((a, g, b) => a + g.M[i].reduce((t, q, j) => t + q * y[b][j], 0), 0) / theirs.length)
+  const lambda = LEVELS16[level]?.lambda
+  return { options: rows, x: lambda ? softmax(util, lambda) : x, value: v, util }
 }
 
 // One reveal: the setup card and the clash card are one secret choice, made

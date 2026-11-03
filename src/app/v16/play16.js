@@ -16,7 +16,7 @@ const MODES = [['ai', 'You vs sparring partner'], ['hotseat', 'Two players, one 
 const SHORT = { ai: ['you', 'partner'], hotseat: ['player 1', 'player 2'], watch: ['partner 1', 'partner 2'] }
 
 export function Setup16({ onStart, prefs, setPrefs }) {
-  const list = roster().filter(r => r.rules === 16)
+  const list = roster().filter(r => r.rules >= 16)
   const ids = list.map(r => r.id)
   const sides = prefs.sides.map((id, k) => (ids.includes(id) ? id : ids[k % Math.max(ids.length, 1)]))
   const pick = (k, id) => setPrefs({ ...prefs, sides: sides.map((s, i) => (i === k ? id : s)) })
@@ -32,13 +32,13 @@ export function Setup16({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">${s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
+      <p class="lede">${s.rules.merged ? 'Rules v18: each fighter plays one shuffled 24-card deck, gone through once, with hands hidden. Each round, both play a clash card together; riders on the cards (Charge, Read, Recall) fire on reveal, win or lose. Specials and the Super wait face up on the table until a Read takes them for meter; a special goes back to the table once used, the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
       <${Seg} value=${prefs.mode} options=${MODES} onChange=${mode => setPrefs({ ...prefs, mode })} label="Mode" />
       <p class="small muted">${{
-        ai: 'The sparring partner can\'t see your hand: it deals you a few possible hands from the cards it hasn\'t seen, and plays the mix that\'s safest against them.',
+        ai: s.rules.merged ? 'The sparring partner can\'t see your hand: it deals you a few possible hands from the cards it hasn\'t seen, and it knows you can\'t see its own, so it plays the mix that\'s safest across all of them.' : 'The sparring partner can\'t see your hand: it deals you a few possible hands from the cards it hasn\'t seen, and plays the mix that\'s safest against them.',
         hotseat: 'Hands are hidden, so the screen asks for the device to change hands before each private choice.',
         watch: 'Step through a game between two sparring partners.',
       }[prefs.mode]}</p>
@@ -46,7 +46,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
     ${prefs.mode === 'ai' ? html`<div class="stack">
       <span class="label">Difficulty</span>
       <${Seg} value=${difficulty} options=${levels.map(([k, l]) => [k, l.label])} onChange=${d => setPrefs({ ...prefs, difficulty: d })} label="Difficulty" />
-      <p class="small muted">${M.LEVELS16[difficulty].about} ${{ easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' }[difficulty]}</p>
+      <p class="small muted">${M.LEVELS16[difficulty].about} ${(s.rules.merged ? { easy: 'In the Benchmark mirror, Hard beats it about 65 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 59 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out.' } : { easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' })[difficulty]}</p>
     </div>` : null}
     <div class="pickers">
       ${[0, 1].map(k => html`<div class="stack">
@@ -54,7 +54,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${M.WHO16[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP · ${splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP · ${r.fighter.rules === 18 ? oneDeckSize(r.fighter) : splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
@@ -63,7 +63,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
       <label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you choose (lethal range, live Supers, statuses, Counters they could hold, speed duels)</label>
       <label class="check"><input type="checkbox" checked=${!!prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the sparring partner's mix after each reveal</label>
       ${prefs.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${!!prefs.showHands} onChange=${e => setPrefs({ ...prefs, showHands: e.target.checked })} /> Show both hands</label>` : null}
-      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}${greyRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.tableCards ? 'taken from the table and used once' : s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${tieRule(s.rules)}. Change these in Settings.</p>
+      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}${greyRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.tableCards ? 'taken from the table and used once' : s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${tieRule(s.rules)}${s.rules.timeout ? '; no reshuffle: the game times out when a deck runs out' : ''}. Change these in Settings.</p>
       <div class="actions"><button class="btn" onClick=${start}>Start the match</button></div>
     </div>
   </div>`
@@ -130,7 +130,7 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <div class="overlay-box">
         <span class="label">Round ${m.G.round}</span>
         <h2>Pass the device to ${who[m.turn]}</h2>
-        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
+        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option', rider: 'Their rider\'s choice' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
         <button class="btn" onClick=${() => setM(M.continueAfterPass(m))}>I'm ${who[m.turn]}</button>
       </div>
     </div>` : null}
@@ -162,13 +162,13 @@ function Hud16({ X, who, m }) {
     <div class="hud-row small">
       <span class="count"><b>${X.hand.length}</b> in hand</span>
       ${cap !== null ? html`<span class="flag status" title=${`${Y.f.cards[Y.inPlay].name}: discard down to ${cap} in the draw step`}>Hand limit ${cap}</span>` : null}
-      <span class="count"><b>${X.deck.length}</b> in deck</span>
+      <span class=${cx('count', m.G.rules.timeout && X.deck.length <= 3 && 'flag status')} title=${m.G.rules.timeout ? 'No reshuffle: when a deck runs out, the game times out and the higher HP wins' : ''}><b>${X.deck.length}</b> in deck${m.G.rules.timeout && X.deck.length <= 3 ? ' · time-out near' : ''}</span>
       <span class="count"><b>${X.discard.length}</b> discarded${top ? html`<span class="muted"> · top: ${top.burned ? 'a burned card' : X.f.cards[top.i].name}</span>` : null}</span>
       ${X.reshuffles ? html`<span class="count muted">reshuffled ${X.reshuffles}×</span>` : null}
     </div>
     ${X.table ? html`<div class="hud-row small neutral-row" aria-label="On the table">
       <span class="label">Table</span>
-      ${X.f.cards.map((c, i) => (c.special ? html`<span class=${cx('flag', X.table.includes(i) ? 'status' : 'sup')} title=${X.table.includes(i) ? `Read can take it for ${c.meter} meter` : 'Taken: in their deck for the game'}>${c.name} ${X.table.includes(i) ? `· ${c.meter} meter` : '· taken'}</span>` : null))}
+      ${X.f.cards.map((c, i) => (c.special ? html`<span class=${cx('flag', X.table.includes(i) ? 'status' : 'sup')} title=${X.table.includes(i) ? `Read can take it for ${c.meter} meter` : m.G.rules.specialsReturn ? 'Taken: in their hand, back to the table once it leaves it' : 'Taken: in their deck for the game'}>${c.name} ${X.table.includes(i) ? `· ${c.meter} meter` : m.G.rules.specialsReturn ? '· in hand' : '· taken'}</span>` : null))}
       ${sup ? html`<span class=${cx('flag sup', X.superAt === 'hand' && 'ready', X.superAt === 'gone' && 'spent')} title="Their Super: taken from the table by Read, used once">${sup.name} ${X.superAt === 'table' ? `· ${sup.meter} meter` : X.superAt === 'hand' ? '· in hand' : '· used'}</span>` : null}
     </div>` : null}
     ${X.nhand ? html`<div class="hud-row small neutral-row">
@@ -188,16 +188,21 @@ function Stage16({ m, names, prefs }) {
   const res = m.result
   return html`<section class="clash" aria-label="The round" aria-live="polite">
     ${m.phase === 'over' ? html`<div class="outcome">
-      <span class="ko">${res === 0.5 ? 'Draw' : 'K.O.'}</span>
-      <b>${res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
-      <span>Round ${G.round}.</span>
+      <span class="ko">${m.timedOut ? 'Time' : res === 0.5 ? 'Draw' : 'K.O.'}</span>
+      <b>${m.timedOut ? (res === 0.5 ? 'Time-out: level on HP, a draw' : `Time-out: ${names[res === 1 ? 0 : 1]} wins on HP`) : res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
+      <span>Round ${G.round}.${m.timedOut ? ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.` : ''}</span>
     </div>` : null}
-    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal' }[m.phase]}</span>
+    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal', rider: 'Reveal' }[m.phase]}</span>
     ${neutral ? html`<div class="neutral-line">${[1, 0].map(k => html`<div><b>${names[k]}</b> <span>${neutralLine16(neutral[k], m.G[k === 0 ? 'A' : 'B'].f)}</span></div>`)}</div>` : null}
-    ${!clash ? html`<div class="clash-cards">
+    ${m.phase === 'rider' ? html`<div class="clash-cards">
+      ${[1, 0].map((k, n) => { const X = k === 0 ? G.A : G.B, i = m.picks[k]; return html`${n ? html`<span class="vs">VS</span>` : null}${i === null || i === undefined ? html`<div class="card card-back" style=${{ opacity: 0.4 }}><span>—</span></div>` : html`<${Card16} card=${card16(X, i).src} isSuper=${i === 'S'} />`}` })}
+    </div>
+    <p class="small muted">Both cards are face up. Riders fire now, the initiative holder's first; a Read or a Recall is chosen in that order.</p>
+    ${m.opts.some((o, k) => o !== undefined && m.riderDone[k]) ? html`<ul class="narr16">${[0, 1].filter(k => m.opts[k] !== undefined && m.riderDone[k]).map(k => html`<li>${names[k]} chose: ${M.riderList(m, k).find(o => JSON.stringify(o.opt) === JSON.stringify(m.opts[k]))?.label || 'the default'}.</li>`)}</ul>` : null}`
+    : !clash ? html`<div class="clash-cards">
       ${[1, 0].map((k, n) => html`${n ? html`<span class="vs">VS</span>` : null}<div class="card card-back" style=${{ opacity: (m.phase === 'clash' && m.picks[k] !== undefined) ? 1 : 0.35 }}><span>${m.phase === 'clash' && m.picks[k] !== undefined ? 'YOMI' : '?'}</span></div>`)}
     </div>
-    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? 'Both clash cards reveal together.' : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
+    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? (m.G.rules.merged ? 'Both clash cards reveal together; their riders fire win or lose.' : 'Both clash cards reveal together.') : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
   </section>`
 }
 
@@ -209,7 +214,7 @@ function ClashView({ m, clash, names, prefs }) {
   const beaten = k => w >= 0 && w !== k && clash.picks[k] !== null
   const o = outcomeTitle16(clash, names)
   const extra = [...(clash.follow ? [{ ...clash.follow, stage: 'follow' }] : []), ...clash.combo]
-  const lines = narrate16(clash.events, names)
+  const lines = [...M.riderLines(clash, names), ...narrate16(clash.events, names)]
   const last = m.history[m.history.length - 1]
   return html`
     <div class="clash-cards">
@@ -232,6 +237,7 @@ function ClashView({ m, clash, names, prefs }) {
 }
 
 // A deck's size, as clash and neutral cards
+const oneDeckSize = f => { const sp = (f.cards || []).filter(c => c.special).length; return `${deckSize(f) - sp} cards${sp ? ` + ${sp} specials` : ''}` }
 const splitSize = f => { const all = deckSize(f), n = (f.cards || []).filter(c => c.type === 'neutral').reduce((t, c) => t + (c.copies || 0), 0), sp = (f.cards || []).filter(c => c.special).length; return `${all - n - sp} clash + ${n} neutral cards${sp ? ` + ${sp} specials` : ''}` }
 
 const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?' }
@@ -241,7 +247,9 @@ export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative
 export const greyRule = R => (R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : ''
 
 // The neutral step's options, in words
-export const neutralRule = R => R.splitDecks
+export const neutralRule = R => R.merged
+  ? 'one step a round: a clash card each, its On reveal rider firing win or lose'
+  : R.splitDecks
   ? `split decks: play one of your ${R.neutralHand ?? 3} neutral cards each neutral step, and a clash card if you have one you can play`
   : R.focusDraw
   ? `neutral step: a neutral card, or Focus (draw a card${(R.focusMeter ?? 0) > 0 ? ` and gain ${R.focusMeter} meter` : ''})${(R.burnMax ?? 0) > 0 ? `, or burn up to ${R.burnMax}` : ''}`
@@ -307,7 +315,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
     const sup = X.f.sup
     return html`<div class="spread"><h3>${youName} clash card · Round ${m.G.round}</h3>
         <div class="actions"><button class="btn" disabled=${sel === null} onClick=${() => setM(M.choosePick(m, side, sel))}>Lock in</button>
-          ${m.G.rules.blankClash !== false ? html`<button class="btn ghost" onClick=${() => setM(M.choosePick(m, side, null))}>Play nothing (Focus)</button>` : null}</div></div>
+          ${m.G.rules.blankClash !== false && !(m.G.rules.merged && m.G.rules.blankClash !== true) ? html`<button class="btn ghost" onClick=${() => setM(M.choosePick(m, side, null))}>Play nothing (Focus)</button>` : null}</div></div>
       ${Notes}
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
@@ -358,6 +366,14 @@ function Action16({ m, setM, side, prefs, names, who }) {
       <div class="actions">${list.map((o, n) => html`<button class=${cx('btn', n && 'ghost')} onClick=${() => setM(M.chooseOption(m, side, o.opt))}>${o.label}</button>`)}</div>
       ${list.some(o => o.card) ? html`<div class="hand">${list.filter(o => o.card).map(o => html`<div><${Card16} card=${o.card.src} isSuper=${!!o.sup} /></div>`)}</div>` : null}`
   }
+  if (m.phase === 'rider') {
+    const list = M.riderList(m, side)
+    const c = M.riderCard(m, side)
+    return html`<div class="spread"><h3>${c.name}: ${c.reveal.read ? 'Read' : 'Recall'}</h3></div>
+      <p class="small">Both clash cards are face up. ${m.G.init === side ? 'You hold the initiative, so you choose first.' : 'Your opponent chose first (they hold the initiative).'} ${c.reveal.read ? `Meter ${X.meter} of ${m.G.rules.meterMax}. A card you take is yours at once: it can be your follow-up this round.` : 'The card comes back from your face-up discard pile, so your opponent knows you hold it. It can be your follow-up this round.'}</p>
+      <div class="actions">${list.filter(o => !o.card).map(o => html`<button class="btn" onClick=${() => setM(M.chooseRider(m, side, o.opt))}>${o.label}</button>`)}</div>
+      ${list.some(o => o.card) ? html`<div class="hand">${list.filter(o => o.card).map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} isSuper=${!!o.sup} onClick=${() => setM(M.chooseRider(m, side, o.opt))} /><span class="small">${o.label}</span></div>`)}</div>` : null}`
+  }
   if (m.phase === 'confiscate') {
     const need = X.owe || 0
     const [pick, setPick] = [disc, setDisc]
@@ -392,7 +408,7 @@ function RoundLog16({ m, names }) {
       ${[...m.history].reverse().map(r => html`<div class="log-row" key=${r.n}>
         <b>${r.n}</b>
         <div>
-          <div class="small muted">Neutral: ${names[0]} ${nl(r.neutral[0])} · ${names[1]} ${nl(r.neutral[1])}</div>
+          ${r.reveals ? (r.reveals.length ? html`<div class="small muted">${M.riderLines({ events: r.reveals }, names).join(' ')}</div>` : null) : html`<div class="small muted">Neutral: ${names[0]} ${nl(r.neutral[0])} · ${names[1]} ${nl(r.neutral[1])}</div>`}
           <div class="vsline"><span class="tdot" data-t=${r.types[0] || 'T'}></span>${r.cards[0] || 'nothing'} <span class="muted">vs</span> <span class="tdot" data-t=${r.types[1] || 'T'}></span>${r.cards[1] || 'nothing'}
             ${r.follow ? html`<span class="muted">· follow-up:</span> ${r.follow.name}` : null}
             ${r.combo.length ? html`<span class="muted">· combo:</span> ${r.combo.map(x => x.name).join(' → ')}` : null}</div>

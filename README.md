@@ -17,23 +17,26 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
+| `v18` | Yomi Playtest v18 | The v18 Benchmark and the Warden (`data/v18/`). Rules v18 run on the v16 engine and screens with `merged`, `timeout`, `specialsReturn` and `knockdownLocks` on, and the new partner (`pooled`, `mySamples`). See `docs/rules-overview-18.md` and `docs/playtest-app-v18-guide.md` | `node tools/build-artifact.mjs --edition v18` |
 | `v17` | Yomi Playtest v17 | The v17 Benchmark and the Warden (`data/v17/`). Rules v17 run on the v16 engine and screens with four switches on: `initiative`, `tableCards`, `refillAtReveal` (off) and `speedTie: "initiative"`. See `docs/rules-overview-17.md` and `docs/playtest-app-v17-guide.md` | `node tools/build-artifact.mjs --edition v17` |
 | `v16` | Yomi Playtest v16 | The v16 Benchmark deck (`data/v16/`). Rules v16 (decks, the neutral phase, combos, statuses, meter) run on their own engine in `src/engine/v16/` and their own screens in `src/app/v16/` | `node tools/build-artifact.mjs --edition v16` |
 | `v15` | Yomi Playtest v15 | The v15 Benchmark, Benchmark C3/4 (Converts chip 3 and 4), the Split Benchmark (Block with frame advantage, Dodge with a cost) and the four v11 fighters ported to v15, untuned (`data/v15/`) | `node tools/build-artifact.mjs --edition v15` |
 
-Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
+Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`, `?edition=v18`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
 
-Rules v18 has no page yet: it runs in the simulator only (below).
 
 ### Rules v18
 
 `docs/rules-overview-18.md` (also in the Claude project). One 24-card deck gone through once, with no neutral step: its effects are On reveal riders on clash cards (`revealRiders` in `src/engine/v16/engine.js`), fired win or lose. Every deck shares a defence core of Recall ×3, Charge ×2 and Read ×2, all Guards with a Counter follow-up. When a player draws their last card the game times out and the higher HP wins. It runs on the v16 engine with four switches on: `merged`, `specialsReturn`, `timeout` and `knockdownLocks`. Fighters and settings are in `data/v18/` (Benchmark HP 34, Warden HP 32), drafts and test cores in `data/v18/variants/`.
+
+The v18 sparring partner is stronger than the v16/v17 one (`pooled: 1`, `mySamples: 4` in the settings' `ai`): it solves the clash once over all the hands it deals you (`bayesMaximin` in `src/engine/lp.js`), and treats its own hand as hidden too, dealing itself the hands you might guess (`bayesGame`). Known cards (specials taken, recalled cards: `X.known`, `hiddenSplit`) stay in every dealt hand. It beats the old partner 55%.
 
 ```
 node tools/test18.mjs                                     # rule checks for v18
 node tools/sim18.mjs game benchmark warden -n 500         # a v18 matchup, full report
 node tools/sim18.mjs v17 benchmark warden -n 500          # the same report for v17
 node tools/sim18.mjs exploit benchmark -n 300             # mindless bots vs Hard
+node tools/smoke/browser18.cjs dist/yomi-playtest-v18.html <vendor dir>   # the built page in Chromium
 ```
 
 ### Rules v17

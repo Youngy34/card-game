@@ -1,15 +1,18 @@
 // Rule checks for rules v18 (rules-overview 18.md): one deck and one step, riders On reveal
-// (Charge, Read, Shakedown), the defence core (Guard, Parry, Brace), specials returning to the
-// table, Knockdown as Lock Pressure, and the time-out.
+// (Charge, Read, Recall, Shakedown), the defence cores, specials returning to the table, Knockdown as
+// Lock Pressure, the time-out, and the v18 partner's solvers and hidden-hand dealing.
 //   node tools/test18.mjs
 
 import fs from 'fs'
 import { toFighter16, validateFighter16 } from '../src/engine/v16/cards.js'
-import { newGame16, startClash16, decideClash16, startDraw16, finishRound16, clashOptions16, superReady, readModes18, recallModes18, confiscate16 } from '../src/engine/v16/engine.js'
+import { newGame16, startClash16, decideClash16, startDraw16, finishRound16, clashOptions16, superReady, readModes18, recallModes18, confiscate16, hiddenSplit } from '../src/engine/v16/engine.js'
 import { playGame18 } from '../src/engine/v16/game.js'
+import { DEFAULT_W16, clashMix16 } from '../src/engine/v16/ai.js'
+import { maximin, bayesMaximin, bayesGame, worstCase } from '../src/engine/lp.js'
 
 const read = p => JSON.parse(fs.readFileSync(new URL(p, import.meta.url)))
 const rules = { ...read('../data/v18/settings.json').rules }
+const W18 = { ...DEFAULT_W16, ...read('../data/v18/settings.json').ai }
 let fails = 0, passes = 0
 const ok = (cond, msg) => { if (cond) passes++; else { fails++; console.log('FAIL:', msg) } }
 for (const n of ['benchmark', 'warden', 'variants/benchmark-2nov', 'variants/warden-2nov']) { const v = validateFighter16(read(`../data/v18/${n}.json`)); ok(!v.errors.length, `${n} v18 validates ${JSON.stringify(v.errors)}`) }
@@ -138,7 +141,7 @@ const base = (patchA = {}, patchB = {}, init = 0) => {
 {
   let timeouts = 0, takes = 0, meter = 0, games = 0
   for (let s = 0; s < 10; s++) {
-    const g = playGame18(s % 2 ? W3 : F3, F3, { rules, levels: ['hard', 'hard'], seed: 80 + s })
+    const g = playGame18(s % 2 ? W3 : F3, F3, { rules, W: W18, levels: ['hard', 'hard'], seed: 80 + s })
     games++
     ok(g.result === 0 || g.result === 1 || g.result === 0.5, 'game finishes')
     ok(g.rounds.length <= 19, `no game outlasts the deck (${g.rounds.length} rounds)`)
@@ -146,6 +149,36 @@ const base = (patchA = {}, patchB = {}, init = 0) => {
     for (const r of g.rounds) for (const e of r.reveals) { if (e.what === 'take' || e.what === 'recall') takes++; if (e.what === 'meter') meter += e.n }
   }
   ok(takes > 0 && meter > 0, `the default decks' riders fire: ${meter} meter gained, ${takes} cards taken or recalled in ${games} games`)
+}
+
+// 10. The v18 partner: one solve over the dealt hands, both hands hidden, known cards kept
+{
+  let rs = 99; const r = () => (rs = (rs * 1103515245 + 12345) % 2147483648) / 2147483648
+  let gapA = 0, gapB = 0, same = 0
+  for (let t = 0; t < 300; t++) {
+    const K = 1 + Math.floor(r() * 5), n = 1 + Math.floor(r() * 6)
+    const Ms = Array.from({ length: K }, () => { const c = 1 + Math.floor(r() * 6); return Array.from({ length: n }, () => Array.from({ length: c }, () => r())) })
+    const a = bayesMaximin(Ms)
+    gapA = Math.max(gapA, Math.abs(Ms.reduce((s, M) => s + worstCase(M, a.x), 0) / K - a.v))
+    if (K === 1) same = Math.max(same, Math.abs(maximin(Ms[0]).v - a.v))
+    const g = bayesGame([Ms])
+    gapB = Math.max(gapB, Math.abs(g.v - a.v))
+  }
+  ok(gapA < 1e-7, `bayesMaximin: its mix guarantees its value (gap ${gapA})`)
+  ok(same < 1e-7, 'bayesMaximin with one game is maximin')
+  ok(gapB < 1e-7, 'bayesGame with one hand of ours is bayesMaximin')
+  // a game where hiding our hand matters: knowing it, they'd always guard against our one Convert
+  const hid = bayesGame([[[[0.9, 0.1], [0.4, 0.6]]], [[[0.4, 0.6], [0.9, 0.1]]]])
+  ok(hid.v > 0.5, `hiding which hand we hold is worth something (${hid.v.toFixed(3)})`)
+  // known cards stay in every dealt hand
+  const REC = F3.cards.findIndex(c => c.name === 'Recall'), SHOT = F3.cards.findIndex(c => c.name === 'Shot')
+  let G = newGame16(F3, F3, rules, 11)
+  G = { ...G, init: 0, A: { ...G.A, hand: [REC, ...G.A.hand.filter(i => i !== REC).slice(0, 4)], discard: [{ i: SHOT }] } }
+  G = startClash16(G, REC, G.B.hand[0], false, [{ recall: SHOT }, undefined])
+  ok((G.A.known || []).includes(SHOT) && hiddenSplit(G.A).known.includes(SHOT), 'a recalled card is known to be in hand')
+  ok(!hiddenSplit(G.A).pool.includes(SHOT) || G.A.deck.includes(SHOT) || G.A.hand.filter(i => i === SHOT).length > 1, "the known copy isn't also dealt at random")
+  const mix = clashMix16(G, 1, W18, () => 0.5)
+  ok(Math.abs(mix.x.reduce((s, v) => s + v, 0) - 1) < 1e-9 && mix.util.length === mix.options.length, 'the new partner returns a full mix and a value for each card')
 }
 
 console.log(`${passes} passed, ${fails} failed`)

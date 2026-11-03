@@ -14,7 +14,7 @@ const ALL_LEVELS = { ...LEVELS16, ...BOTS16 }
 const share = (o, tot) => Object.entries(o).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${pct(v / Math.max(tot, 1))}`).join(', ')
 
 export function Lab16({ state, setState }) {
-  const list = roster().filter(r => r.rules === 16)
+  const list = roster().filter(r => r.rules >= 16)
   const ids = list.map(r => r.id)
   const { a = ids[0], b = ids[0], n = 300, seed = 1, report = null, exploit = null, la = 'hard', lb = 'hard' } = state
   const [running, setRunning] = useState(null)
@@ -100,6 +100,7 @@ function Report16({ r }) {
     <div class="stats">
       <div class="stat-tile"><span class="label">${a} wins</span><b>${pct(r.win, 1)}</b><span class="small muted">±${Math.round(100 * r.margin)} points</span></div>
       <div class="stat-tile"><span class="label">Median length</span><b>${r.median}</b><span class="small muted">rounds · 10–90%: ${Math.round(r.p10)}–${Math.round(r.p90)}</span></div>
+      ${r.rules?.timeout ? html`<div class="stat-tile"><span class="label">Time-outs</span><b>${pct(r.timeouts / n, 1)}</b><span class="small muted">of games: a deck ran out, higher HP won</span></div>` : null}
       <div class="stat-tile"><span class="label">Quiet rounds</span><b>${pct(r.quiet / R, 1)}</b><span class="small muted">no HP or pile change</span></div>
       <div class="stat-tile"><span class="label">Combos</span><b>${pct(r.combos / R, 1)}</b><span class="small muted">of rounds · ${(r.comboLen / Math.max(r.combos, 1)).toFixed(1)} cards, ${(r.comboDmg / Math.max(r.combos, 1)).toFixed(1)} HP each · a Starter won ${pct(r.starterWins / R)} of rounds</span></div>
       <div class="stat-tile"><span class="label">Guard beats Pressure</span><b>${pct(r.guardWins / R, 1)}</b><span class="small muted">of rounds · follow-up ${pct(r.follows / Math.max(r.guardWins, 1))}, ${(r.followDmg / Math.max(r.follows, 1)).toFixed(1)} HP each · no Counter in hand ${pct(r.guardWinsNoCounter / Math.max(r.guardWins, 1))}</span></div>
@@ -112,7 +113,7 @@ function Report16({ r }) {
       ${[0, 1].map(k => {
         const T = Object.values(r.types[k]).reduce((s, v) => s + v, 0)
         return html`<div class="panel stack"><h3>${r.names[k]}${r.names[0] === r.names[1] ? ` (${k ? 'B' : 'A'})` : ''}</h3>
-          <p class="small"><span class="label">Neutral phase</span><br />${share(r.neutral[k], R)}</p>
+          ${r.rules?.merged ? null : html`<p class="small"><span class="label">Neutral phase</span><br />${share(r.neutral[k], R)}</p>`}
           <p class="small"><span class="label">Clash types</span><br />${share(Object.fromEntries(Object.entries(r.types[k]).map(([t, v]) => [{ P: 'Pressure', C: 'Convert', R: 'Guard', '-': 'nothing' }[t] || t, v])), T)}</p>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Clash card</th><th class="r">Share</th></tr></thead>
             <tbody>${Object.entries(r.plays[k]).sort((x, y) => y[1] - x[1]).map(([c, v]) => html`<tr><td>${c}</td><td class="r">${pct(v / T)}</td></tr>`)}</tbody></table></div>

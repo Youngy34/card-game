@@ -4,6 +4,7 @@
 //   node tools/build-artifact.mjs                 -> dist/yomi-playtest.html      (rules v11 and v12)
 //   node tools/build-artifact.mjs --edition v15   -> dist/yomi-playtest-v15.html  (rules v15)
 //   node tools/build-artifact.mjs --edition v16   -> dist/yomi-playtest-v16.html  (rules v16: decks, combos, statuses)
+//   node tools/build-artifact.mjs --edition v18   -> dist/yomi-playtest-v18.html  (rules v18: one deck, riders, the time-out)
 //
 // Running locally: index.html, or index.html?edition=v15.
 // Fighters are [folder under data/, file name]; the roster keys them by their id.
@@ -32,6 +33,14 @@ export const EDITIONS = {
     drafts: [['v16', 'warden']],
     labels: {},
     defaultSides: ['benchmark16', 'benchmark16'],
+  },
+  v18: {
+    title: 'Yomi Playtest v18', subtitle: 'rules v18', out: 'yomi-playtest-v18.html', settings: 'v18/settings.json',
+    fighters: [],
+    reference: [['v18', 'benchmark']],
+    drafts: [['v18', 'warden']],
+    labels: {},
+    defaultSides: ['benchmark18', 'benchmark18'],
   },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',

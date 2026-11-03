@@ -43,7 +43,7 @@ export function Log16() {
   const [mode, setMode] = useState('all')
   const [ask, setAsk] = useState(null)
   const [open, setOpen] = useState(null)
-  const games = st.games.filter(g => g.rules === 16 && (mode === 'all' || g.mode === mode))
+  const games = st.games.filter(g => g.rules >= 16 && (mode === 'all' || g.mode === mode))
   const s = useMemo(() => summarise(games), [games])
   if (!st.gamesLoaded) return html`<div class="stack"><h1>Playtest log</h1><p class="muted">Loading the log…</p></div>`
   return html`<div class="stack" style=${{ gap: '24px' }}>

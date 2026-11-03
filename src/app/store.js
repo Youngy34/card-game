@@ -15,7 +15,7 @@ import { validateFighter, fighterHash } from '../engine/fighters.js'
 import { validateFighter16 } from '../engine/v16/cards.js'
 
 // v16 fighters (decks) have their own validator
-const validate = f => (f?.rules === 16 ? validateFighter16(f) : validateFighter(f))
+const validate = f => (f?.rules === 16 || f?.rules === 18 ? validateFighter16(f) : validateFighter(f))
 import { DEFAULT_WEIGHTS } from '../engine/ai.js'
 
 const listeners = new Set()
@@ -106,7 +106,7 @@ export function roster() {
     const baseHash = base ? fighterHash(base) : null
     const reference = S.reference.includes(id), draft = S.drafts.includes(id)
     const status = !base ? 'variant' : hash !== baseHash ? 'edited' : reference ? 'reference' : draft ? 'draft' : 'signed-off'
-    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: [12, 15, 16].includes(fighter.rules) ? fighter.rules : 11 }
+    return { id, fighter, base, saved: saved !== undefined, status, reference, draft, hash, baseHash, problems, rules: [12, 15, 16, 18].includes(fighter.rules) ? fighter.rules : 11 }
   }
   for (const id of S.order) out.push(entry(id, S.docs[id]?.fighter, S.bundled[id]))
   const variants = Object.keys(S.docs).filter(id => !S.bundled[id]).sort()

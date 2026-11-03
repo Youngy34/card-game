@@ -4,14 +4,18 @@
 // Shakedown took a card) -> 'clash' (each picks a clash card) -> 'stage' (a follow-up,
 // Linker or Ender to choose) -> 'confiscate' (if a hit took cards) -> 'reveal' (the
 // round's result) -> 'discard' (down to the hand limit, if over) -> 'neutral' ... 'over'.
+// Rules v18 (rules.merged): no neutral phase. 'clash' -> 'rider' (a Read or Recall rider on a
+// revealed clash card to choose, in initiative order) -> 'stage' -> 'confiscate' -> 'reveal' ->
+// 'discard' -> 'clash' ... 'over' (a KO, or the time-out when a deck runs out).
 // A sparring partner decides at once; a person's turn sets m.turn.
 // In hot-seat play, m.pass asks for the device to change hands before a private choice.
 
 import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16,
-         card16, unseenPool, unseenCounts, superReady, statusList, iconOptions, speedOf, confiscate16, handLimitOf, neutralModes16, initOrder, tableCost } from '../../engine/v16/engine.js'
+         card16, unseenPool, unseenCounts, superReady, statusList, iconOptions, speedOf, confiscate16, handLimitOf, neutralModes16, initOrder, tableCost,
+         readModes18, recallModes18, locked } from '../../engine/v16/engine.js'
 import { toFighter16, fighterHash16 } from './fighters16.js'
-import { clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, chooseConfiscate, chooseMode16, sampleIndex, LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
-import { roundRecord16, winRoute16, snap16 } from '../../engine/v16/game.js'
+import { clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, chooseConfiscate, chooseMode16, chooseRead18, sampleIndex, LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
+import { roundRecord16, winRoute16, snap16, randomReveal18 } from '../../engine/v16/game.js'
 import { LABEL16, STATUSES } from '../../engine/v16/cards.js'
 
 const HUMANS = { ai: [true, false], hotseat: [true, true], watch: [false, false] }
@@ -55,7 +59,8 @@ function handTo(m, side) {
 function beginNeutral(m) {
   m = { ...m, phase: 'neutral', acts: [undefined, undefined], picks: [undefined, undefined], roundBefore: [snap16(m.G.A), snap16(m.G.B)],
         decisions: { neutral: [null, null], picks: [null, null], stages: [], discards: [null, null] }, aiMix: [null, null], aiNeutral: [null, null],
-        confiscated: [[], []], confPre: [0, 0], confNext: null }
+        confiscated: [[], []], confPre: [0, 0], confNext: null, opts: [undefined, undefined], riderDone: [false, false] }
+  if (m.G.rules.merged) return beginClash({ ...m, acts: [{ kind: 'none' }, { kind: 'none' }] })
   const [rng, state] = aiRng(m)
   const acts = [undefined, undefined]
   for (const k of [0, 1]) {
@@ -187,8 +192,67 @@ function beginClash(m) {
 
 function nextPick(m) {
   const k = [0, 1].find(s => m.picks[s] === undefined)
-  if (k === undefined) return resolve(m)
+  if (k === undefined) return m.G.rules.merged ? nextRider(m) : resolve(m)
   return handTo({ ...m, phase: 'clash' }, k)
+}
+
+// ---- rules v18: the riders -------------------------------------------------------------
+// Both clash cards are face up. A Read or Recall rider with a choice is chosen in initiative
+// order, so the second player sees the first's choice. The other riders need no choice.
+export function riderCard(m, side) {
+  const X = P(m, side), pick = m.picks[side]
+  if (pick === null || pick === undefined) return null
+  const c = card16(X, pick)
+  return c && c.reveal && !locked(X, c.t) ? c : null
+}
+export function riderModes(m, side) {
+  const c = riderCard(m, side), X = P(m, side)
+  if (!c) return []
+  if (c.reveal.read) return readModes18(X)
+  if (c.reveal.recall) return recallModes18(X, c.reveal.recall === 'attack')
+  return []
+}
+const needsRider = (m, k) => { const c = riderCard(m, k); return !!c && ((c.reveal.read && riderModes(m, k).length > 1) || (c.reveal.recall && riderModes(m, k).length > 1)) }
+function nextRider(m) {
+  const [rng, state] = aiRng(m)
+  const opts = m.opts.slice(), riderDone = m.riderDone.slice()
+  for (const k of initOrder(m.G)) {
+    if (riderDone[k]) continue
+    if (!needsRider(m, k)) { riderDone[k] = true; continue }
+    if (isHuman(m, k)) return handTo({ ...m, opts, riderDone, aiRng: state(), phase: 'rider' }, k)
+    if (m.levels[k] === 'random') opts[k] = randomReveal18(m.G, k, m.picks[k], rng)
+    else if (!BOTS16[m.levels[k]]) opts[k] = chooseRead18(m.G, k, m.picks, opts, m.W)
+    riderDone[k] = true
+  }
+  return resolve({ ...m, opts, riderDone, aiRng: state() })
+}
+export function chooseRider(m, side, opt) {
+  const opts = m.opts.slice(); opts[side] = opt
+  const riderDone = m.riderDone.slice(); riderDone[side] = true
+  const decisions = { ...m.decisions, riders: [...(m.decisions.riders || []), { side, opt }] }
+  return nextRider({ ...m, opts, riderDone, decisions, lastChooser: side, pass: false })
+}
+// A rider's options, with labels and the card each would bring into the hand
+export function riderList(m, side) {
+  const X = P(m, side), c = riderCard(m, side)
+  return riderModes(m, side).map(opt => {
+    if (opt === 'draw') return { opt, label: X.deck.length ? `Draw a card (${X.deck.length} left in your deck)` : 'Draw a card (your deck is empty)' }
+    if (opt.take !== undefined) return { opt, label: `Take ${opt.take === 'S' ? X.f.sup.name : X.f.cards[opt.take].name} from the table (${tableCost(X, opt.take)} meter)`, card: opt.take === 'S' ? X.f.sup : X.f.cards[opt.take], sup: opt.take === 'S' }
+    return { opt, label: `Bring back ${X.f.cards[opt.recall].name}`, card: X.f.cards[opt.recall] }
+  }).map(o => ({ ...o, from: c.name }))
+}
+// What each revealed rider did (from the clash events), for the board and the log
+export function riderLines(clash, names) {
+  return (clash?.events || []).filter(e => e.kind === 'reveal').map(e => {
+    const who = names[e.side]
+    switch (e.what) {
+      case 'meter': return `${who}'s ${e.name}: +${e.n} meter${e.wasted ? ` (${e.wasted} lost at the cap)` : ''}.`
+      case 'draw': return `${who}'s ${e.name}: ${e.n ? 'drew a card' : 'no card left to draw'}.`
+      case 'take': return `${who}'s ${e.name}: took ${e.took} from the table (${e.cost} meter)${e.sup ? ': their Super is live' : ''}.`
+      case 'recall': return e.recalled ? `${who}'s ${e.name}: brought ${e.recalled} back from the discard pile.` : `${who}'s ${e.name}: nothing to bring back.`
+      default: return `${who}'s ${e.name}.`
+    }
+  })
 }
 
 export function choosePick(m, side, pick) {
@@ -198,7 +262,7 @@ export function choosePick(m, side, pick) {
 }
 
 function resolve(m) {
-  const G = startClash16(m.G, m.picks[0], m.picks[1])
+  const G = m.G.rules.merged ? startClash16(m.G, m.picks[0], m.picks[1], false, m.opts) : startClash16(m.G, m.picks[0], m.picks[1])
   return continueClash({ ...m, G, neutralShown: m.G.neutral })
 }
 
@@ -218,9 +282,10 @@ export function chooseStage(m, choice) {
 }
 
 function finishClash(m) {
-  const record = roundRecord16(m.G.round, m.roundBefore, m.G, m.G.neutral)
+  const record = roundRecord16(m.G.round, m.roundBefore, m.G, m.G.rules.merged ? [{ kind: 'none' }, { kind: 'none' }] : m.G.neutral)
   const entry = { ...record, humans: m.humans, ...(m.aiMix.some(Boolean) ? { mix: m.aiMix } : {}), decisions: m.decisions,
-    confiscated: m.confiscated, confPre: m.confPre }
+    confiscated: m.confiscated, confPre: m.confPre,
+    ...(m.G.rules.merged ? { reveals: m.G.clash.events.filter(e => e.kind === 'reveal') } : {}) }
   const last = { neutral: m.G.neutral, clash: m.G.clash, before: m.roundBefore, after: [snap16(m.G.A), snap16(m.G.B)] }
   if (m.G.result !== null) return { ...m, history: [...m.history, entry], last, result: m.G.result, phase: 'over', turn: null, pass: false }
   return { ...m, history: [...m.history, entry], last, phase: 'reveal', turn: null, pass: false }
@@ -255,7 +320,7 @@ export function chooseDiscard(m, side, cards) {
 }
 
 function afterDraw(m) {
-  if (m.G.result !== null) return { ...m, result: m.G.result, phase: 'over', turn: null }
+  if (m.G.result !== null) return { ...m, result: m.G.result, timedOut: !!m.G.timedOut, phase: 'over', turn: null }
   return beginNeutral(m)
 }
 
@@ -300,6 +365,12 @@ export function boardNotes16(m, side) {
   if (superReady(Y, m.G.rules)) notes.push({ tone: 'bad', text: `${name} has ${Y.meter} meter: their Super, ${Y.f.sup.name}, is live.` })
   if (superReady(X, m.G.rules)) notes.push({ tone: 'good', text: `You have ${X.meter} meter: your Super, ${X.f.sup.name}, is live (it's in your hand row).` })
   if (m.G.rules.initiative && (m.G.init === 0 || m.G.init === 1)) notes.push({ tone: m.G.init === side ? 'good' : undefined, text: m.G.init === side ? 'You hold the initiative: you win speed ties this round, and choose first where there\'s an order.' : `${name} holds the initiative: they win speed ties this round.` })
+  if (m.G.rules.timeout) {
+    const mine = X.deck.length, theirs = Y.deck.length
+    if (Math.min(mine, theirs) <= 4) notes.push({ tone: X.hp > Y.hp ? 'good' : X.hp < Y.hp ? 'bad' : undefined, text: `Time-out: ${mine} card${mine === 1 ? '' : 's'} left in your deck, ${theirs} in theirs. When a deck runs out the game ends and the higher HP wins: you're ${X.hp > Y.hp ? `${X.hp - Y.hp} ahead` : X.hp < Y.hp ? `${Y.hp - X.hp} behind` : 'level'}.` })
+  }
+  const known = (Y.known || []).filter(i => Y.hand.includes(i))
+  if (known.length) notes.push({ tone: 'bad', text: `${name} brought back ${[...new Set(known.map(i => Y.f.cards[i].name))].join(' and ')} with Recall: it's in their hand.` })
   if (Y.superAt === 'hand') notes.push({ tone: 'bad', text: `${name} has taken their Super, ${Y.f.sup.name}, into their hand: it's live until they use it.` })
   // statuses this round
   for (const [who, Z, tone] of [['You', X, 'bad'], [name, Y, 'good']]) {
@@ -336,7 +407,7 @@ export function boardNotes16(m, side) {
 export function gameRecord16(m) {
   const last = m.history[m.history.length - 1]
   return {
-    id: m.id, v: 3, rules: 16,
+    id: m.id, v: 3, rules: m.G.rules.merged ? 18 : 16, ...(m.timedOut ? { timedOut: true } : {}),
     startedAt: m.startedAt, finishedAt: Date.now(),
     mode: m.mode, humans: m.humans, levels: m.levels,
     fighters: m.json.map((j, k) => ({ id: j.id, name: j.name, hash: fighterHash16(j), status: m.statuses[k], json: j })),

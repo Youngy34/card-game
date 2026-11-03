@@ -101,7 +101,10 @@ export function cloneP(X, lite = false) {
 }
 export const card16 = (X, i) => (i === 'S' ? X.f.sup : X.f.cards[i])
 export const locked = (X, t) => !!(X.st.lock && X.st.lock[t])
-const takeFromHand = (X, i) => { const k = X.hand.lastIndexOf(i); if (k < 0) throw new Error(`card ${i} isn't in hand`); X.hand.splice(k, 1) }
+const takeFromHand = (X, i) => {
+  const k = X.hand.lastIndexOf(i); if (k < 0) throw new Error(`card ${i} isn't in hand`); X.hand.splice(k, 1)
+  if (X.known) { const q = X.known.indexOf(i); if (q >= 0) { X.known = X.known.slice(); X.known.splice(q, 1) } }
+}
 
 function drawCards(X, n, R) {
   let drawn = 0
@@ -494,6 +497,7 @@ function revealRiders(G, P, cards, opts, lite, ev) {
         const at = X.discard.findIndex(d => d.i === o.recall)
         if (at < 0) throw new Error(`${c.name} can't recall that`)
         X.discard = X.discard.slice(); X.discard.splice(at, 1); X.hand.push(o.recall)
+        X.known = [...(X.known || []), o.recall]                 // it came from the face-up pile: the opponent knows it's there
         ev.push({ side: k, kind: 'reveal', what: 'recall', recalled: X.f.cards[o.recall].name, name: c.name })
       } else ev.push({ side: k, kind: 'reveal', what: 'recall', recalled: null, name: c.name })
     }
@@ -699,6 +703,16 @@ export function unseenPool(Y) {
   const pool = Y.deck.concat(Y.hand)
   for (const d of Y.discard) if (d.burned) pool.push(d.i)
   return pool
+}
+// Rules v18: the cards in Y's hand the opponent knows about (specials taken from the table, cards
+// recalled from the face-up discard pile), and the pool the rest of the hand could come from
+export function hiddenSplit(Y) {
+  const pool = unseenPool(Y), known = []
+  const take = i => { const q = pool.lastIndexOf(i); if (q >= 0) { pool[q] = pool[pool.length - 1]; pool.pop(); known.push(i) } }
+  const left = Y.hand.slice(), drop = i => { const q = left.indexOf(i); if (q < 0) return false; left.splice(q, 1); return true }
+  for (const i of Y.known || []) if (drop(i)) take(i)
+  for (const i of left) if (Y.f.cards[i].special) take(i)
+  return { known, pool }
 }
 
 // For the table: how many of each card a player still has out of sight
