@@ -40,7 +40,7 @@ Card by card in `rules-overview 18.md`, The Fighters.
 - **Board notes** (while you choose) add the time-out once either deck is down to 4 (cards left on each side, and whether you're ahead), and any attack the opponent brought back with Recall ("it's in their hand").
 - **The result** of a time-out reads "Time-out: Benchmark wins on HP" (or a draw), with both HP totals.
 - **Settings:** the neutral-step dials are hidden; the partner has "Hands it deals itself" (4); "Use the defaults" restores this page's own settings (it used to restore the v16 ones, which would have brought back the old partner).
-- **Lab:** plays v18 games and adds a Time-outs tile; the neutral-phase line is gone. Runs are slower than on v17 (the new partner does several times the work per decision): 100 Hard-v-Hard games take about half a minute.
+- **Lab:** plays v18 games and adds a Time-outs tile; the neutral-phase line is gone. Runs are slower than on v17 (the new partner does several times the work per decision): 100 Hard-v-Hard games take about a minute.
 
 ## Checks (3 November)
 
