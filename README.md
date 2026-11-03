@@ -23,6 +23,19 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 
 Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
 
+Rules v18 has no page yet: it runs in the simulator only (below).
+
+### Rules v18
+
+`docs/rules-overview-18.md` (also in the Claude project). One 24-card deck gone through once, with no neutral step: its effects are On reveal riders on clash cards (`revealRiders` in `src/engine/v16/engine.js`), fired win or lose. Every deck shares a defence core of Recall ×3, Charge ×2 and Read ×2, all Guards with a Counter follow-up. When a player draws their last card the game times out and the higher HP wins. It runs on the v16 engine with four switches on: `merged`, `specialsReturn`, `timeout` and `knockdownLocks`. Fighters and settings are in `data/v18/` (Benchmark HP 34, Warden HP 32), drafts and test cores in `data/v18/variants/`.
+
+```
+node tools/test18.mjs                                     # rule checks for v18
+node tools/sim18.mjs game benchmark warden -n 500         # a v18 matchup, full report
+node tools/sim18.mjs v17 benchmark warden -n 500          # the same report for v17
+node tools/sim18.mjs exploit benchmark -n 300             # mindless bots vs Hard
+```
+
 ### Rules v17
 
 `docs/rules-overview-17.md` (also in the Claude project). v16's game with an initiative token (`G.init`, passed every round: it wins speed ties and goes first wherever players act in turn), specials and a single-use Super on the table (`X.table`, `X.superAt`), taken by Read's option or returned by Charge's (`neutralModes16`), and the neutral refill at the end of the round. Checks: `node tools/test17.mjs`, `node tools/test16-warden.mjs`, `node tools/smoke/browser17.cjs dist/yomi-playtest-v17.html <vendor dir>`, and sims with `node tools/sim16.mjs game data/v17/warden.json data/v17/benchmark.json -n 300 --settings v17/settings.json`.
