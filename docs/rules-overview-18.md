@@ -8,7 +8,7 @@
 - ***The time-out:*** *the deck never reshuffles. When a player draws their last card, the round finishes and the higher HP wins.*
 - ***Specials go back to the table*** *after use, to be taken again.*
 
-**Status: simmed, not yet playable.** It runs in the sim (`tools/sim18.mjs`); there's no playtest page for it yet. **Open now:** Recovers are the strongest cards to spam (an always-Guard bot beats Hard 32%), Supers almost never come out in sim, and careful play is barely ahead of loose play (Design Flags 1–3).
+**Status: simmed, not yet playable.** It runs in the sim (`tools/sim18.mjs`); there's no playtest page for it yet. **Open now:** Recovers are the strongest cards to spam (an always-Guard bot beats Hard 32%), Supers almost never come out in sim, and the Hard partner itself has a flaw that a sharper bot beats (Design Flags 1–3).
 
 **Decisions (Mark, 2 November, evening):**
 
@@ -186,7 +186,7 @@ As v17, except **Knockdown: next round, your Pressures are Locked** (voided if p
 - **The time-out does its job for hidden hands:** in v17 a third of games were decided with the loser's deck at 2 cards or fewer (their hand all but known); in v18 about one in sixteen. No game reshuffles.
 - **The things flagged on 2 November are fixed:** time-outs 17% → 3%; hands back to v17's size; blocked Pressures punished again; and with Read off the Starters, no more taking the Super mid-combo.
 
-**Bots against Hard (Benchmark mirror, 1,000 games, ±3):** random 26%, 28% (two seeds; v17 25%); Pressure every round 24% (v17 17%); **Guard every round 32%** (v17 18%); **Medium 52%** (v17 43%). *From 300 games each (±5):* any attack 13%, Convert 19%, Easy 41%. The random bot plays the Warden at 30%. Its rider choices are random too, as in v17.
+**Bots against Hard (Benchmark mirror, 1,000 games, ±3):** random 26%, 28% (two seeds; v17 25%); Pressure every round 24% (v17 17%); **Guard every round 32%** (v17 18%); Medium 52%, 46% (two seeds; v17 49%: the 43% quoted before came from 200 games). *From 300 games each (±5):* any attack 13%, Convert 19%, Easy 41%. The random bot plays the Warden at 30%. Its rider choices are random too, as in v17.
 
 ### Variants
 
@@ -212,7 +212,7 @@ As v17, except **Knockdown: next round, your Pressures are Locked** (voided if p
 
 1. **Recovers are the cards to spam:** an always-Guard bot beats Hard 32% (v17 18%). Every Recover now gives a resource and still punishes, and the partner doesn't adapt to habits; a person will Convert into it. A one-pass deck caps it at seven Recovers. Levers: six Recovers; a Convert that punishes guarding (a status, or a bigger cash); or one core card without the follow-up.
 2. **Supers almost never come out** (0.01 a game for the Benchmark, against 0.36 in v17). Read is the only way to the table, with two Reads in the deck, and a special is always waiting there, so the partner spends every Read on a special or a draw. Partly the partner (it undervalues the Super), but the route is narrow. Levers: a third Read (Recall ×2); let Charge take the Super instead of gaining meter; or the Super costs 1 more and is taken with Charge.
-3. **Careful play is barely ahead of loose play:** Medium beats Hard 52% (v17 43%). The neutral step was a decision a round, and the riders now come free with the card. Random play is no stronger (26–28%), but the measured gap between careful and loose play has closed. The first thing to watch at the table.
+3. **The Hard partner isn't the strongest setting.** Medium is level with Hard (52% and 46% over two 1,000-game seeds; 49% in v17, where the 43% quoted before came from 200 games). Medium plays a softened best reply to the opponent's solved mix; sharpened, the same reply beats Hard 54–56% (54% in v17). Hard solves the clash against each of six guessed hands and averages the six answers, where deciding from the averaged payoffs is better. Separately, its value function is overconfident (when it gives a side 92%, that side wins 79%; at 8%, 23%) and values a card in hand at 0.5 HP where the games suggest about 1.3. Bot numbers against Hard (Flag 1) are against this partner; balance between fighters is less affected, since both sides share it. Fix: one solve over all the guessed hands, then refit the weights.
 4. **Specials come out less** (0.6–0.7 a game against 1.7): the same Read bottleneck as Flag 2.
 5. **Counter-only Supers:** Chain Prison was played 0.04 times a game. Give it Ender, as v17 Flag 2 suggested.
 6. **In principle the time-out favours the fighter with more HP:** it compares HP left, so a lower-HP fighter must get further ahead. It hasn't shown in the sim (time-outs are rare now), but it grows with HP gaps. The alternative is to compare HP lost.
@@ -233,7 +233,7 @@ As v17, except **Knockdown: next round, your Pressures are Locked** (voided if p
 
 ## Running It
 
-- **Code:** branch `v18`, off `v17` at 2669910, not pushed yet. Until it is, the project's `claude/sim/v18.patch.xz.b64` parts 1 and 2 hold it: join them (part 1 first), then on a checkout of `v17`, `base64 -d joined.b64 | xz -d | git apply`. Engine: `src/engine/v16/engine.js` with rule switches `merged`, `specialsReturn`, `timeout` and `knockdownLocks`; v16 and v17 play unchanged with them off.
+- **Code:** GitHub `Youngy34/card-game`, branch `v18` (pushed 3 November), off `v17` at 2669910. Engine: `src/engine/v16/engine.js` with rule switches `merged`, `specialsReturn`, `timeout` and `knockdownLocks`; v16 and v17 play unchanged with them off.
 - **Fighters and settings:** `data/v18/` (`benchmark.json`, `warden.json`, `settings.json`); the drafts and today's test cores in `data/v18/variants/`.
 - **Card fields:** `reveal` (`{ "meter": 2 }`, `{ "read": true }`, `{ "recall": "attack" }` or `true` for any card, `{ "confiscate": 1 }`), `noFollow: true`, `parry: true`, `brace: "reflect" | "stagger"`, `core: true`; a v18 fighter file has `"rules": 18`.
 - **Sim:** `node tools/sim18.mjs game benchmark warden -n 500` (v18), `node tools/sim18.mjs v17 benchmark warden` (the same report for v17), `exploit benchmark`, with `--levels random,hard`, `--set meterMax=4`, `--hp 34,34`.
