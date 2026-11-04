@@ -27,6 +27,12 @@
 - **HP 34** for the Benchmark (38 before): 12-round games, few time-outs, and random play held at v17's level.
 - **Fix the Hard partner, then build the v18 page on it** (evening).
 
+**Decisions (Mark, 4 November, after the first games on the page):**
+
+- **The riders work:** they make a beaten card still feel like it achieved something. It didn't feel unbalanced.
+- **No shared riders on attacks.** A rider on an attack is character-specific and plays into that fighter's gameplan (as Shakedown does for the Warden), and only where it earns its place: none are added for the sake of it.
+- **No exception to the triangle for riders** (a Guard Break voiding a Guard's rider was pitched and turned down: riders stay unconditional).
+
 **Claude's calls (to confirm):**
 
 - **Riders fire On reveal,** win or lose (winning resources would snowball), in initiative order, and **only on the clash card;** a choice (Read's, Recall's) is made after both cards are face up, the holder first.
@@ -116,7 +122,7 @@ As v17, except **Knockdown: next round, your Pressures are Locked** (voided if p
 
 - **Every card gets played.** In a one-pass deck you play about one card per card you draw, so the deck's mix is your play mix. There are no filler cards: a weak card is a weak play every time it's drawn.
 - **24 cards: the defence core (7) and 17 of the fighter's own.** At most 3 copies of any card.
-- **The shared riders (Charge, Read, Recall) live on the core.** A fighter's own riders (Shakedown) can sit on its attacks, on full-strength cards priced as usual (a little slower, or no combo icon).
+- **The shared riders (Charge, Read, Recall) live on the core, and only there.** An attack carries a rider only if it's the fighter's own and serves their gameplan (the Warden's Shakedown squeezes the hand), on a full-strength card priced as usual (a little slower, or no combo icon). No rider for the sake of it, and nothing that feeds meter or cards: the core already does, and meter isn't the bottleneck (Reads are).
 - **Specials are threats, not surprises:** the opponent sees you take one. A special should be worth having when they know it's coming (fast, safe, awkward to play around).
 - *Unchanged:* type effects are fixed; every Convert chips; Recovers never deal damage; Dizzy only on Supers; Lock on slow cards, Enders or cards with a cost; about a third of the deck as Counters.
 
@@ -238,7 +244,7 @@ As v17, except **Knockdown: next round, your Pressures are Locked** (voided if p
 
 ## Design Flags
 
-1. **Recovers are the cards to spam:** an always-Guard bot beats Hard 28.5% (v17 18%, against v17's partner; 32% against the old v18 partner, so most of it is the cards). Every Recover now gives a resource and still punishes, and the partner doesn't adapt to habits; a person will Convert into it. A one-pass deck caps it at seven Recovers. Levers: six Recovers; a Convert that punishes guarding (a status, or a bigger cash); or one core card without the follow-up.
+1. **Recovers are the cards to spam (in sim):** an always-Guard bot beats Hard 28.5% (v17 18%, against v17's partner; 32% against the old v18 partner, so most of it is the cards). Every Recover now gives a resource and still punishes, and the partner doesn't adapt to habits; a person will Convert into it. A one-pass deck caps it at seven Recovers. Levers: six Recovers; a Convert that punishes guarding (a status, or a bigger cash); or one core card without the follow-up. *4 November:* it didn't feel unbalanced at the table, and people Convert into habitual guarding (Mark's first game: his Recovers were hit for 9 and 10). Watch it in playtests rather than change it now.
 2. **Supers almost never come out** (0.01–0.02 a game for the Benchmark, against 0.36 in v17). Read is the only way to the table, with two Reads in the deck, and a special is always waiting there, so the partner spends every Read on a special or a draw. Partly the partner (it undervalues the Super), but the route is narrow. Levers: a third Read (Recall ×2); let Charge take the Super instead of gaining meter; or the Super costs 1 more and is taken with Charge.
 3. **Specials come out less** (0.6–0.8 a game against 1.7): the same Read bottleneck as Flag 2.
 4. **Counter-only Supers:** Chain Prison was played 0.04–0.05 times a game. Give it Ender, as v17 Flag 2 suggested.
