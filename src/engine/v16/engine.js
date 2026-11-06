@@ -44,7 +44,7 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
   initiative: false, tableCards: false, refillAtReveal: false,
-  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false }
+  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false }
 // Rules v18 switches (rules-overview 18.md), off for v16 and v17:
 //   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
 //     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
@@ -59,6 +59,8 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //     drew its last card), the game ends: the higher HP wins, equal HP is a draw.
 //   knockdownLocks: Knockdown means Lock Pressure next round (getting up, you can guard or go for
 //     a big reversal, but not a quick strike), since there is no neutral step to skip.
+//   knockdownSlow (6 Nov, replaces knockdownLocks): a knocked-down player loses every speed clash next
+//     round (same-type attacks, ties included); if both are down, speeds compare as usual.
 // Rules v17 switches (rules-overview 17.md), off for v16:
 //   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
 //     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
@@ -553,7 +555,10 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   }
   else {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
-    if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
+    // Rules v18 (6 Nov): a knocked-down player loses every speed clash (ties included); both down, compare as usual
+    const ka = !!(G.rules.knockdownSlow && A.st.knockdown), kb = !!(G.rules.knockdownSlow && B.st.knockdown)
+    if (ka !== kb) { winner = ka ? 1 : 0; outcome = 'speed' }
+    else if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
     else {
       const tw = tieWinner16(G.A, G.B, G.rules, G.init)
       if (tw < 0) outcome = 'cancel'
@@ -579,7 +584,7 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   let next = { ...G, A, B, rng, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
-  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return wc.brace || wc.noFollow ? finishClash(next) : ask(next, 'follow', winner)
+  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return wc.brace || wc.noFollow || lc.safe ? finishClash(next) : ask(next, 'follow', winner)   // Safe Pressures (6 Nov) can't be followed up
   if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }

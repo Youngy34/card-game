@@ -1,6 +1,6 @@
 // Rule checks for rules v18 (rules-overview 18.md): one deck and one step, riders On reveal
-// (Charge, Read, Recall, Shakedown), the defence cores, specials returning to the table, Knockdown as
-// Lock Pressure, the time-out, and the v18 partner's solvers and hidden-hand dealing.
+// (Charge, Read, Recall, Shakedown), the defence cores, specials returning to the table, Knockdown losing
+// speed clashes, the time-out, and the v18 partner's solvers and hidden-hand dealing.
 //   node tools/test18.mjs
 
 import fs from 'fs'
@@ -97,15 +97,19 @@ const base = (patchA = {}, patchB = {}, init = 0) => {
   H = confiscate16(H, 1, [RISE])
   ok(H.B.table.includes(RISE) && !H.B.discard.some(d => d.i === RISE), 'a Confiscated special goes back to the table')
 }
-// 7. Knockdown is Lock Pressure next round
+// 7. Knockdown (6 Nov, was Lock Pressure): next round the knocked-down player loses every speed clash
 {
   let G = base({ hand: [SWEEP] }, { hand: [THROW] })
   G = startClash16(G, SWEEP, THROW)
   ok(G.B.next.knockdown, 'Sweep knocks down')
   G = finishRound16({ ...G, pending: null })
-  ok(G.B.st.lock?.P, 'the knocked-down player has Pressure Locked')
-  G = startClash16({ ...G, A: { ...G.A, hand: [GUARD] }, B: { ...G.B, hand: [JAB] } }, GUARD, JAB)
-  ok(G.clash.voided[1], 'their Jab is voided')
+  ok(G.B.st.knockdown && !G.B.st.lock?.P, 'knocked down: nothing Locked')
+  const H = startClash16({ ...G, A: { ...G.A, hand: [SHOT] }, B: { ...G.B, hand: [JAB] } }, SHOT, JAB)
+  ok(H.clash.winner === 0 && !H.clash.voided[1], 'their faster Jab loses the speed clash to Shot')
+  const K = startClash16({ ...G, init: 1, A: { ...G.A, hand: [JAB] }, B: { ...G.B, hand: [JAB] } }, JAB, JAB)
+  ok(K.clash.winner === 0, 'a speed tie goes against them, even holding the initiative')
+  const L = startClash16({ ...G, A: { ...G.A, hand: [SHOT], st: { knockdown: true } }, B: { ...G.B, hand: [JAB] } }, SHOT, JAB)
+  ok(L.clash.winner === 1, 'both knocked down: speeds compare as usual')
 }
 // 8. The time-out: no reshuffle; a deck run out ends the game at the end of the round, higher HP winning
 {

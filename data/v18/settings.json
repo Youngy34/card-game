@@ -21,7 +21,8 @@
     "merged": true,
     "specialsReturn": true,
     "timeout": true,
-    "knockdownLocks": true
+    "knockdownLocks": false,
+    "knockdownSlow": true
   },
   "ai": {
     "alpha": 0.6,

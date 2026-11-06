@@ -65,7 +65,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -92,6 +92,7 @@ export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
   if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(REVEAL18[k].line(v))
+  if (t === 'P' && c.safe) text.push('Safe: a Recover that beats this gets no follow-up.')
   if (t === 'R' && c.parry) text.push('If it beats a Pressure, you may follow up with any attack from your hand, and it can start a combo.')
   else if (t === 'R' && c.brace === 'reflect') text.push("If it beats a Pressure: no follow-up; instead, the Pressure's Build goes onto its owner's pile.")
   else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")
@@ -187,6 +188,7 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.parry && c.brace) E('A card is a Parry or a Brace, not both.')
   if (c.noFollow !== undefined && (t !== 'R' || c.noFollow !== true || c.parry || c.brace)) E('noFollow is true, on a Recover that is neither a Parry nor a Brace.')
   if (c.core !== undefined && c.core !== true) E('core is true (a card from the shared defence core).')
+  if (c.safe !== undefined && (t !== 'P' || c.safe !== true)) E('safe is true, on a Pressure.')
   return { errors, warnings }
 }
 
@@ -244,7 +246,7 @@ function norm(c, isSuper) {
     onHit: c.onHit ?? null, cost: c.cost ?? null, onLossSelf: c.onLossSelf ?? 0,
     meter: isSuper ? (c.meter ?? 3) : c.special ? (c.meter ?? 1) : 0, special: !!c.special, orSelect: !!c.orSelect, orFetch: !!c.orFetch, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
     confiscate: c.confiscate ?? 0, discardDownTo: c.discardDownTo ?? null, atClash: c.atClash ?? null, capHand: c.capHand ?? null, endsOn: c.endsOn ?? null,
-    reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow,
+    reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow, safe: !!c.safe,
     sup: isSuper, src: c,
   }
 }
