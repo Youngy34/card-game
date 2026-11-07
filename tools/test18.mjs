@@ -148,7 +148,8 @@ const base = (patchA = {}, patchB = {}, init = 0) => {
     const g = playGame18(s % 2 ? W3 : F3, F3, { rules, W: W18, levels: ['hard', 'hard'], seed: 80 + s })
     games++
     ok(g.result === 0 || g.result === 1 || g.result === 0.5, 'game finishes')
-    ok(g.rounds.length <= 19, `no game outlasts the deck (${g.rounds.length} rounds)`)
+    const longest = Math.max(F3.deck.length, W3.deck.length) - rules.openingHand + 1   // the time-out: one draw a round
+    ok(g.rounds.length <= longest, `no game outlasts the deck (${g.rounds.length} rounds, at most ${longest})`)
     if (g.timedOut) timeouts++
     for (const r of g.rounds) for (const e of r.reveals) { if (e.what === 'take' || e.what === 'recall') takes++; if (e.what === 'meter') meter += e.n }
   }

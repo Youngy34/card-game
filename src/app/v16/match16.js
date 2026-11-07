@@ -374,7 +374,9 @@ export function boardNotes16(m, side) {
   if (Y.superAt === 'hand') notes.push({ tone: 'bad', text: `${name} has taken their Super, ${Y.f.sup.name}, into their hand: it's live until they use it.` })
   // statuses this round
   for (const [who, Z, tone] of [['You', X, 'bad'], [name, Y, 'good']]) {
-    const s = statusList(Z.st)
+    const slow = m.G.rules.knockdownSlow && Z.st.knockdown
+    const s = statusList(Z.st).filter(l => !(slow && l === 'Knockdown'))
+    if (slow) notes.push({ tone, text: who === 'You' ? 'You\'re knocked down this round: you lose every speed clash (same-type attacks, ties included).' : `${name} is knocked down this round: they lose every speed clash (same-type attacks, ties included).` })
     if (s.length) notes.push({ tone, text: `${who} ${who === 'You' ? 'are' : 'is'} ${s.join(', ')} this round.` })
   }
   // their neutral card
@@ -386,18 +388,21 @@ export function boardNotes16(m, side) {
   if (Y.fx && Object.keys(Y.fx).length) notes.push({ text: `${name}'s neutral card is live: ${Object.entries(Y.fx).map(([k, v]) => ({ convertChip: `Converts chip +${v}`, pressureBuild: `Pressures build +${v}`, pressureChip: `Pressures chip +${v}`, attackChip: `attacks chip +${v}`, speed: `attacks +${v} speed`, grabConfiscate: 'their Grabs Confiscate on hit', armor: 'Armor: their Converts (not their Super) also beat Pressures', mixup: 'Mix-Up: their Pressures (not their Super) also beat Guards', parry: "Parry: if their Guard beats a Pressure, the punish can be any attack, and it can combo" })[k]).join(', ')}.` })
   // Counters
   const counters = could(c => c.counter)
-  notes.push({ text: `${name} holds ${Y.hand.length} card${Y.hand.length === 1 ? '' : 's'}, from ${pool} you haven't seen: ${counters} of those are Counters. If you Pressure into their Guard, they punish only with a Counter.` })
+  notes.push({ text: `${name} holds ${Y.hand.length} card${Y.hand.length === 1 ? '' : 's'}, from ${pool} you haven't seen: ${counters} of those are Counters. If you Pressure into their Guard, they punish only with a Counter${X.hand.some(i => X.f.cards[i].safe) ? ', and not at all if your card is Safe' : ''}.` })
   // speed duels
   for (const t of ['P', 'C']) {
     const mine = X.hand.map(i => X.f.cards[i]).filter(c => c.t === t)
     const theirs = Y.f.cards.filter((c, i) => c.t === t && unseen[i])
     if (!mine.length || !theirs.length || X.st.lock?.[t]) continue
+    const label0 = t === 'P' ? 'Pressure' : 'Convert'
+    const downX = m.G.rules.knockdownSlow && X.st.knockdown, downY = m.G.rules.knockdownSlow && Y.st.knockdown
+    if (downX !== downY) { notes.push({ tone: downX ? 'bad' : 'good', text: downX ? `${label0} duel: you're knocked down, so you lose it whatever the speeds.` : `${label0} duel: they're knocked down, so you win it whatever the speeds.` }); continue }
     const myBest = Math.max(...mine.map(c => speedOf(X, c)))
     const theirBest = Math.max(...theirs.map(c => speedOf(Y, c)))
     const label = t === 'P' ? 'Pressure' : 'Convert'
     if (myBest > theirBest) notes.push({ text: `${label} duel: your fastest (${myBest}) beats anything they could hold (${theirBest} at most).` })
     else if (myBest < theirBest) notes.push({ text: `${label} duel: they could hold a faster one (${theirBest}) than your fastest (${myBest}).` })
-    else notes.push({ text: `${label} duel: your fastest and theirs could both be ${myBest}: a tie ${m.G.rules.speedTie === 'lowhp' ? 'goes to the player on less HP' : 'cancels'}.` })
+    else notes.push({ text: `${label} duel: your fastest and theirs could both be ${myBest}: a tie ${m.G.rules.speedTie === 'lowhp' ? 'goes to the player on less HP' : m.G.rules.speedTie === 'initiative' && (m.G.init === 0 || m.G.init === 1) ? (m.G.init === side ? 'goes to you (you hold the initiative)' : `goes to ${name} (they hold the initiative)`) : 'cancels'}.` })
   }
   if (Y.pile > 0) notes.push({ tone: 'good', text: `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
   return notes

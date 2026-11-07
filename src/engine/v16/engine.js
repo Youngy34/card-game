@@ -557,7 +557,7 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
     // Rules v18 (6 Nov): a knocked-down player loses every speed clash (ties included); both down, compare as usual
     const ka = !!(G.rules.knockdownSlow && A.st.knockdown), kb = !!(G.rules.knockdownSlow && B.st.knockdown)
-    if (ka !== kb) { winner = ka ? 1 : 0; outcome = 'speed' }
+    if (ka !== kb) { winner = ka ? 1 : 0; outcome = 'speed'; ev.push({ kind: 'downSlow', side: ka ? 0 : 1 }) }
     else if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
     else {
       const tw = tieWinner16(G.A, G.B, G.rules, G.init)
@@ -584,7 +584,11 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   let next = { ...G, A, B, rng, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
   if (next.result !== null || winner < 0) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
-  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') return wc.brace || wc.noFollow || lc.safe ? finishClash(next) : ask(next, 'follow', winner)   // Safe Pressures (6 Nov) can't be followed up
+  if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') {
+    // Safe Pressures (6 Nov) can't be followed up
+    if (lc.safe && !wc.brace && !wc.noFollow) ev.push({ kind: 'safe', side: 1 - winner, name: lc.name })
+    return wc.brace || wc.noFollow || lc.safe ? finishClash(next) : ask(next, 'follow', winner)
+  }
   if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
 }

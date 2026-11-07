@@ -5,6 +5,9 @@
 const fs = require('fs'), path = require('path')
 const { chromium } = require('playwright')
 const PAGE = process.argv[2] || 'dist/yomi-playtest-v18.html'
+// The bundled Benchmark, so the deck checks follow its file (26 cards since 7 November)
+const BM = JSON.parse(fs.readFileSync(path.join(__dirname, '../../data/v18/benchmark.json'), 'utf8'))
+const BM_SIZE = BM.cards.filter(c => !c.special).reduce((s, c) => s + c.copies, 0)
 const VENDOR = process.argv[3]
 const SHOTS = process.argv[4] ? process.argv[4] + '/' : null
 let html = fs.readFileSync(PAGE, 'utf8')
@@ -112,7 +115,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const body = async () => (await page.locator('body').innerText()).toLowerCase()
   ok((await body()).includes('rules v18'), 'header says rules v18')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
-  ok((await body()).includes('34 hp · 24 cards + 2 specials'), 'the picker shows HP 34 and the 24-card deck')
+  ok((await body()).includes(`${BM.hp} hp · ${BM_SIZE} cards + 2 specials`), `the picker shows HP ${BM.hp} and the ${BM_SIZE}-card deck`)
   ok((await body()).includes('32 hp · 24 cards + 2 specials'), 'the Warden at HP 32')
   ok((await body()).includes('the game times out when a deck runs out') && (await body()).includes('one step a round'), 'setup states the time-out and the one-step round')
   ok((await body()).includes('knows you can\'t see its own'), 'setup describes the new partner')
@@ -124,7 +127,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(!(await body()).includes('neutral in hand'), 'no neutral hand in the HUD')
   ok((await page.locator('.hud-flags .flag', { hasText: 'Initiative' }).count()) === 1, 'exactly one player holds the initiative')
   ok((await page.locator('.hud', { hasText: 'Rising Strike · 1 meter' }).count()) === 2 && (await body()).includes('overdrive · 2 meter'), 'specials and the Super start on the table')
-  ok((await body()).includes('18 in deck'), 'HUD shows 18 cards left in the deck')
+  ok((await body()).includes(`${BM_SIZE - 6} in deck`), `HUD shows ${BM_SIZE - 6} cards left in the deck`)
   const seen = await playGame(page, { shots: true })
   console.log('vs Hard:', JSON.stringify(seen))
   ok(seen.rounds > 3, 'played several rounds')
@@ -172,7 +175,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   await btn(page, 'Decks').click()
   await page.waitForSelector('text=Counters')
   const nCards = await page.locator('.cards-grid .card').count()
-  ok(nCards === 13, `ten cards, two specials and the Super (${nCards})`)
+  ok(nCards === BM.cards.length + 1, `${BM.cards.length - 2} cards, two specials and the Super (${nCards})`)
   SHOTS && await page.screenshot({ path: SHOTS + '08-decks.png', fullPage: true })
 
   // settings

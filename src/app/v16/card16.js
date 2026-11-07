@@ -1,7 +1,7 @@
 // The v16 card face, written from the card's data so it always matches the engine.
 
 import { html, cx } from '../lib.js'
-import { T16, LABEL16, KINDS16, ICONS, ICON_ORDER, cardLines16, CONFISCATE_LINE } from '../../engine/v16/cards.js'
+import { T16, LABEL16, KINDS16, ICONS, ICON_ORDER, SAFE_LINE, cardLines16, CONFISCATE_LINE } from '../../engine/v16/cards.js'
 
 // card: the card's JSON (an engine card's .src)
 export function Card16({ card, isSuper = false, copies = null, cls = '', stamp = null, why = null, as = 'div', onClick, disabled, label, style, count = null }) {
@@ -12,7 +12,7 @@ export function Card16({ card, isSuper = false, copies = null, cls = '', stamp =
   const typeName = K ? `${LABEL16[t]} · ${K.label}` : LABEL16[t]
   const icons = ICON_ORDER.filter(i => (card.icons || []).includes(i))
   const Tag = as
-  const aria = label || `${card.name}, ${typeName}${isSuper ? ' Super' : ''}${card.speed ? `, speed ${card.speed}` : ''}${icons.length ? `, ${icons.map(i => ICONS[i].label).join(', ')}` : ''}`
+  const aria = label || `${card.name}, ${typeName}${isSuper ? ' Super' : ''}${card.speed ? `, speed ${card.speed}` : ''}${card.safe ? ', Safe' : ''}${icons.length ? `, ${icons.map(i => ICONS[i].label).join(', ')}` : ''}`
   return html`
     <${Tag} class=${cx('card', 'c16', isSuper && 'super', cls)} data-t=${t === 'N' ? 'T' : t} onClick=${onClick} disabled=${disabled}
       aria-label=${as === 'button' ? aria : undefined} type=${as === 'button' ? 'button' : undefined} style=${style}>
@@ -27,7 +27,7 @@ export function Card16({ card, isSuper = false, copies = null, cls = '', stamp =
           ${t === 'P' ? html`<div class="stat"><b>${card.build ?? 0}</b><i>Build</i></div>` : null}
           ${t === 'P' || t === 'C' || card.chip ? html`<div class="stat"><b>${card.chip ?? 0}</b><i>Chip</i></div>` : null}
         </div>
-        ${icons.length ? html`<div class="icons">${icons.map(i => html`<span class=${cx('icon', i)} title=${ICONS[i].line}>${ICONS[i].label}</span>`)}</div>` : null}
+        ${icons.length || card.safe ? html`<div class="icons">${card.safe ? html`<span class="icon safe" title=${SAFE_LINE}>Safe</span>` : null}${icons.map(i => html`<span class=${cx('icon', i)} title=${ICONS[i].line}>${ICONS[i].label}</span>`)}</div>` : null}
         <div class="card-text">${text.map(l => html`<p>${l}</p>`)}</div>
         ${text.some(l => l.includes('Confiscate')) ? html`<div class="card-flavour">${CONFISCATE_LINE}</div>` : null}
         ${isSuper && card.flavour && !cost.length ? html`<div class="card-flavour">${card.flavour}</div>` : null}

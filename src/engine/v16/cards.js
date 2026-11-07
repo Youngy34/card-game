@@ -33,10 +33,12 @@ export const ICONS = {
   counter: { label: 'Counter', short: 'Ct', line: 'Counter: can be the follow-up after your Guard beats a Pressure.' },
 }
 export const ICON_ORDER = ['starter', 'linker', 'ender', 'counter']
+// Safe (rules v18, 6 Nov): a card property shown with the icons
+export const SAFE_LINE = 'Safe: if a Recover beats this, it gets no follow-up.'
 
 // Statuses last through the target's next round
 export const STATUSES = {
-  knockdown: { label: 'Knockdown', line: 'skips the neutral phase next round' },
+  knockdown: { label: 'Knockdown', line: 'skips the neutral phase next round (v18: loses every speed clash next round)' },
   staggered: { label: 'Staggered', line: 'has −3 speed on their attacks next round' },
   dizzy: { label: 'Dizzy', line: 'plays no card next round: a free hit' },
 }
@@ -92,7 +94,6 @@ export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
   if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(REVEAL18[k].line(v))
-  if (t === 'P' && c.safe) text.push('Safe: a Recover that beats this gets no follow-up.')
   if (t === 'R' && c.parry) text.push('If it beats a Pressure, you may follow up with any attack from your hand, and it can start a combo.')
   else if (t === 'R' && c.brace === 'reflect') text.push("If it beats a Pressure: no follow-up; instead, the Pressure's Build goes onto its owner's pile.")
   else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")

@@ -4,7 +4,7 @@
   "id": "benchmark18",
   "name": "Benchmark",
   "epithet": "Reference",
-  "concept": "The plain v18 fighter: one 24-card deck (at most 3 of any card) and the shared defence core (Recall, Charge, Read: every one a Guard with a Counter follow-up and a rider), two specials on the table (Rising Strike, Breaker) and a single-use Super.",
+  "concept": "The plain v18 fighter: one 26-card deck (at most 3 of any card) with Safe pokes and punishable big strikes, the shared defence core (Recall, Charge, Read: every one a Guard with a Counter follow-up and a rider), two specials on the table (Rising Strike, Breaker) and a single-use Super.",
   "hp": 34,
   "passive": null,
   "cards": [
@@ -13,7 +13,21 @@
       "type": "pressure",
       "kind": "strike",
       "speed": 17,
-      "build": 2,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Lunge",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
       "chip": 1,
       "copies": 3,
       "icons": [
@@ -51,24 +65,24 @@
       "name": "Shot",
       "type": "pressure",
       "kind": "projectile",
-      "speed": 15,
-      "build": 2,
-      "chip": 1,
-      "copies": 3,
-      "icons": [
-        "starter"
-      ]
+      "speed": 12,
+      "build": 3,
+      "chip": 2,
+      "copies": 2,
+      "icons": [],
+      "safe": true
     },
     {
       "name": "Throw",
       "type": "convert",
       "kind": "grab",
       "speed": 7,
-      "chip": 2,
-      "copies": 2,
+      "chip": 1,
+      "copies": 3,
       "icons": [
         "counter"
-      ]
+      ],
+      "onHit": "knockdown"
     },
     {
       "name": "Big Swing",
@@ -76,7 +90,7 @@
       "kind": "guardBreak",
       "speed": 3,
       "chip": 3,
-      "copies": 2,
+      "copies": 3,
       "icons": [
         "ender",
         "counter"
@@ -86,12 +100,11 @@
       "name": "Wind-Up",
       "type": "convert",
       "kind": "guardBreak",
-      "speed": 2,
-      "chip": 3,
-      "copies": 3,
+      "speed": 1,
+      "chip": 4,
+      "copies": 2,
       "icons": [
-        "ender",
-        "counter"
+        "ender"
       ]
     },
     {
@@ -172,5 +185,5 @@
     "onHit": "knockdown",
     "flavour": "Once a game: ends a combo with a cash and a knockdown."
   },
-  "notes": "Rules v18 (rules-overview 18.md), 3 November 2026: Charge and Read moved from Shot and Wind-Up onto the defence core; HP 34."
+  "notes": "Rules v18, 7 November 2026: 26 cards. Safe Jab (x2, Build 1, chip 1) and Shot (x2, speed 12, Build 3, chip 2, no icons); new Lunge x3 (the unsafe Jab); Slash x2; Sweep x2; Throw x3 (chip 1, On hit: Knockdown); Big Swing x3; Wind-Up x2 (the slow heavy: speed 1, chip 4, Ender). The 3 November deck is variants/benchmark-3nov.json."
 }

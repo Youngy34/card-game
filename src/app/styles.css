@@ -344,6 +344,7 @@ pre.json { background: var(--ground); padding: 12px; overflow-x: auto; font-fami
 .icon.linker { border-color: var(--ink-2); }
 .icon.ender { border-color: var(--convert); color: var(--convert); }
 .icon.counter { border-color: var(--recover); color: var(--recover); }
+.icon.safe { border-color: var(--ink-2); background: var(--ink-2); color: var(--ground); }
 .icon.tiny { font-size: 10px; padding: 0 4px; }
 .card-count { position: absolute; right: 0.4em; bottom: 0.4em; z-index: 3; font-family: var(--font-display); font-weight: 900; font-size: 1.3em; background: var(--ink); color: var(--ground); padding: 0 0.3em; }
 .card.small { --w: 110px; }
