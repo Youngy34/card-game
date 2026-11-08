@@ -10,7 +10,10 @@ const PAGE = process.argv[2] || 'dist/yomi-playtest-v18.html'
 const ED = process.env.SMOKE_EDITION || 'v18'
 const DATA = n => JSON.parse(fs.readFileSync(path.join(__dirname, `../../data/${ED}/${n}.json`), 'utf8'))
 const BM = DATA('benchmark'), WD = DATA('warden'), VX = DATA('vex'), AT = DATA('atlas')
-const CAP = JSON.parse(fs.readFileSync(path.join(__dirname, `../../data/${ED}/settings.json`), 'utf8')).rules.greyCap || 0
+const RULES = JSON.parse(fs.readFileSync(path.join(__dirname, `../../data/${ED}/settings.json`), 'utf8')).rules
+const CAP = RULES.greyCap || 0, OVF = !!(CAP && RULES.greyOverflow)
+// the picker's "· grey cap N" (a fighter's own cap, or the rule's), when the cap is on
+const capTxt = f => (CAP ? ` · grey cap ${f.greyCap || CAP}` : '')
 const BM_SIZE = BM.cards.filter(c => !c.special).reduce((s, c) => s + c.copies, 0)
 const VENDOR = process.argv[3]
 const SHOTS = process.argv[4] ? process.argv[4] + '/' : null
@@ -65,6 +68,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
       if (t.includes('with recall: it')) seen.knownNote++
       if (t.includes('turns the blow aside')) seen.block++
       if (t.includes('reached the cap of')) seen.cap = (seen.cap || 0) + 1
+      if (t.includes('is lost as hp') || t.includes('pile was full') || t.includes('pile is full')) seen.full = (seen.full || 0) + 1
       const rider = page.locator('.hand-wrap h3', { hasText: /: (read|recall)$/i })
       if (await rider.count()) {
         seen.rider++
@@ -124,8 +128,11 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const body = async () => (await page.locator('body').innerText()).toLowerCase()
   ok((await body()).includes('rules v18'), 'header says rules v18')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
-  ok((await body()).includes(`${BM.hp} hp · ${BM_SIZE} cards + 2 specials`), `the picker shows HP ${BM.hp} and the ${BM_SIZE}-card deck`)
-  ok((await body()).includes(`${WD.hp} hp · 26 cards + 2 specials · super: chain prison`), `the Warden at HP ${WD.hp}, 26 cards`)
+  ok((await body()).includes(`${BM.hp} hp${capTxt(BM)} · ${BM_SIZE} cards + 2 specials`), `the picker shows HP ${BM.hp}${capTxt(BM)} and the ${BM_SIZE}-card deck`)
+  ok((await body()).includes(`${WD.hp} hp${capTxt(WD)} · 26 cards + 2 specials · super: chain prison`), `the Warden at HP ${WD.hp}, 26 cards`)
+  if (CAP) ok((await body()).includes(`${VX.hp} hp${capTxt(VX)}`) && (await body()).includes(`${AT.hp} hp${capTxt(AT)}`), `the picker shows Vex's and Atlas's own caps (${VX.greyCap || CAP}, ${AT.greyCap || CAP})`)
+  if (RULES.cashOnWin) ok((await body()).includes('a convert cashes only as the clash card'), 'setup states that a Convert cashes only as the clash card')
+  if (OVF) ok((await body()).includes('grey beyond it is lost as hp'), 'setup states the overflow cap')
   ok((await body()).includes('the game times out when a deck runs out') && (await body()).includes('one step a round'), 'setup states the time-out and the one-step round')
   ok((await body()).includes('knows you can\'t see its own'), 'setup describes the new partner')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })
@@ -138,7 +145,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok((await page.locator('.hud', { hasText: 'Rising Strike · 1 meter' }).count()) === 2 && (await body()).includes('overdrive · 2 meter'), 'specials and the Super start on the table')
   ok((await body()).includes(`${BM_SIZE - 6} in deck`), `HUD shows ${BM_SIZE - 6} cards left in the deck`)
   if (CAP) {
-    ok((await page.locator('.pile-n').allInnerTexts()).every(t => t.endsWith(`/${CAP}`)), `the HUD shows each pile against the cap of ${CAP}`)
+    ok((await page.locator('.pile-n').allInnerTexts()).every(t => t.endsWith(`/${BM.greyCap || CAP}`)), `the HUD shows each pile against the cap of ${BM.greyCap || CAP}`)
     ok((await body()).includes(`grey cap ${CAP}`) || (await page.locator('.pile[title*="Grey cap"]').count()) === 2, 'the cap is explained')
   }
   const seen = await playGame(page, { shots: true })
@@ -175,11 +182,13 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(all.table > 0, 'the table row shows a special in hand')
   ok(all.timeNote > 0, 'board notes warn of the time-out near the end of the deck')
   console.log('endings: KO', all.ko, '· time-out', all.timeout, '· cap notes', all.cap || 0)
-  if (CAP) ok((all.cap || 0) > 0, 'a cap cash was narrated (board note or game-over line)')
+  console.log('full-pile notes', all.full || 0)
+  if (OVF) ok((all.full || 0) > 0, 'a full pile was narrated (grey lost as HP)')
+  else if (CAP) ok((all.cap || 0) > 0, 'a cap cash was narrated (board note or game-over line)')
 
   // the 8 November drafts: you as Vex against Bastion (Twin, Repulse), then you as Atlas against Vex
   await btn(page, 'New match').click()
-  ok((await body()).includes(`${VX.hp} hp · 26 cards + 2 specials · super: hundred fang`) && (await body()).includes(`${AT.hp} hp · 26 cards + 2 specials · super: avalanche`), `the picker lists Vex (HP ${VX.hp}) and Atlas (HP ${AT.hp})`)
+  ok((await body()).includes(`${VX.hp} hp${capTxt(VX)} · 26 cards + 2 specials · super: hundred fang`) && (await body()).includes(`${AT.hp} hp${capTxt(AT)} · 26 cards + 2 specials · super: avalanche`), `the picker lists Vex (HP ${VX.hp}) and Atlas (HP ${AT.hp})`)
   ok((await page.locator('.pickers .fighters').nth(0).locator('.fpick', { hasText: 'Bastion' }).count()) === 1, 'the picker lists Bastion')
   await page.locator('.pickers .fighters').nth(0).locator('.fpick', { hasText: 'Vex' }).click()
   await page.locator('.pickers .fighters').nth(1).locator('.fpick', { hasText: 'Bastion' }).click()

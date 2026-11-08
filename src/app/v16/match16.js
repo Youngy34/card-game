@@ -12,7 +12,7 @@
 
 import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16,
          card16, unseenPool, unseenCounts, superReady, statusList, iconOptions, speedOf, confiscate16, handLimitOf, neutralModes16, initOrder, tableCost,
-         readModes18, recallModes18, locked } from '../../engine/v16/engine.js'
+         readModes18, recallModes18, locked, capOf } from '../../engine/v16/engine.js'
 import { toFighter16, fighterHash16 } from './fighters16.js'
 import { clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, chooseConfiscate, chooseMode16, chooseRead18, sampleIndex, LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
 import { roundRecord16, winRoute16, snap16, randomReveal18 } from '../../engine/v16/game.js'
@@ -294,12 +294,15 @@ function finishClash(m) {
 // ---- 3. draw ----------------------------------------------------------------------
 export function nextRound16(m) {
   let G = startDraw16(m.G)
-  // greyCap (v19 test): say whose pile was cashed at the end of the round
-  const capNote = G.capCash?.some(n => n > 0)
-    ? [0, 1].filter(k => G.capCash[k]).map(k => `End of round ${m.G.round}: ${P(m, k).f.name}'s grey reached the cap of ${G.rules.greyCap} and was cashed for ${G.capCash[k]} damage.`).join(' ')
-    : null
+  // greyCap (v19 test): say whose pile was cashed at the end of the round, or (overflow) whose full pile cost HP
+  const capNote = [0, 1].map(k => {
+    const X = P(m, k)
+    if (G.capCash?.[k]) return `End of round ${m.G.round}: ${X.f.name}'s grey reached the cap of ${capOf(X, G.rules)} and was cashed for ${G.capCash[k]} damage.`
+    if (G.capSpill?.[k]) return `End of round ${m.G.round}: ${X.f.name}'s pile was full, so the round's grey cost ${G.capSpill[k]} HP.`
+    return null
+  }).filter(Boolean).join(' ') || null
   m = { ...m, capNote }
-  if (capNote && m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), capCash: G.capCash }] }
+  if (capNote && m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), ...(G.capCash?.some(n => n) ? { capCash: G.capCash } : {}), ...(G.capSpill?.some(n => n) ? { capSpill: G.capSpill } : {}) }] }
   // In initiative order: a person discards before a later partner chooses (both choices are public)
   m = { ...m, G, last: null }
   return nextDiscard(m)
@@ -362,12 +365,19 @@ export function boardNotes16(m, side) {
   const notes = []
   // greyCap (v19 test): last round's cap cash, and piles near the cap
   if (m.capNote) notes.push({ tone: 'bad', text: m.capNote })
-  const cap = m.G.rules.greyCap, gpr = m.G.rules.greyPerRound || 0
-  if (cap) {
+  const gpr = m.G.rules.greyPerRound || 0, cX = capOf(X, m.G.rules), cY = capOf(Y, m.G.rules)
+  if (cX && m.G.rules.greyOverflow) {
+    // overflow (v19): a full pile can't grow; what would go past it is lost as HP, and a winning Convert takes it all
+    if (X.pile >= cX) notes.push({ tone: 'bad', text: `Your pile is full (${X.pile} of ${cX}): grey you take now is lost as HP, the round's grey too, and a Convert that wins the clash cashes all ${X.pile}.` })
+    else if (X.pile + 3 >= cX) notes.push({ tone: 'bad', text: `Your grey is ${X.pile} of ${cX}: one Pressure hit could fill it, and anything past ${cX} is lost as HP.` })
+    if (Y.pile >= cY) notes.push({ tone: 'good', text: `${name}'s pile is full (${Y.pile} of ${cY}): any grey you put on them is lost as HP, and a Convert that wins the clash cashes all ${Y.pile}.` })
+    else if (Y.pile + 3 >= cY) notes.push({ tone: 'good', text: `${name}'s grey is ${Y.pile} of ${cY}: one Pressure hit could fill it.` })
+  } else if (cX) {
+    const cap = cX
     if (X.pile + gpr >= cap) notes.push({ tone: 'bad', text: `Your grey (${X.pile}) reaches the cap of ${cap} with this round's grey: unless you clear it (a Guard), it's cashed for ${X.pile + gpr} at the end of the round.` })
     else if (X.pile + gpr + 3 >= cap) notes.push({ tone: 'bad', text: `Your grey is ${X.pile}: a Pressure hit now could take you to the cap of ${cap}, and it's cashed at the end of the round.` })
-    if (Y.pile + gpr >= cap) notes.push({ tone: 'good', text: `${name}'s grey (${Y.pile}) reaches the cap of ${cap} with this round's grey: unless they clear it, it's cashed for ${Y.pile + gpr} at the end of the round.` })
-    else if (Y.pile + gpr + 3 >= cap) notes.push({ tone: 'good', text: `${name}'s grey is ${Y.pile}: one Pressure hit could take them to the cap of ${cap}.` })
+    if (Y.pile + gpr >= cY) notes.push({ tone: 'good', text: `${name}'s grey (${Y.pile}) reaches the cap of ${cY} with this round's grey: unless they clear it, it's cashed for ${Y.pile + gpr} at the end of the round.` })
+    else if (Y.pile + gpr + 3 >= cY) notes.push({ tone: 'good', text: `${name}'s grey is ${Y.pile}: one Pressure hit could take them to the cap of ${cY}.` })
   }
   const unseen = unseenCounts(Y)
   const could = pred => Y.f.cards.reduce((s, c, i) => s + (pred(c) ? unseen[i] : 0), 0)

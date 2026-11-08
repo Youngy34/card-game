@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "warden19",
+  "name": "The Warden",
+  "epithet": "Grappler",
+  "concept": "A grappler with chains, on one 26-card deck. One combo route, and not often: Chain Lash (the only Starter), Ankle Hook (the only Linker), Coil (the only Ender). His grabs hit harder than anyone's and every Counter he holds is a grab. Shakedown and Coil take a card, Shackles cuts their hand to 5, Chain Toss is a Safe poke; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
+  "hp": 31,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Chain Lash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "counter"
+      ],
+      "copies": 3
+    },
+    {
+      "name": "Ankle Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "onHit": "knockdown",
+      "copies": 3
+    },
+    {
+      "name": "Chain Toss",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 3,
+      "chip": 2,
+      "copies": 3,
+      "icons": [],
+      "safe": true
+    },
+    {
+      "name": "Shakedown",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 8,
+      "chip": 3,
+      "reveal": {
+        "confiscate": 1
+      },
+      "copies": 2
+    },
+    {
+      "name": "Haul In",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 9,
+      "chip": 3,
+      "copies": 1,
+      "flavour": "Drag them in before they can set."
+    },
+    {
+      "name": "Coil",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 4,
+      "chip": 4,
+      "confiscate": 1,
+      "copies": 2
+    },
+    {
+      "name": "Shackles",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 6,
+      "chip": 3,
+      "discardDownTo": 5,
+      "copies": 2,
+      "flavour": "Chained up, you can't carry much."
+    },
+    {
+      "name": "Chain Spin",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Iron Haul",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 10,
+      "chip": 3,
+      "confiscate": 1,
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "The chain finds you before you move."
+    },
+    {
+      "name": "Chain Whip",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "counter"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A crack of the chain from out of reach."
+    }
+  ],
+  "super": {
+    "name": "Chain Prison",
+    "type": "convert",
+    "kind": "grab",
+    "speed": 10,
+    "chip": 4,
+    "meter": 2,
+    "discardDownTo": 3
+  },
+  "notes": "v19 tuning: HP 33 and grabs +3 (Shakedown, Haul In, Shackles, Iron Haul 5; Coil, Chain Prison 6): his grabs are no longer his punishes, so they can hit hard. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Chain Lash, Ankle Hook, Chain Whip gain it. Rules v18. 8 November 2026 (evening), Mark: his chains should combo, just not regularly: one route (Chain Lash Starter, Ankle Hook Linker, Coil Ender; Chain Spin and Chain Whip have no combo icons), and a smaller grab buff: +1 chip (Shakedown, Haul In, Shackles, Iron Haul 3; Coil, Chain Prison 4). Against the 7 November Benchmark 44.2% (47.3%, 41.1%; two seeds of 400); beats Vex 55.8% (300). With grabs +2: 53.4% and Vex 66.3%; graded (+1 fast, +2 slow): 47.2% and Vex 64.8%. The no-combo, grabs +3 version (50.8%, Vex 73%) is variants/warden-nocombo-grab3.json. Rules v18. 8 November 2026 (afternoon): Chain Toss is Safe with no icons (Mark: a long-range move isn't a combo starter), and Build 3, chip 2 like the Benchmark's Shot. Against the 7 November Benchmark: 41.8% (42.3%, 41.3%; two seeds of 400); 37.3% at Build 2, chip 1; 46.9% as a Safe Starter (variants/warden-26-safetoss-starter.json); at HP 34, 45.1%. Also 8 November: 26 cards to match the other fighters (Mark), adding Haul In x1 (cut to fit 24 on 3 November) and a third Ankle Hook: Pressure 9, Convert 10, Recover 7. In sim against the 7 November Benchmark it changed nothing (44.2% at 24 and at 26, two seeds of 400); the 24-card deck is variants/warden-24.json. 3 November: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 (3 November) Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
+}

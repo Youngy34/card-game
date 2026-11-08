@@ -14,6 +14,8 @@ const args = process.argv.slice(2)
 const opt = (name, d) => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : d }
 const n = +opt('-n', 300), seed = +opt('--seed', 5)
 const settings = JSON.parse(fs.readFileSync(`${root}/data/v18/settings.json`, 'utf8'))
+// --set k=v (repeatable) changes a rule, as in sim18
+for (let i; (i = args.indexOf('--set')) >= 0;) { const [k, v] = args.splice(i, 2)[1].split('='); settings.rules[k] = v === 'true' ? true : v === 'false' ? false : +v }
 const W = { ...DEFAULT_W16, ...settings.ai }
 const load = name => toFighter16(JSON.parse(fs.readFileSync(name.endsWith('.json') ? `${root}/${name}` : `${root}/data/v18/${name}.json`, 'utf8')))
 const F = [load(args[0]), load(args[1] || args[0])]
@@ -28,6 +30,7 @@ for (let i = 0; i < n; i++) {
     for (const k of [0, 1]) {
       S[k].rounds++
       for (const st of ['clash', 'follow', 'link', 'end']) S[k].dealt[st] += r.dmg[st][1 - k]
+      S[k].bled = (S[k].bled || 0) + (r.capSpill?.[k] || 0) + (r.capCash?.[k] || 0)     // lost to the cap at the end of the round
     }
     const w = r.winner
     if (w >= 0 && r.types[0] && r.types[1]) {
@@ -43,6 +46,6 @@ const per = v => (v / n).toFixed(2)
 console.log(`${F[0].name} v ${F[1].name}: ${(100 * win / n).toFixed(1)}% (${n} games)`)
 for (const k of [0, 1]) {
   const s = S[k], tot = Object.values(s.dealt).reduce((a, b) => a + b, 0)
-  console.log(`${F[k].name}: damage dealt a game ${per(tot)} (clash ${per(s.dealt.clash)}, follow-up ${per(s.dealt.follow)}, Linker ${per(s.dealt.link)}, Ender ${per(s.dealt.end)}) · follow-ups ${per(s.follows)} · combos ${per(s.combos)} (${(s.comboDmg / Math.max(1, s.combos)).toFixed(1)} HP each; Twin ${per(s.twins)})`)
+  console.log(`${F[k].name}: damage dealt a game ${per(tot)} (clash ${per(s.dealt.clash)}, follow-up ${per(s.dealt.follow)}, Linker ${per(s.dealt.link)}, Ender ${per(s.dealt.end)}) · lost to the cap at round end ${per(s.bled || 0)} · follow-ups ${per(s.follows)} · combos ${per(s.combos)} (${(s.comboDmg / Math.max(1, s.combos)).toFixed(1)} HP each; Twin ${per(s.twins)})`)
   console.log(`   clash wins a game: ${Object.entries(s.wins).sort((a, b) => b[1] - a[1]).map(([k2, v]) => `${k2} ${per(v)}`).join(', ')}`)
 }

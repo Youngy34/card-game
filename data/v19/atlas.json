@@ -4,8 +4,8 @@
   "id": "atlas19",
   "name": "Atlas",
   "epithet": "Heavy hitter",
-  "concept": "The Mountain: the slowest cards in the game, the biggest numbers and the most HP. He loses almost every speed clash, so he wins by reading the type; Knockdown on Hammer Sweep and Earthsplitter gives him a round of speed. Specials: Lariat (his one quick hit) and Upheaval (his one quick swing). Super: Avalanche.",
-  "hp": 40,
+  "concept": "The Mountain: the slowest cards in the game, the biggest numbers and the highest grey cap (12): he soaks Pressure that would bury anyone else, but a Convert read on a full pile is a huge hit. He loses almost every speed clash, so he wins by reading the type; Knockdown on Hammer Sweep (his Ender) and Earthsplitter gives him a round of speed. Specials: Lariat (his one quick hit) and Upheaval (his one quick swing). Super: Avalanche.",
+  "hp": 34,
   "passive": null,
   "cards": [
     {
@@ -65,8 +65,7 @@
       "kind": "guardBreak",
       "speed": 5,
       "chip": 2,
-      "copies": 2,
-      "icons": []
+      "copies": 2
     },
     {
       "name": "Hammer Spin",
@@ -74,10 +73,7 @@
       "kind": "guardBreak",
       "speed": 2,
       "chip": 4,
-      "copies": 3,
-      "icons": [
-        "ender"
-      ]
+      "copies": 3
     },
     {
       "name": "Earthsplitter",
@@ -86,9 +82,6 @@
       "speed": 1,
       "chip": 5,
       "copies": 3,
-      "icons": [
-        "ender"
-      ],
       "onHit": "knockdown"
     },
     {
@@ -146,9 +139,6 @@
       "speed": 9,
       "chip": 4,
       "copies": 1,
-      "icons": [
-        "ender"
-      ],
       "flavour": "The hammer comes up faster than it should.",
       "special": true,
       "meter": 1
@@ -160,12 +150,10 @@
     "kind": "guardBreak",
     "speed": 5,
     "chip": 7,
-    "icons": [
-      "ender"
-    ],
     "meter": 2,
     "onHit": "knockdown",
     "flavour": "Once a game: the whole mountain comes down."
   },
-  "notes": "v19 tuning: HP 40. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Hammer Sweep, Lariat gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 11, Convert 8, Recover 7; HP 38. Pitched, added as written."
+  "notes": "v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Hammer Spin, Earthsplitter, Upheaval and Avalanche lose Ender; Hammer Sweep is the only Ender. His own grey cap: 12. HP 34. v19 tuning: HP 40. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Hammer Sweep, Lariat gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 11, Convert 8, Recover 7; HP 38. Pitched, added as written.",
+  "greyCap": 12
 }

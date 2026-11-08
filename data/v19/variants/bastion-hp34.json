@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "bastion19",
+  "name": "Bastion hp34",
+  "epithet": "Counter-puncher",
+  "concept": "The Sentinel: more Guards than anyone, a Counter on nearly every attack, and blocks that win the next round too. Repulse (his own Guard) Staggers a Pressure it beats; the Aegis special knocks down; the Final Bastion Super leaves them Dizzy. His Pressures punish the Converts his Guards push them into.",
+  "hp": 34,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Edge Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker",
+        "counter"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Shield Bash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Rim Shot",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "counter"
+      ],
+      "onHit": "staggered"
+    },
+    {
+      "name": "Sonic Cutter",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 3,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "counter"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Lockdown",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Shoulder Ram",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 4,
+      "chip": 3,
+      "copies": 3
+    },
+    {
+      "name": "Shield Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 1,
+      "chip": 4,
+      "copies": 2
+    },
+    {
+      "name": "Repulse",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "onBlock": "staggered",
+      "flavour": "Turn the blow aside and step in."
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Aegis",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 1,
+      "onBlock": "knockdown",
+      "flavour": "Plant the shield: whatever hits it goes down.",
+      "special": true,
+      "meter": 1
+    },
+    {
+      "name": "Shield Rush",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 3,
+      "chip": 1,
+      "copies": 1,
+      "icons": [
+        "starter",
+        "counter"
+      ],
+      "flavour": "A charge behind the shield.",
+      "special": true,
+      "meter": 1
+    }
+  ],
+  "super": {
+    "name": "Final Bastion",
+    "type": "recover",
+    "kind": "guard",
+    "meter": 2,
+    "onBlock": "dizzy",
+    "flavour": "Once a game: the wall that leaves them reeling."
+  },
+  "notes": "v19 tuning: HP 38. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Edge Jab, Sonic Cutter gain it. Rules v18, 8 November 2026 (afternoon), Mark: better attacks, Knockdown on Lockdown (throws usually knock down) and HP 36. Edge Jab 17, Shield Bash 15 (Starter, Linker, Counter), Rim Shot 14 (Build 4, chip 1); Lockdown On hit: Knockdown. Against the 7 November Benchmark: 52.8% (54.0%, 51.6%; two seeds of 400); 45.2% without the speed changes (variants/bastion-36-attacks.json). As drafted that morning (HP 32): about 30%, variants/bastion-as-drafted.json."
+}

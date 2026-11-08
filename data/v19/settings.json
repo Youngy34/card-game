@@ -23,7 +23,9 @@
     "timeout": true,
     "knockdownLocks": false,
     "knockdownSlow": true,
-    "greyCap": 9
+    "greyCap": 9,
+    "greyOverflow": true,
+    "cashOnWin": true
   },
   "ai": {
     "alpha": 0.6,

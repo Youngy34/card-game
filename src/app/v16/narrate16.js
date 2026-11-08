@@ -53,12 +53,12 @@ export function narrate16(ev, names) {
   for (const e of ev) {
     const who = names[e.side], them = names[1 - e.side]
     if (e.kind === 'hit') {
-      if (e.t === 'P') out.push(`${how[e.how]}${e.name} puts ${e.build} grey on ${them}${e.chip ? ` and chips ${e.chip}` : ''}.`)
-      else if (e.t === 'C') out.push(`${how[e.how]}${e.name} ${e.cash ? `cashes ${them}'s ${e.cash} grey` : 'cashes an empty pile'} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
+      if (e.t === 'P') out.push(`${how[e.how]}${e.name} puts ${e.build} grey on ${them}${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? ` ${them}'s pile is full: ${e.spill} of it is lost as HP.` : ''}`)
+      else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} ${e.cash ? `cashes ${them}'s ${e.cash} grey` : 'cashes an empty pile'} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
       else if (e.t === 'R') out.push(`${who}'s ${e.name} clears ${e.cleared ? `${e.cleared} grey` : 'an empty pile'}${e.chip ? ` and chips ${e.chip}` : ''}.`)
     } else if (e.kind === 'status') out.push(e.block ? `${them}'s ${e.from} turns the blow aside: ${names[e.side]} is ${e.status === 'knockdown' ? 'knocked down' : status(e.status)} next round.` : `${names[e.side]} is hit with ${status(e.status)} (from ${e.from}) for next round.`)
     else if (e.kind === 'safe') out.push(`${who}'s ${e.name} is Safe: no follow-up.`)
-    else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.`)
+    else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.${e.spill ? ` It's full: ${e.spill} is lost as HP.` : ''}`)
     else if (e.kind === 'prevented') out.push(`${who}'s ${e.by} stops the ${typeof e.status === 'string' ? (STATUSES[e.status]?.label || e.status).toLowerCase() : 'Lock'}, and is discarded.`)
     else if (e.kind === 'voided') out.push(`${who}'s ${e.name} is voided: their ${LABEL16[e.t]}s are Locked.`)
     else if (e.kind === 'play' && e.sup) out.push(e.gone ? `${who} plays their Super, ${e.name}: it's used up for the game.` : `${who} spends meter on ${e.name}.`)

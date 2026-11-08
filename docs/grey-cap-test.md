@@ -2,7 +2,7 @@
 
 *Mark's idea: Counter icons sit mostly on Converts, so a Guard that beats a Pressure clears its own pile **and** cashes theirs, which loosens the triangle's read. Put Counters only on Pressures, and stop Pressure spam with a cap: a pile that reaches it is cashed for damage regardless. "Cap doesn't have to be 9, whatever works." First simmed on the Benchmark mirror; then (Mark: "Try it") all five fighters were converted and put on their own page.*
 
-**Playable: the v19 test page, https://claude.ai/artifact/TDrkScu7TZrGNnmHyHxhL9** ("Yomi Playtest v19 test (grey cap)"): the five fighters below, cap 9. The v18 page is unchanged.
+**Playable: the v19 test page, https://claude.ai/artifact/TDrkScu7TZrGNnmHyHxhL9** ("Yomi Playtest v19 test (overflow cap)"). **Since the evening of 8 November it plays the overflow version** (the last section: the pile stops at its cap, a Convert cashes only as the clash card, every fighter converted and retuned). The first version described below (cash at the cap) is in git as tag `v19-cashcap` and in `data/v19/cashcap/`. The v18 page is unchanged.
 
 ## All Five Fighters (the v19 test set, `data/v19/`)
 
@@ -143,4 +143,58 @@ Benchmark with its own cap against Benchmark on 9, overflow + cash on a win, 300
 - **It changes how you're beaten.** A low-cap fighter dies to Pressure (follow-ups and combos end more games against cap 5); a high-cap fighter dies to a Convert read (half the games against cap 13), and time-outs creep up.
 - The opponent's mix barely moves (Pressure 38% against cap 5, 36% against cap 13), so in the sim it's mostly a stat. At the table it may read stronger: on a cap-5 fighter you never fear a big cash.
 
-Code: `greyOverflow`, `cashOnWin`, `capOf` and `spill` in `engine.js`; the partner values grey above the cap as certain damage (`score16`); spills are recorded per hit (`spill`, counted in damage) and at the end of the round (`capSpill`); `sim18.mjs` reports them. Checks in `tools/test18-roster.mjs` (76 pass). Variants `data/v19/variants/benchmark-cap{5,7,11,13}.json`. Not on a page yet.
+Code: `greyOverflow`, `cashOnWin`, `capOf` and `spill` in `engine.js`; the partner values grey above the cap as certain damage (`score16`); spills are recorded per hit (`spill`, counted in damage) and at the end of the round (`capSpill`); `sim18.mjs` reports them. Checks in `tools/test18-roster.mjs` (76 pass). Variants `data/v19/variants/benchmark-cap{5,7,11,13}.json`.
+
+## 8 Nov Evening: The v19 Set, Converted (Now on the Page)
+
+Mark: go with the two rules; a Convert converts only as the initial hit, or only Pressures are used in combos. Both, as one idea: **a Convert cashes only as the clash card** (the rule, `cashOnWin`), so **no Convert carries a Linker or Ender icon** (how cards are written). Plus the **overflow cap of 9** and **a fighter's own cap**.
+
+### The Fighters
+
+| | HP | Grey cap | What changed |
+|---|---|---|---|
+| **Benchmark** | 32 | 9 | Big Swing, Wind-Up, Breaker and Overdrive lose Ender; Sweep is the only Ender |
+| **The Warden** | 31 | 9 | Coil loses Ender: his route is Chain Lash into Ankle Hook (Knockdown), no Ender. Grabs back to +1 (Shakedown, Haul In, Shackles, Iron Haul 3; Coil, Chain Prison 4) |
+| **Vex** | 31 | **7** | Pommel Strike loses Ender; Heel Drop and Hundred Fang end her combos |
+| **Bastion** | 36 | **6** | Shoulder Ram and Shield Slam lose Ender, so Rim Shot gains it (×3, from ×2); Repulse ×1 (from ×2): 8 Guards, still the most |
+| **Atlas** | 34 | **12** | Hammer Spin, Earthsplitter, Upheaval and Avalanche lose Ender; Hammer Sweep is the only Ender |
+
+**The caps as identity:** Atlas soaks Pressure that would bury anyone else, but a Convert read on a full pile is a huge hit; Vex is fragile but never has much to cash; Bastion is the wall: hits trickle through, never a big opening.
+
+### How It Got There
+
+| Step | Result |
+|---|---|
+| Strip Convert Enders, Vex cap 7 HP 32, Atlas cap 12 HP 37 | Warden 64% average (his +3 grabs, with Convert wins now the main kill); Vex 42%; Bastion's mirror times out 54%, his matchups up to 27% (no Ender left) |
+| Warden grabs +2 / +1 | vs Benchmark 55% / 52%, vs Vex 63% / 51%: **+1** |
+| Bastion: Rim Shot Ender at HP 38 / 36; no Ender at HP 34 | 58% / 48% / 39% against the Benchmark, but time-outs ~20% whatever the HP |
+| Bastion: 8 Guards (HP 36, 34, 32) | 61%, 56%, 51%; time-outs 12%, 11%, 7% |
+| Bastion: 8 Guards, cap 6 (HP 36, 35) / cap 5 (HP 36) | 45%, 47% / 47%, time-outs 7–8%; **his mirror 8%** (from 24–54%) |
+| All five with Bastion cap 6 HP 38 | averages 46–52.5%, but time-outs 7–13% in most matchups: less damage in the game without Convert Enders and cap cashes |
+| **Every HP −2 (Vex −1)** | time-outs 2–9%; Atlas v Vex 62% (seed 5) |
+| Atlas cap 11 HP 35 / cap 12 HP 34 / cap 10 HP 36, seed 9 | vs Vex 54.5 / 51.5 / 54.4%, vs Benchmark 53%: **cap 12, HP 34** |
+
+### The Round-Robin (Final Set, Seed 9, 300 Games Each, ±5.7; Row's Win Rate)
+
+| | vs Bench. | vs Warden | vs Vex | vs Bastion | vs Atlas | Average |
+|---|---|---|---|---|---|---|
+| **Benchmark** (32, cap 9) | — | 43% | 51% | 47% | 46% | 47% |
+| **Warden** (31, cap 9) | 57% | — | 46% | 48.5% | 55% | 51% |
+| **Vex** (31, cap 7) | 49% | 54% | — | 48.5% | 48% | 50% |
+| **Bastion** (36, cap 6) | 53% | 51.5% | 51.5% | — | 51% | 52% |
+| **Atlas** (34, cap 12) | 54% | 45% | 52% | 49% | — | 50% |
+
+- **Medians 12–16 rounds; time-outs 1–9%** (Bastion's mirror 8.7%, Bastion v Benchmark 7%, the rest 1–6%).
+- **How games end:** a Convert cash in 44–67% (most in the Warden's and Atlas's mirrors), combos 3–20% (most in Vex's mirror), a full pile's grey at the end of a round 6–13%.
+- **Bots against Hard, Benchmark mirror:** Pressure 20%, Guard 27%, Convert 30%, random 31%, Easy 32%.
+- **Seed 5 (Atlas at HP 35) for comparison:** averages 47–54%; Atlas 54% with Vex 62% against him there, the reason for HP 34.
+
+### The Page
+
+- **The HUD shows each pile against its own cap** ("5/6"), with **"Full: more grey costs HP"** when it's at the cap. The fighter picker and the deck list show each fighter's cap.
+- **Board notes:** your pile (or theirs) is full: grey now is lost as HP, and a Convert that wins the clash cashes it all; or one Pressure hit from full. When a full pile takes the round's grey, the next round opens with it ("End of round 6: Vex's pile was full, so the round's grey cost 1 HP.").
+- **Narration:** "Slash puts 4 grey on Vex and chips 1. Vex's pile is full: 3 of it is lost as HP."
+- **Setup** states both rules. **Settings:** "At the cap" (Overflow, or Cash as in the first test) and "When a Convert cashes" (only as the clash card, or whenever it hits, as v18). **Decks:** a Grey cap tile with − and + (— uses the rule's).
+- **Checks:** browser smoke test 431 of 431 on the v19 page and 483 of 483 on the v18 page; `tools/test18-roster.mjs` 98 pass (the v19 set: no Convert Linker or Ender, each HP and cap, piles never pass their caps).
+
+**If adopted:** this is the v19 candidate. The Convert Enders are gone, so "Ender" now always means a Pressure that builds (or knocks down); combos are a building tool and Converts are the kill. Watch at the table whether combos still feel worth landing (about 3–5 HP of grey each), and whether full piles bleeding 1 a round reads well.

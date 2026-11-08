@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "atlas19",
+  "name": "Atlas",
+  "epithet": "Heavy hitter",
+  "concept": "The Mountain: the slowest cards in the game, the biggest numbers and the most HP. He loses almost every speed clash, so he wins by reading the type; Knockdown on Hammer Sweep and Earthsplitter gives him a round of speed. Specials: Lariat (his one quick hit) and Upheaval (his one quick swing). Super: Avalanche.",
+  "hp": 35,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Haft Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 3,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ]
+    },
+    {
+      "name": "Overhead",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 5,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Ground Smash",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 11,
+      "build": 3,
+      "chip": 2,
+      "copies": 2,
+      "icons": [],
+      "safe": true
+    },
+    {
+      "name": "Hammer Sweep",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 11,
+      "build": 4,
+      "chip": 0,
+      "copies": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Shoulder Check",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 5,
+      "chip": 2,
+      "copies": 2
+    },
+    {
+      "name": "Hammer Spin",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 2,
+      "chip": 4,
+      "copies": 3
+    },
+    {
+      "name": "Earthsplitter",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 1,
+      "chip": 5,
+      "copies": 3,
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Lariat",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 4,
+      "chip": 1,
+      "copies": 1,
+      "icons": [
+        "counter"
+      ],
+      "flavour": "The one quick thing he does.",
+      "special": true,
+      "meter": 1
+    },
+    {
+      "name": "Upheaval",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 4,
+      "copies": 1,
+      "flavour": "The hammer comes up faster than it should.",
+      "special": true,
+      "meter": 1
+    }
+  ],
+  "super": {
+    "name": "Avalanche",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 5,
+    "chip": 7,
+    "meter": 2,
+    "onHit": "knockdown",
+    "flavour": "Once a game: the whole mountain comes down."
+  },
+  "notes": "v19 tuning: HP 40. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Hammer Sweep, Lariat gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 11, Convert 8, Recover 7; HP 38. Pitched, added as written.",
+  "greyCap": 11
+}

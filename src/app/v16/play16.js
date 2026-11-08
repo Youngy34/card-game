@@ -7,7 +7,7 @@ import { LifeBar, Tokens, Seg, StatusChip } from '../ui.js'
 import { roster, saveGame, newId } from '../store.js'
 import { settings16 } from './fighters16.js'
 import * as M from './match16.js'
-import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost } from '../../engine/v16/engine.js'
+import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost, capOf } from '../../engine/v16/engine.js'
 import { ICONS, LABEL16, STATUSES, CONFISCATE_LINE } from '../../engine/v16/cards.js'
 import { deckSize } from '../../engine/v16/cards.js'
 import { narrate16, outcomeTitle16, neutralLine16 } from './narrate16.js'
@@ -54,7 +54,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${M.WHO16[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP · ${r.fighter.rules === 18 ? oneDeckSize(r.fighter) : splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP${ownCap(r.fighter, s.rules)} · ${r.fighter.rules === 18 ? oneDeckSize(r.fighter) : splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
@@ -156,7 +156,7 @@ function Hud16({ X, who, m }) {
     </div>
     <${LifeBar} X=${X} />
     <div class="hud-row">
-      <div class="pile" title=${m.G.rules.greyCap ? `Grey cap ${m.G.rules.greyCap}: a pile that reaches it at the end of the round is cashed for its size` : ''}><span class="label">Grey</span><span class="pile-n">${X.pile}${m.G.rules.greyCap ? `/${m.G.rules.greyCap}` : ''}</span><${Tokens} n=${X.pile} />${m.G.rules.greyCap && X.pile + (m.G.rules.greyPerRound || 0) >= m.G.rules.greyCap ? html`<span class="flag status">Cashed at the end of the round</span>` : null}</div>
+      <div class="pile" title=${pileTitle(X, m.G.rules)}><span class="label">Grey</span><span class="pile-n">${X.pile}${capOf(X, m.G.rules) ? `/${capOf(X, m.G.rules)}` : ''}</span><${Tokens} n=${X.pile} />${pileFlag(X, m.G.rules) ? html`<span class="flag status">${pileFlag(X, m.G.rules)}</span>` : null}</div>
       <div class="meter" aria-label=${`Meter ${X.meter} of ${m.G.rules.meterMax}`}><span class="label">Meter</span>${Array.from({ length: m.G.rules.meterMax }, (_, i) => html`<span class=${cx('pipm', i < X.meter && 'on')}></span>`)}</div>
     </div>
     <div class="hud-row small">
@@ -244,7 +244,14 @@ const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?'
 export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative holder' : R.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel')
 
 // The draw step's grey, in words ('' when off)
-export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '') + (R.greyCap ? `; grey cap ${R.greyCap}: a pile that has reached it at the end of the round is cashed for its size` : '')
+export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '')
+  + (R.greyCap ? (R.greyOverflow ? `; grey cap ${R.greyCap} (some fighters have their own): a pile can't go above its cap, and grey beyond it is lost as HP at once` : `; grey cap ${R.greyCap}: a pile that has reached it at the end of the round is cashed for its size`) : '')
+  + (R.cashOnWin ? '; a Convert cashes only as the clash card, so Converts are never Linkers or Enders' : '')
+// The HUD's grey pile: its cap in words, and a flag when it's full (overflow) or will be cashed (cash cap)
+const pileTitle = (X, R) => { const c = capOf(X, R); return !c ? '' : R.greyOverflow ? `Grey cap ${c}: the pile can't go above it; grey beyond it is lost as HP at once` : `Grey cap ${c}: a pile that reaches it at the end of the round is cashed for its size` }
+const pileFlag = (X, R) => { const c = capOf(X, R); if (!c) return null; if (R.greyOverflow) return X.pile >= c ? 'Full: more grey costs HP' : null; return X.pile + (R.greyPerRound || 0) >= c ? 'Cashed at the end of the round' : null }
+// A fighter's own cap, for the picker ('' when the rule's cap is off or it uses the rule's)
+const ownCap = (f, R) => (R?.greyCap ? ` · grey cap ${f.greyCap || R.greyCap}` : '')
 
 // The neutral step's options, in words
 export const neutralRule = R => R.merged

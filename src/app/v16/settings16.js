@@ -49,7 +49,7 @@ export function Settings16() {
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${v18 ? null : num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
         ${num('greyPerRound', 0, 3, 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
-        ${v18 ? num('greyCap', 0, 30, 'Grey cap (0 = off)', 'v19 test: at the end of the round, after the grey, a pile that has reached the cap is cashed for its size. 9 on the v19 test page; 0 is v18.') : null}
+        ${v18 ? num('greyCap', 0, 30, 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
         ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
         ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${v18 ? null : num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
@@ -60,6 +60,16 @@ export function Settings16() {
           <option value="0">Reusable: meter is the only gate (as written)</option>
           <option value="1">Once per game</option>
         </select></label>`}
+      ${v18 && d.rules.greyCap ? html`<label class="field"><span>At the cap</span>
+        <select id="s-overflow" value=${d.rules.greyOverflow ? 'overflow' : 'cash'} onChange=${e => rule({ greyOverflow: e.target.value === 'overflow' })}>
+          <option value="overflow">Overflow: the pile stops at the cap, and grey beyond it is lost as HP at once (v19)</option>
+          <option value="cash">Cash: a pile that has reached the cap at the end of the round is cashed for its size (the first v19 test)</option>
+        </select></label>` : null}
+      ${v18 ? html`<label class="field"><span>When a Convert cashes</span>
+        <select id="s-cashonwin" value=${d.rules.cashOnWin ? 'win' : 'any'} onChange=${e => rule({ cashOnWin: e.target.value === 'win' })}>
+          <option value="win">Only as the clash card: a Convert played as a Linker, Ender or follow-up just deals its damage (v19)</option>
+          <option value="any">Whenever it hits, combos and follow-ups included (v18)</option>
+        </select></label>` : null}
       <label class="field"><span>Speed ties: two attacks of the same type at the same speed</span>
         <select id="s-tie" value=${d.rules.speedTie} onChange=${e => rule({ speedTie: e.target.value })}>
           <option value="cancel">They cancel: neither lands</option>

@@ -209,6 +209,25 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(G.B.pile === 0, 'cashOnWin: a Convert that wins the clash still cashes')
 }
 
+// 8c. The v19 set (8 Nov evening): no Convert links or ends a combo; each fighter's cap; the page's rules
+{
+  const S19 = read('../data/v19/settings.json').rules
+  ok(S19.greyCap === 9 && S19.greyOverflow === true && S19.cashOnWin === true, 'v19 settings: cap 9, overflow, Converts cash only on a win')
+  const want19 = { benchmark: [32, 9], warden: [31, 9], vex: [31, 7], bastion: [36, 6], atlas: [34, 12] }
+  for (const [n, [hp, cap]] of Object.entries(want19)) {
+    const f = read(`../data/v19/${n}.json`), v = validateFighter16(f)
+    const all = [...f.cards, ...(f.super ? [f.super] : [])]
+    const bad = all.filter(c => c.type === 'convert' && (c.icons || []).some(i => i === 'linker' || i === 'ender')).map(c => c.name)
+    ok(!v.errors.length, `v19 ${n} validates`)
+    ok(!bad.length, `v19 ${n}: no Convert is a Linker or Ender (${bad.join(', ')})`)
+    ok(f.hp === hp && (f.greyCap || 9) === cap, `v19 ${n}: HP ${f.hp} (want ${hp}), cap ${f.greyCap || 9} (want ${cap})`)
+    ok(all.some(c => c.type === 'pressure' && (c.icons || []).includes('starter')), `v19 ${n} still has a Starter`)
+  }
+  const g = playGame18(toFighter16(read('../data/v19/bastion.json')), toFighter16(read('../data/v19/atlas.json')), { rules: { ...rules, ...S19 }, W: W18, seed: 4 })
+  const maxPile = Math.max(...g.rounds.flatMap(r => [r.after[0].pile, r.after[1].pile].map((p, k) => p - [6, 12][k])))
+  ok(g.result !== null && maxPile <= 0, `a v19 game: Bastion's pile never passes 6, Atlas's never 12 (worst ${maxPile} over)`)
+}
+
 // 9. Whole games run for every pairing, inside the time-out
 {
   const F = { vex: V, bastion: B, atlas: A, benchmark: BM }

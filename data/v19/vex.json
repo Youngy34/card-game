@@ -4,8 +4,8 @@
   "id": "vex19",
   "name": "Vex",
   "epithet": "Rushdown",
-  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, and the lowest HP. Twin Fang can link into a second Twin Fang. Specials: Cross-Up (a guard break that starts a combo) and Flying Fang (a fast, Safe thrown blade). Super: Hundred Fang (Dizzy).",
-  "hp": 30,
+  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, a low HP and a low grey cap (7): fragile, but there is never much to cash on her. Twin Fang can link into a second Twin Fang; Heel Drop and Hundred Fang end her combos. Specials: Cross-Up (a guard break that starts a combo) and Flying Fang (a fast, Safe thrown blade). Super: Hundred Fang (Dizzy).",
+  "hp": 31,
   "passive": null,
   "cards": [
     {
@@ -82,8 +82,7 @@
       "kind": "guardBreak",
       "speed": 6,
       "chip": 2,
-      "copies": 3,
-      "icons": []
+      "copies": 3
     },
     {
       "name": "Pommel Strike",
@@ -91,10 +90,7 @@
       "kind": "guardBreak",
       "speed": 3,
       "chip": 3,
-      "copies": 3,
-      "icons": [
-        "ender"
-      ]
+      "copies": 3
     },
     {
       "name": "Recall",
@@ -172,5 +168,6 @@
     "onHit": "dizzy",
     "flavour": "Once a game: a flurry that leaves them seeing stars."
   },
-  "notes": "v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written."
+  "notes": "v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Pommel Strike loses Ender. Her own grey cap: 7. HP 31. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written.",
+  "greyCap": 7
 }
