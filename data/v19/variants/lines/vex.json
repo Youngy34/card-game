@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "vex19",
+  "name": "Vex",
+  "epithet": "Rushdown",
+  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, a low HP and a low grey cap (7): fragile, but there is never much to cash on her. Twin Fang can link into a second Twin Fang; Heel Drop and Hundred Fang end her combos. Specials: Cross-Up (a guard break that starts a combo) and Flying Fang (a fast, Safe thrown blade). Super: Hundred Fang (Dizzy).",
+  "hp": 31,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Quick Fang",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 19,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Fang Rush",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Twin Fang",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 3,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "linker"
+      ],
+      "twin": true
+    },
+    {
+      "name": "Crossing Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Heel Drop",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Undercut",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 6,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ]
+    },
+    {
+      "name": "Pommel Strike",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender"
+      ]
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Cross-Up",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 2,
+      "copies": 1,
+      "icons": [
+        "starter"
+      ],
+      "flavour": "Break the guard and keep going.",
+      "special": true,
+      "meter": 1
+    },
+    {
+      "name": "Flying Fang",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 18,
+      "build": 2,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "safe": true,
+      "flavour": "A thrown blade: fast, and nothing to punish.",
+      "special": true,
+      "meter": 1
+    }
+  ],
+  "super": {
+    "name": "Hundred Fang",
+    "type": "pressure",
+    "kind": "strike",
+    "speed": 20,
+    "build": 4,
+    "chip": 2,
+    "icons": [
+      "ender"
+    ],
+    "meter": 2,
+    "onHit": "dizzy",
+    "flavour": "Once a game: a flurry that leaves them seeing stars."
+  },
+  "notes": "v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Pommel Strike loses Ender. Her own grey cap: 7. HP 31. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written.",
+  "greyCap": 7
+}

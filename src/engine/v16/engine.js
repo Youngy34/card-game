@@ -44,7 +44,7 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
   initiative: false, tableCards: false, refillAtReveal: false,
-  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0, greyOverflow: false, cashOnWin: false }
+  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0, greyOverflow: false, cashOnWin: false, comboSameType: false }
 // Rules v18 switches (rules-overview 18.md), off for v16 and v17:
 //   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
 //     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
@@ -67,6 +67,9 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //   greyOverflow (8 Nov, test): with a cap, the pile instead can't go above it. Grey beyond the cap is lost as
 //     HP at once and the pile stays at the cap, so only a Convert takes the whole pile. A fighter may set its
 //     own cap (fighter greyCap), used whenever the rule's cap is on.
+//   comboSameType (8 Nov, test, Mark): a combo continues only with cards of its Starter's type: Pressures
+//     into Pressures, Converts into Converts. Two separate combo lines; a Convert line can only follow a
+//     Convert that won, so it never touches a player who read it with a Pressure.
 //   cashOnWin (8 Nov, test): only a Convert that wins the clash cashes the pile; a Convert played as a
 //     follow-up, Linker or Ender just deals its damage.
 // Rules v17 switches (rules-overview 17.md), off for v16:
@@ -623,7 +626,12 @@ export function startClash16(G, a, b, lite = false, opts = null) {
 const ICON_FOR = { follow: 'counter', link: 'linker', end: 'ender' }
 function ask(G, stage, side) {
   const X = side === 0 ? G.A : G.B
-  const options = stage === 'follow' && X.fx.parry ? attackOptions(X, G.rules) : iconOptions(X, ICON_FOR[stage], G.rules)
+  let options = stage === 'follow' && X.fx.parry ? attackOptions(X, G.rules) : iconOptions(X, ICON_FOR[stage], G.rules)
+  // comboSameType (test): Linkers and Enders of the Starter's type only (the Starter: the clash card, or a Parry follow-up)
+  if (G.rules.comboSameType && stage !== 'follow') {
+    const lineT = G.clash.follow?.side === side ? G.clash.follow.t : G.clash.types[side]
+    options = options.filter(i => (i === 'S' ? X.f.sup : X.f.cards[i]).t === lineT)
+  }
   G = { ...G, clash: { ...G.clash, offered: { ...(G.clash.offered || {}), [stage]: options.length } } }
   if (!options.length) {
     if (stage === 'link') return ask(G, 'end', side)

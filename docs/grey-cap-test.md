@@ -198,3 +198,43 @@ Mark: go with the two rules; a Convert converts only as the initial hit, or only
 - **Checks:** browser smoke test 431 of 431 on the v19 page and 483 of 483 on the v18 page; `tools/test18-roster.mjs` 98 pass (the v19 set: no Convert Linker or Ender, each HP and cap, piles never pass their caps).
 
 **If adopted:** this is the v19 candidate. The Convert Enders are gone, so "Ender" now always means a Pressure that builds (or knocks down); combos are a building tool and Converts are the kill. Watch at the table whether combos still feel worth landing (about 3–5 HP of grey each), and whether full piles bleeding 1 a round reads well.
+
+## 8 Nov Night: Two Combo Lines (Simmed, Not on the Page Yet)
+
+Mark: Converts (guard breaks) could combo, but only into Converts; Pressures only into Pressures. Two separate combo lines, and guard breaks combo without breaking the triangle. **Grabs stay out of combos, except perhaps the Warden's.**
+
+**The rule** (switch `comboSameType`): *a combo continues only with cards of its Starter's type.* It replaces "Converts are never Linkers or Enders". A Convert line can only follow a Convert that won (they Guarded, or played a slower Convert), so it never touches a player who read it with a Pressure. The clash card has already cashed the pile, so a Convert line's other cards deal their damage as plain HP.
+
+**The lines:** one guard-break Starter into one Ender, no Linkers (Convert combos hit as straight HP, so they're kept short):
+
+| | Convert line | Notes |
+|---|---|---|
+| **Benchmark** | Big Swing → Wind-Up | Throw is a grab: not in it |
+| **The Warden** | Haul In → Coil | grabs (Mark: maybe for him) |
+| **Vex** | Undercut or Cross-Up → Pommel Strike | Cross-Up used to lead into her Pressures; now it starts this line. **HP 32** (from 31) |
+| **Bastion** | Shoulder Ram → Shield Slam | Lockdown is a grab: not in it |
+| **Atlas** | Shoulder Check → Hammer Spin | Earthsplitter as the Ender made him 54% on average (59% against the Benchmark); Hammer Spin (4, no Knockdown) instead |
+
+**The Benchmark mirror** (seed 5; today's v19 Benchmark in brackets):
+
+- **The triangle holds.** A player on 5+ who loses with a Pressure loses the pile 0% of the time (0%); with a Convert 41% (43%); with a Guard 100%, losing 11.2 HP (10.7). On 0–4, a lost Guard costs 4.8 HP (4.1).
+- **Bots against Hard:** Pressure 19% (20%), Guard 29% (27%), Convert 28% (30%), random 27% (31%), Easy 28% (32%), Medium 42% (43%).
+- **Combos in 30.5% of rounds (24%), 5.0 HP each (3.3); median 13 rounds (14), time-outs 3.7% (6%).** A combo ending in a Convert ends 10% of games.
+- **The mix:** Pressure up about a point, Convert down a point, Guard level, as the triangle's maths predicts (raising what a Convert win pays makes the answer to Converts, Pressure, more common).
+- **The line is worth about 6%:** the line Benchmark beats today's 56% (400 games).
+- **Guard spam isn't fixed in the sim** (Guard bot 29%): the partner doesn't adapt to a habit, so it plays its usual mix against a player who always Guards. A person who spots a guarder now gets more for each Convert read.
+
+**The roster** (two seeds of 300, so 600 games a matchup, ±4; row's win rate):
+
+| | vs Bench. | vs Warden | vs Vex | vs Bastion | vs Atlas | Average |
+|---|---|---|---|---|---|---|
+| **Benchmark** (32, cap 9) | — | 47% | 51% | 45% | 50% | 48% |
+| **Warden** (31, cap 9) | 53% | — | 51.5% | 45% | 54% | 51% |
+| **Vex** (32, cap 7) | 49% | 48.5% | — | 51% | 48% | 49% |
+| **Bastion** (36, cap 6) | 55% | 55% | 49% | — | 47% | 52% |
+| **Atlas** (34, cap 12) | 50% | 46% | 52% | 53% | — | 50% |
+
+- **Time-outs 0–8%** (most 1–6%; Bastion's mirror 5–6%, from 8.7% without lines). Medians 12–15.
+- First pass, before the Atlas and Vex changes (one seed): averages 47–54%, Atlas 59% against the Benchmark, Vex 42% against Bastion.
+
+Files: `data/v19/variants/lines/final/` (the five fighters as tuned), `data/v19/variants/lines/` (the first pass). Checks in `tools/test18-roster.mjs` (105 pass): a Convert Starter is offered only Convert Enders, a Pressure Starter only Pressures, a Convert Ender after the cash deals only its own damage.

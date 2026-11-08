@@ -228,6 +228,30 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(g.result !== null && maxPile <= 0, `a v19 game: Bastion's pile never passes 6, Atlas's never 12 (worst ${maxPile} over)`)
 }
 
+// 8d. Same-type combo lines (test switch comboSameType, 8 Nov night): Pressures into Pressures, Converts into Converts
+{
+  const LB = toFighter16(read('../data/v19/variants/lines/benchmark.json'))
+  const S19 = { ...rules, ...read('../data/v19/settings.json').rules, comboSameType: true }
+  const mk = (pa, pb) => { const G = newGame16(LB, LB, S19, 3); return { ...G, phase: 'clash', A: { ...G.A, ...pa }, B: { ...G.B, ...pb } } }
+  const BIG = id(LB, 'Big Swing'), WIND = id(LB, 'Wind-Up'), SWEEP = id(LB, 'Sweep'), JAB = id(LB, 'Jab'), SLASH = id(LB, 'Slash'), REC = id(LB, 'Recall'), THROW = id(LB, 'Throw')
+  ok(LB.cards[BIG].starter && LB.cards[WIND].ender && !LB.cards[THROW].starter, 'the line Benchmark: Big Swing a Starter, Wind-Up an Ender, Throw (a grab) neither')
+  // a Convert Starter that beats a Guard: offered Wind-Up only (not Sweep, a Pressure Ender)
+  let G = startClash16(mk({ hand: [BIG, WIND, SWEEP, SLASH], hp: 30 }, { hand: [REC], pile: 6, hp: 30 }), BIG, REC)
+  ok(G.pending && G.pending.stage === 'end' && G.pending.options.includes(WIND) && !G.pending.options.includes(SWEEP), `Big Swing beats Recall: the Ender offered is Wind-Up, not Sweep (${JSON.stringify(G.pending?.options)})`)
+  const hpAfterCash = G.B.hp
+  ok(G.B.pile === 0 && hpAfterCash === 30 - 6 - LB.cards[BIG].chip, `Big Swing cashes the 6 (HP ${hpAfterCash})`)
+  G = decideClash16(G, WIND)
+  ok(G.B.hp === hpAfterCash - LB.cards[WIND].chip, `Wind-Up as the Ender deals its ${LB.cards[WIND].chip} (HP ${G.B.hp})`)
+  // a Pressure Starter: Pressure Linkers and Enders only
+  G = startClash16(mk({ hand: [JAB, SLASH, WIND, SWEEP], hp: 30 }, { hand: [THROW], hp: 30 }), JAB, THROW)
+  ok(G.pending?.stage === 'link' && G.pending.options.includes(SLASH) && !G.pending.options.includes(WIND), 'Jab beats Throw: Linkers offered are Pressures')
+  G = decideClash16(G, SLASH)
+  ok(G.pending?.stage === 'end' && G.pending.options.includes(SWEEP) && !G.pending.options.includes(WIND), `then the Ender offered is Sweep, not Wind-Up (${JSON.stringify(G.pending?.options)})`)
+  // with the switch off, a Pressure Starter could end on Wind-Up
+  G = startClash16({ ...mk({ hand: [JAB, WIND], hp: 30 }, { hand: [THROW], hp: 30 }), rules: { ...S19, comboSameType: false } }, JAB, THROW)
+  ok(G.pending?.options?.includes(WIND), 'without the switch, Jab could end on Wind-Up')
+}
+
 // 9. Whole games run for every pairing, inside the time-out
 {
   const F = { vex: V, bastion: B, atlas: A, benchmark: BM }
