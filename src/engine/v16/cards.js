@@ -270,5 +270,5 @@ export function toFighter16(f) {
   const cards = f.cards.map(c => norm(c, false))
   const deck = []
   cards.forEach((c, i) => { for (let k = 0; k < c.copies; k++) deck.push(i) })
-  return { id: f.id, name: f.name, hp: f.hp, v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
+  return { id: f.id, name: f.name, hp: f.hp, ...(f.greyCap ? { greyCap: f.greyCap } : {}), v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
 }

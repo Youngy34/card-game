@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "benchmark19",
+  "name": "Benchmark cap 5",
+  "epithet": "Reference",
+  "concept": "The plain v18 fighter: one 26-card deck (at most 3 of any card) with Safe pokes and punishable big strikes, the shared defence core (Recall, Charge, Read: every one a Guard with a Counter follow-up and a rider), two specials on the table (Rising Strike, Breaker) and a single-use Super.",
+  "hp": 34,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Lunge",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Sweep",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 3,
+      "chip": 2,
+      "copies": 2,
+      "icons": [],
+      "safe": true
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Big Swing",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender"
+      ]
+    },
+    {
+      "name": "Wind-Up",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 1,
+      "chip": 4,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ]
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Rising Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 19,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "Faster than anything they can throw out."
+    },
+    {
+      "name": "Breaker",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 3,
+      "icons": [
+        "ender"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A quick heavy that cracks any guard."
+    }
+  ],
+  "super": {
+    "name": "Overdrive",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 10,
+    "chip": 5,
+    "icons": [
+      "ender"
+    ],
+    "meter": 2,
+    "onHit": "knockdown",
+    "flavour": "Once a game: ends a combo with a cash and a knockdown."
+  },
+  "notes": "v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Lunge, Sweep gain it. Rules v18, 7 November 2026: 26 cards. Safe Jab (x2, Build 1, chip 1) and Shot (x2, speed 12, Build 3, chip 2, no icons); new Lunge x3 (the unsafe Jab); Slash x2; Sweep x2; Throw x3 (chip 1, On hit: Knockdown); Big Swing x3; Wind-Up x2 (the slow heavy: speed 1, chip 4, Ender). The 3 November deck is variants/benchmark-3nov.json.",
+  "greyCap": 5
+}

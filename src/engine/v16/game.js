@@ -36,7 +36,7 @@ function damageBy(ev) {
   const out = { clash: [0, 0], follow: [0, 0], link: [0, 0], end: [0, 0] }
   for (const e of ev) {
     if (e.kind !== 'hit') continue
-    const d = (e.chip || 0) + (e.cash || 0)
+    const d = (e.chip || 0) + (e.cash || 0) + (e.spill || 0)
     const target = e.t === 'R' && !e.chip ? null : 1 - e.side
     if (target === null || !d) continue
     out[e.how][target] += d
@@ -186,8 +186,9 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
       for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
     }
     if (G.capCash?.some(n => n > 0)) rec.capCash = G.capCash
+    if (G.capSpill?.some(n => n > 0)) rec.capSpill = G.capSpill
   }
-  const capKO = G.result !== null && !G.timedOut && !!rounds.at(-1)?.capCash && (G.A.hp <= 0 || G.B.hp <= 0)
+  const capKO = G.result !== null && !G.timedOut && !!(rounds.at(-1)?.capCash || rounds.at(-1)?.capSpill) && (G.A.hp <= 0 || G.B.hp <= 0)
   return { result: G.result, rounds, timedOut: !!G.timedOut, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
 }
 

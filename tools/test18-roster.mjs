@@ -171,6 +171,44 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(G.B.pile >= 13 && !G.capCash?.[1], 'with no cap, a big pile stays')
 }
 
+// 8b. Overflow cap and cash-on-win (test switches, 8 Nov evening)
+{
+  const oRules = { ...rules, greyCap: 9, greyOverflow: true }
+  const mk = (r, pa, pb, fa = BM, fb = BM) => { const G = newGame16(fa, fb, r, 3); return { ...G, phase: 'clash', A: { ...G.A, ...pa }, B: { ...G.B, ...pb } } }
+  const JAB = id(BM, 'Jab'), SLASH = id(BM, 'Slash'), BIG = id(BM, 'Big Swing'), THROW = id(BM, 'Throw'), REC = id(BM, 'Recall')
+  // a Pressure that takes the pile past the cap: the pile stops at 9, the rest is lost as HP now
+  let G = startClash16(mk(oRules, { hand: [SLASH], hp: 30 }, { hand: [THROW], pile: 8, hp: 30 }), SLASH, THROW)
+  const jab = BM.cards[JAB], sl = BM.cards[SLASH], over = 8 + sl.build - 9
+  ok(over > 0 && G.B.pile === 9 && G.B.hp === 30 - sl.chip - over, `Slash on a pile of 8: pile ${G.B.pile}, HP ${G.B.hp} (chip ${sl.chip} + ${over} spilled)`)
+  const spilled = G.clash.events.find(e => e.kind === 'hit')?.spill
+  ok(spilled === over, `the hit records the spill (${spilled})`)
+  // the round's grey on a full pile spills too, and the pile stays at the cap
+  G = startDraw16(startClash16(mk(oRules, { hand: [JAB], hp: 30 }, { hand: [JAB], pile: 9, hp: 30 }, ), JAB, JAB))
+  ok(G.B.pile === 9 && G.capSpill?.[1] === 1 && !G.capCash?.[1], `a full pile takes the round's grey as 1 HP and stays at 9 (pile ${G.B.pile}, spill ${G.capSpill?.[1]})`)
+  // a winning Convert still takes the whole pile
+  G = startClash16(mk(oRules, { hand: [THROW], hp: 30 }, { hand: [REC], pile: 9, hp: 30 }), THROW, REC)
+  ok(G.B.pile === 0 && G.B.hp === 30 - 9 - BM.cards[THROW].chip, `Throw beats Recall on a full pile: all 9 cashed (HP ${G.B.hp})`)
+  // a fighter's own cap
+  const low = toFighter16({ ...read('../data/v18/benchmark.json'), greyCap: 6 })
+  G = startClash16(mk(oRules, { hand: [JAB], hp: 30 }, { hand: [THROW], pile: 5, hp: 30 }, BM, low), JAB, THROW)
+  ok(G.B.pile === 6, `a fighter with cap 6 stops at 6 (pile ${G.B.pile})`)
+  G = startClash16(mk({ ...rules, greyCap: 0 }, { hand: [JAB], hp: 30 }, { hand: [THROW], pile: 5, hp: 30 }, BM, low), JAB, THROW)
+  ok(G.B.pile === 5 + jab.build, `with the rule's cap off, a fighter's own cap does nothing (pile ${G.B.pile})`)
+  G = startDraw16(startClash16(mk({ ...rules, greyCap: 9 }, { hand: [JAB] }, { hand: [JAB], pile: 6, hp: 30 }, BM, low), JAB, JAB))
+  ok(G.capCash?.[1] > 0 && G.B.pile === 0, `cash-mode cap uses the fighter's own cap (cashed ${G.capCash?.[1]})`)
+  // cash-on-win: a Convert Ender only deals its damage
+  const wRules = { ...oRules, cashOnWin: true }
+  for (const [r, cashes] of [[oRules, true], [wRules, false]]) {
+    G = startClash16(mk(r, { hand: [JAB, BIG], hp: 30 }, { hand: [THROW], pile: 4, hp: 30 }), JAB, THROW)
+    while (G.pending) G = decideClash16(G, G.pending.options.includes(BIG) ? BIG : null)
+    const end = G.clash.combo.find(x => x.name === 'Big Swing')
+    const pile = 4 + jab.build
+    ok(!!end && (cashes ? G.B.pile === 0 : G.B.pile === pile), `Jab → Big Swing, cashOnWin ${!!r.cashOnWin}: pile after ${G.B.pile}`)
+  }
+  G = startClash16(mk(wRules, { hand: [THROW], hp: 30 }, { hand: [REC], pile: 6, hp: 30 }), THROW, REC)
+  ok(G.B.pile === 0, 'cashOnWin: a Convert that wins the clash still cashes')
+}
+
 // 9. Whole games run for every pairing, inside the time-out
 {
   const F = { vex: V, bastion: B, atlas: A, benchmark: BM }

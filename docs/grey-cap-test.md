@@ -91,3 +91,56 @@ Medians 11–14 rounds; time-outs 0–4%.
 ## In the Code
 
 GitHub `Youngy34/card-game`, branch `v18-roster`: `greyCap` in `src/engine/v16/engine.js` (`startDraw16`, `finishRound16`), the partner valuing a pile that will reach the cap as certain damage (`score16` in `ai.js`), cap cashes recorded per round (`game.js`) and reported by `node tools/sim18.mjs ... --set greyCap=9`. Checks in `tools/test18-roster.mjs` (66 pass). The v19 test set is `data/v19/` (five fighters and `settings.json` with `greyCap: 9`); the page is edition `v19` (`node tools/build-artifact.mjs --edition v19`). The page code: the cap in the HUD and setup (`play16.js`), board notes and the cap-cash line (`match16.js`), the Settings dial (`settings16.js`).
+
+## 8 Nov Evening: An Overflow Cap, and Cashing Only on a Win
+
+Mark's point: with Convert Enders, a loaded player can be cashed whatever they play (a faster Pressure combos into a Convert). And the cap does the same: on 7, losing anything that adds grey takes the pile past 9 and empties it. Two test switches:
+
+- **`greyOverflow`**: the pile can't go above the cap. Grey beyond it is lost as HP at once, and the pile stays at the cap (the round's 1 grey too). So a loaded player who loses bleeds, but only a Convert takes the whole pile.
+- **`cashOnWin`**: only a Convert that wins the clash cashes. A Convert played as a Linker, Ender or follow-up just deals its damage.
+- **A fighter's own cap** (`greyCap` on the fighter), used whenever the rule's cap is on.
+
+### Does the Triangle Come Back?
+
+A player on a pile of 5+ loses the clash. How often is the pile taken that round (and the HP they lose), by what they played. Benchmark mirror, 200 games:
+
+| | Lost with a Pressure | Lost with a Convert | Lost with a Guard |
+|---|---|---|---|
+| v18 (no cap) | 43% | 58% | 100% |
+| v19 test (cap 9, cashes) | 66% (8.4 HP) | 96% (11.8) | 100% (8.9) |
+| cap 9 + cash on a win only | 65% (8.8) | 92% (10.8) | 100% (8.8) |
+| overflow cap 9 | 20% (5.3) | 62% (8.9) | 100% (9.8) |
+| **overflow + cash on a win only** | **0% (4.1)** | **37% (8.0)** | **100% (10.2)** |
+
+Only the two together give a clean triangle: a Pressure that loses never loses the pile, a Convert loses it only to a faster Convert, a Guard always does. Either alone does little: with the cash-everything cap, cutting Convert Enders just hands the kills to the cap (cap cashes end 50% of games).
+
+### The Game It Makes
+
+Benchmark mirror, 300 games; bots against Hard, 300 games each (±5).
+
+| | Median (time-outs) | How games end | Combo HP | Pressure bot | Guard bot | Random |
+|---|---|---|---|---|---|---|
+| v19 test (cap 9, cashes) | 12 (0%) | combo→Convert 43%, Convert 24%, cap 20% | 6.3 | 23% | 31% | 28% |
+| overflow only | 13 (1.7%) | combo→Convert 34%, Convert 33% | 9.4 | 30% | 36% | 28% |
+| **overflow + cash on a win** | **14 (5%)** | **Convert 43%, combo→Convert 19% (chip), chip 16%, cap 9%** | **4.7** | **24%** | **29%** | **32%** |
+
+- **Convert reads become the kill.** Pressure spam stays down (24%), Guard spam is a touch lower (29%).
+- **Combos get weaker** (4.7 HP, from 6.3): they build and end on chip. Convert Enders are now worse than Pressure Enders, so fighters' Enders want a look.
+- **Games run longer** (median 14, time-outs 5%, inside the band). Full piles are common: the round's grey spills about 4–5 HP a game.
+- Overflow alone is worse than the v19 test: combos ending on a Convert cash a full pile, and the Guard bot climbs to 36%.
+
+### A Fighter's Own Cap
+
+Benchmark with its own cap against Benchmark on 9, overflow + cash on a win, 300 games each (±5.7):
+
+| Own cap | 5 | 7 | 9 | 11 | 13 |
+|---|---|---|---|---|---|
+| Win | 37% | 43% | 50% | 49% | 57% |
+| Time-outs | 2% | 5% | 5% | 6% | 9% |
+| Games ending on a Convert cash | 35% | 41% | 43% | 44% | 50% |
+
+- **A higher cap is better**, about 2–2.5% a point: roughly a point of HP each. Bleeding is certain damage; a big pile is only lost to a Convert read, and a Guard clears it.
+- **It changes how you're beaten.** A low-cap fighter dies to Pressure (follow-ups and combos end more games against cap 5); a high-cap fighter dies to a Convert read (half the games against cap 13), and time-outs creep up.
+- The opponent's mix barely moves (Pressure 38% against cap 5, 36% against cap 13), so in the sim it's mostly a stat. At the table it may read stronger: on a cap-5 fighter you never fear a big cash.
+
+Code: `greyOverflow`, `cashOnWin`, `capOf` and `spill` in `engine.js`; the partner values grey above the cap as certain damage (`score16`); spills are recorded per hit (`spill`, counted in damage) and at the end of the round (`capSpill`); `sim18.mjs` reports them. Checks in `tools/test18-roster.mjs` (76 pass). Variants `data/v19/variants/benchmark-cap{5,7,11,13}.json`. Not on a page yet.

@@ -64,6 +64,11 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //   greyCap (8 Nov, test): at the end of the round, after the grey, a pile that has reached greyCap is
 //     cashed: its owner loses that much HP and the pile empties. 0 = no cap. Checked at the end of the round,
 //     so a winning Convert still cashes everything and a combo's Ender still has its pile.
+//   greyOverflow (8 Nov, test): with a cap, the pile instead can't go above it. Grey beyond the cap is lost as
+//     HP at once and the pile stays at the cap, so only a Convert takes the whole pile. A fighter may set its
+//     own cap (fighter greyCap), used whenever the rule's cap is on.
+//   cashOnWin (8 Nov, test): only a Convert that wins the clash cashes the pile; a Convert played as a
+//     follow-up, Linker or Ender just deals its damage.
 // Rules v17 switches (rules-overview 17.md), off for v16:
 //   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
 //     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
@@ -402,6 +407,17 @@ export const owes = G => [G.A.owe || 0, G.B.owe || 0]
 // The order players act in wherever an order is needed: the initiative holder first
 export const initOrder = G => (G.init === 1 ? [1, 0] : [0, 1])
 
+// A player's grey cap: the fighter's own, else the rule's; 0 when the rule's cap is off
+export const capOf = (X, rules) => (rules?.greyCap ? X.f.greyCap || rules.greyCap : 0)
+// greyOverflow (test): grey above the cap is lost as HP now; returns how much spilled
+function spill(X, rules) {
+  const cap = rules?.greyOverflow ? capOf(X, rules) : 0
+  if (!cap || X.pile <= cap) return 0
+  const n = X.pile - cap
+  X.pile = cap; X.hp -= n
+  return n
+}
+
 // One card resolving: its type effect, then its On hit status
 function hit(X, Y, c, ev, side, how, rules = {}) {
   const e = { side, kind: 'hit', how, name: c.name, t: c.t }
@@ -409,12 +425,13 @@ function hit(X, Y, c, ev, side, how, rules = {}) {
     e.build = c.build + (X.fx.pressureBuild || 0)
     e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0)
     // lateGrey (under test): grey from this clash lands when the clash ends, so an Ender cashes only what was already there
-    if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else Y.pile += e.build
+    if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else { Y.pile += e.build; const n = spill(Y, rules); if (n) e.spill = n }
     Y.hp -= e.chip
   } else if (c.t === 'C') {
-    e.cash = Y.pile
+    // cashOnWin (test): a Convert played after the clash (follow-up, Linker, Ender) doesn't cash
+    e.cash = rules.cashOnWin && how !== 'clash' ? 0 : Y.pile
     e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0)
-    Y.pile = 0; Y.hp -= e.cash + e.chip
+    Y.pile -= e.cash; Y.hp -= e.cash + e.chip
   } else if (c.t === 'R') {
     // guardHalf (under test): a Guard clears half the pile, rounded up, so grey can build across exchanges
     e.cleared = rules.guardHalf ? Math.ceil(X.pile / 2) : X.pile; X.pile -= e.cleared
@@ -575,7 +592,7 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     const W = P[winner], L = P[1 - winner]
     hit(W, L, cards[winner], ev, winner, 'clash', G.rules)
     const lc = cards[1 - winner]
-    if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf }) }
+    if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf, spill: spill(L, G.rules) }) }
     // Rules v18: a Brace that beats a Pressure gives no follow-up; instead the Pressure's Build
     // goes onto its owner's pile (reflect), or they're Staggered next round (stagger)
     const wcd = cards[winner]
@@ -586,7 +603,7 @@ export function startClash16(G, a, b, lite = false, opts = null) {
       ev.push({ side: 1 - winner, kind: 'status', status: wcd.onBlock, from: wcd.name, block: true })
     }
     if (outcome === 'triangle' && wcd.brace && wcd.t === 'R' && lc?.t === 'P') {
-      if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name }) }
+      if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name, spill: spill(L, G.rules) }) }
       else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
     }
   }
@@ -616,7 +633,10 @@ function ask(G, stage, side) {
 }
 
 function finishClash(G) {
-  if (G.A.fresh || G.B.fresh) G = { ...G, A: { ...G.A, pile: G.A.pile + (G.A.fresh || 0), fresh: 0 }, B: { ...G.B, pile: G.B.pile + (G.B.fresh || 0), fresh: 0 } }
+  if (G.A.fresh || G.B.fresh) {
+    const land = X => { const Y = { ...X, pile: X.pile + (X.fresh || 0), fresh: 0 }; spill(Y, G.rules); return Y }
+    G = { ...G, A: land(G.A), B: land(G.B) }
+  }
   // Confiscate's floor is checked after the clash (8 Nov fix): a player who owed a discard On reveal and then
   // spent cards on a combo never discards below the floor (or, for "discard down to", below nothing)
   const settle = X => { if (!X.owe) return X; const max = X.oweDown ? X.hand.length : Math.max(0, X.hand.length - confiscateFloor(G.rules)); return X.owe > max ? { ...X, owe: max } : X }
@@ -663,14 +683,16 @@ export function runClash16(G, a, b, decide, lite = false, opts = null) {
 export function startDraw16(G) {
   const R = { s: G.rng }
   const P = [cloneP(G.A), cloneP(G.B)]
-  const capCash = [0, 0]
+  const capCash = [0, 0], capSpill = [0, 0]
   for (const [k, X] of P.entries()) {
     for (const i of X.used) if (i !== 'S') toDiscard(X, i, G.rules)
     X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
     if (G.rules.greyPerRound) X.pile += G.rules.greyPerRound      // everyone takes grey with their draw
     // greyCap (test): a pile that has reached the cap is cashed now
-    if (G.rules.greyCap && X.pile >= G.rules.greyCap) { capCash[k] = X.pile; X.hp -= X.pile; X.pile = 0 }
+    // (greyOverflow: the pile never passes its cap; the round's grey spills over as HP instead)
+    if (G.rules.greyOverflow) capSpill[k] = spill(X, G.rules)
+    else if (G.rules.greyCap && X.pile >= capOf(X, G.rules)) { capCash[k] = X.pile; X.hp -= X.pile; X.pile = 0 }
     if (X.nhand) {
       for (const i of X.nused) X.ndiscard.push(i)
       X.nused = []
@@ -678,7 +700,7 @@ export function startDraw16(G) {
     }
   }
   const over = P.map((X, k) => Math.max(0, X.hand.length - handLimitOf(X, P[1 - k], G.rules)))
-  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over, capCash }
+  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over, capCash, capSpill }
   return over.some(n => n > 0) ? g : finishRound16(g)
 }
 

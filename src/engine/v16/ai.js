@@ -12,7 +12,7 @@
 // beyond the next round (a knockdown is worth only what the weights say).
 
 import { maximin, bayesMaximin, bayesGame } from '../lp.js'
-import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit } from './engine.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -53,8 +53,10 @@ export function score16(X, W, rules, Y = null) {
   if (Y) { const lim = handLimitOf(X, Y, rules || {}); if (h + 1 > lim) h -= h + 1 - lim }
   let e = X.hp - W.alpha * X.pile + W.card * h + W.meter * X.meter + (X.inPlay != null ? (W.inPlay ?? 0.4) : 0)
   // greyCap (test): a pile that will reach the cap with this round's grey is cashed for certain
-  const cap = rules?.greyCap, end = X.pile + (rules?.greyPerRound || 0)
-  if (cap && end >= cap) e += W.alpha * X.pile - end
+  const cap = capOf(X, rules), end = X.pile + (rules?.greyPerRound || 0)
+  // (greyOverflow: the round's grey above the cap is lost as HP for certain; the pile stops at the cap)
+  if (cap && rules.greyOverflow) { if (end > cap) e += W.alpha * (X.pile - cap) - (end - cap) }
+  else if (cap && end >= cap) e += W.alpha * X.pile - end
   if (X.table) e += (W.owned ?? 1) * (X.f.cards.filter(c => c.special).length - X.table.length)
   if (superReady(X, rules)) e += W.superReady
   const n = X.next
