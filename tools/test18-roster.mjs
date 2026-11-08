@@ -49,6 +49,8 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(own.find(x => x.name === 'Haul In')?.copies === 1 && own.find(x => x.name === 'Ankle Hook')?.copies === 3, 'his two new cards: Haul In and a third Ankle Hook')
   const toss = own.find(x => x.name === 'Chain Toss')
   ok(toss?.safe === true && !(toss.icons || []).length && toss.build === 3 && toss.chip === 2, 'Chain Toss is Safe, with no icons, Build 3, chip 2 (like Shot)')
+  ok(w.cards.concat([w.super]).every(x => !(x.icons || []).some(i => i !== 'counter')), 'the Warden has no combo icons (a grappler, not a combo fighter)')
+  ok(w.cards.concat([w.super]).filter(x => x.kind === 'grab').every(x => x.chip >= 5), 'every Warden grab chips 5 or more')
   const bas = read('../data/v18/bastion.json').cards
   ok(bas.find(x => x.name === 'Lockdown')?.onHit === 'knockdown' && bas.find(x => x.name === 'Shield Bash')?.icons.includes('linker') && bas.find(x => x.name === 'Rim Shot')?.build === 4, "Bastion's better attacks: Lockdown knocks down, Shield Bash links, Rim Shot Build 4")
 }
