@@ -5,14 +5,14 @@
   "name": "Bastion",
   "epithet": "Counter-puncher",
   "concept": "The Sentinel: more Guards than anyone, a Counter on nearly every attack, and blocks that win the next round too. Repulse (his own Guard) Staggers a Pressure it beats; the Aegis special knocks down; the Final Bastion Super leaves them Dizzy. His Pressures punish the Converts his Guards push them into.",
-  "hp": 32,
+  "hp": 36,
   "passive": null,
   "cards": [
     {
       "name": "Edge Jab",
       "type": "pressure",
       "kind": "strike",
-      "speed": 16,
+      "speed": 17,
       "build": 1,
       "chip": 1,
       "copies": 2,
@@ -26,12 +26,13 @@
       "name": "Shield Bash",
       "type": "pressure",
       "kind": "strike",
-      "speed": 14,
+      "speed": 15,
       "build": 3,
       "chip": 1,
       "copies": 3,
       "icons": [
         "starter",
+        "linker",
         "counter"
       ]
     },
@@ -39,9 +40,9 @@
       "name": "Rim Shot",
       "type": "pressure",
       "kind": "strike",
-      "speed": 13,
-      "build": 3,
-      "chip": 0,
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
       "copies": 2,
       "icons": [
         "counter"
@@ -68,7 +69,8 @@
       "copies": 3,
       "icons": [
         "counter"
-      ]
+      ],
+      "onHit": "knockdown"
     },
     {
       "name": "Shoulder Ram",
@@ -170,5 +172,5 @@
     "onBlock": "dizzy",
     "flavour": "Once a game: the wall that leaves them reeling."
   },
-  "notes": "Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 9, Convert 8, Recover 9 (the core and two Repulses); 13 Counters; HP 32. Pitched, added as written."
+  "notes": "Rules v18, 8 November 2026 (afternoon), Mark: better attacks, Knockdown on Lockdown (throws usually knock down) and HP 36. Edge Jab 17, Shield Bash 15 (Starter, Linker, Counter), Rim Shot 14 (Build 4, chip 1); Lockdown On hit: Knockdown. Against the 7 November Benchmark: 52.8% (54.0%, 51.6%; two seeds of 400); 45.2% without the speed changes (variants/bastion-36-attacks.json). As drafted that morning (HP 32): about 30%, variants/bastion-as-drafted.json."
 }

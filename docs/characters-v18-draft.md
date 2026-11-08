@@ -2,7 +2,9 @@
 
 *8 November 2026, against `rules-overview 18.md` and the 4–7 November decisions (Knockdown: you lose every speed clash next round; Staggered: −3 speed; Safe; 26-card decks). Mark's brief: a rushdown (Vex), a counter-heavy fighter (Bastion), and a big, slow, damaging one (Atlas). Built from the 7 November roster sketch. All names are placeholders.*
 
-***Status, 8 November (afternoon): added as written.*** *Mark: "Let's add them as written." All three are in the engine, the sim and a new playtest page, **https://claude.ai/artifact/SpKQuR7XBsYizp67ijACHA** ("Yomi Playtest v18 (8 Nov)"), from GitHub branch **`v18-roster`**. Simmed below: Atlas sits in the band, Vex just under it, and **Bastion well under it (about 30%)**. Nothing has been changed from the pitch; the fixes tested are in Where They Stand.*
+***Status, 8 November (afternoon): added as written.*** *Mark: "Let's add them as written." All three are in the engine, the sim and a new playtest page, **https://claude.ai/artifact/SpKQuR7XBsYizp67ijACHA** ("Yomi Playtest v18 (8 Nov)"), from GitHub branch **`v18-roster`**. Simmed below: Atlas sits in the band, Vex just under it, and Bastion as drafted well under it (about 30%).*
+
+***8 November, later: Bastion at HP 36** (Mark: slightly better attacks, Knockdown on Lockdown since throws should usually knock down, and higher HP, which suits him). On the page now: **53% against the Benchmark**. See Bastion at HP 36 below; the drafted deck is `variants/bastion-as-drafted.json`. Vex and Atlas are unchanged.*
 
 ## Where They Stand (8 November sim)
 
@@ -11,17 +13,18 @@
 | | vs Benchmark | vs Warden (300) | Mirror (300): median, time-outs |
 |---|---|---|---|
 | **Vex** (HP 30) | **43.0%** | 52.7% | 12 rounds, 1.7% |
-| **Bastion** (HP 32) | **31.5%** (25.7% on a second seed, 300) | 34.8% | **17 rounds, 22%** |
+| **Bastion** as drafted (HP 32) | **31.5%** (25.7% on a second seed, 300) | 34.8% | **17 rounds, 22%** |
+| **Bastion at HP 36** (now) | **52.8%** (two seeds of 400) | — | **17 rounds, 24%** |
 | **Atlas** (HP 38) | **47.3%** | 44.0% | 12 rounds, 1.0% |
 
-**The three against each other (600 games each):** Atlas beats Vex 54.6%; Atlas beats Bastion 62.3%; Vex beats Bastion 56.5%. Time-outs 5–7%, medians 13–14 rounds. The pitch predicted a triangle (Vex over Atlas over Bastion over Vex); the sim has a ladder instead, with Bastion at the bottom.
+**The three against each other (600 games each):** Atlas beats Vex 54.6%; Atlas beats Bastion 62.3%; Vex beats Bastion 56.5%. Time-outs 5–7%, medians 13–14 rounds. The pitch predicted a triangle (Vex over Atlas over Bastion over Vex); the sim has a ladder instead, with Bastion (as drafted) at the bottom. At HP 36 he goes to the top: see below.
 
 **Mindless bots against Hard, in each fighter's mirror (300 games, ±5):**
 
 | | Pressure bot | Guard bot | Random |
 |---|---|---|---|
 | Vex | 25.7% | — | 25.0% |
-| Bastion | — | **34.5%** | **35.2%** |
+| Bastion (as drafted) | — | **34.5%** | **35.2%** |
 | Atlas | — | **34.2%** | 30.3% |
 | *Benchmark (3 Nov, 1,000 games)* | *23%* | *28.5%* | *27%* |
 
@@ -33,7 +36,7 @@
 - **Pressure spam isn't a problem:** the Pressure bot gets 26%.
 - *Card use (her clash cards):* Quick Fang 19%, Recall 14%, Undercut 13%, Fang Rush 13%, Pommel Strike 12%, Read 10%, Charge 10%, Cross-Up 4%. Twin Fang, Heel Drop and Crossing Slash are mostly played inside combos and follow-ups (1.5–2% each as the clash card). Hundred Fang was never played.
 
-### Bastion: his Guards make him readable
+### Bastion as drafted: his Guards make him readable
 
 **Why he loses.** In a deck you go through once, the deck is the play mix. With 9 Recovers he guards in 46% of his clashes, so Converting into him is the obvious read: the Benchmark breaks his Guard **2.5 times a game** (1.4 in its own mirror). His Pressures should punish those Converts, but there are only 9 of them and they're slower than the Benchmark's, so its Pressures beat them too (1.15 Pressure clashes a game won on speed). He deals 23.4 a game and takes 30.5.
 
@@ -58,6 +61,22 @@
 - **No one change fixes it; all of them together do.** Each of his attacks is a little weaker than the Benchmark's nearest card (slower, no Knockdown on his grab, Rim Shot smaller than Slash, only 2 Linkers to its 7), and it adds up. With them all brought level and HP 34, he's **the Benchmark plus two Repulses and more Counters**, at 47%. That works, but his identity is then thin.
 - **His mirror drags:** median 17 rounds, **22% time-outs**, and the random and Guard bots win 35% because a quarter or more of their games run to the clock. Nine cards that never deal damage make long games.
 - *Card use:* Recall 14%, Shield Bash 12%, Charge, Read, Shoulder Ram, Edge Jab 9–10% each, Repulse 8%, Lockdown, Sonic Cutter, Shield Slam 7% each, Aegis 3%, Rim Shot 2%, Shield Rush 1%, Final Bastion 0.4%.
+
+### Bastion at HP 36 (8 November, later)
+
+Mark's version: the attack changes above, Knockdown on Lockdown, and HP 36. Two seeds of 400 against the Benchmark; the matchups 300 games each.
+
+| | Bastion wins |
+|---|---|
+| **HP 36, Knockdown on Lockdown, Shield Bash a Linker, Rim Shot Build 4 chip 1, Pressures at the Benchmark's speeds (on the page)** | **52.8%** (54.0%, 51.6%) |
+| The same without the speed changes | 45.2% (46.1%, 44.3%) |
+| Against Vex | 55.5% (time-outs 10.7%) |
+| Against Atlas | 53.2% (time-outs 7.0%) |
+| Mirror | median 17 rounds, **24% time-outs** |
+
+- **It works against the Benchmark,** and the ladder turns over: he now beats Vex and Atlas, at the top of the band against Vex.
+- **His mirror still drags:** a quarter of games time out (22% at HP 32). Nine Recovers and high HP make long games; Mark's comfort zone is 3–8%. Against the others, 5–11%.
+- **The speed changes are worth about 8 points** here; without them he sits on the band's edge.
 
 ### Atlas: in the band
 
@@ -87,7 +106,7 @@
 | **Vex** | 30 | 19, 17, 16, 15, 14 | 6, 3 | Flying Fang 18, Cross-Up 9 · Hundred Fang 20 |
 | Benchmark | 34 | 17, 15, 14, 13, 12 | 7, 3, 1 | Rising Strike 19, Breaker 9 · Overdrive 10 |
 | Warden | 32 | 15, 14, 12 | 8, 6, 4, 3 | as v17 |
-| **Bastion** | 32 | 16, 14, 13, 12 | 7, 4, 1 | Shield Rush 18, Aegis (a Guard) · Final Bastion (a Guard) |
+| **Bastion** | 36 | 17, 15, 14, 12 | 7, 4, 1 | Shield Rush 18, Aegis (a Guard) · Final Bastion (a Guard) |
 | **Atlas** | 38 | 13, 12, 11, 11 | 5, 2, 1 | Lariat 17, Upheaval 9 · Avalanche 5 |
 
 ---
@@ -126,23 +145,23 @@
 
 ## Bastion: the Sentinel (*Counter-puncher*)
 
-**Hitting him is the mistake.** He has more Guards than anyone, a Counter on nearly every attack, and blocks that win the next round as well as this one. Opponents learn to Convert into him, and every one of his Pressures beats that. *Guile's patience with Sophitia's shield.* *(The sim says this loop doesn't pay as written: see Where They Stand.)*
+**Hitting him is the mistake.** He has more Guards than anyone, a Counter on nearly every attack, and blocks that win the next round as well as this one. Opponents learn to Convert into him, and every one of his Pressures beats that. *Guile's patience with Sophitia's shield.* *(As drafted he simmed at about 30%; at HP 36 with better attacks, 53%: see Where They Stand.)*
 
-**HP 32. Pressure 9, Convert 8, Recover 9 (the core and two Repulses).**
+**HP 36. Pressure 9, Convert 8, Recover 9 (the core and two Repulses).** *(8 November, later: HP 36 and better attacks, from HP 32 as drafted; changed cards marked ↑.)*
 
 | Card | × | Type · kind | Speed | Values | Icons | Text |
 |---|---|---|---|---|---|---|
-| Edge Jab | 2 | Pressure · Strike | 16 | Build 1, chip 1 | Safe, Starter, Linker | — |
-| Shield Bash | 3 | Pressure · Strike | 14 | Build 3, chip 1 | Starter, Counter | — |
-| Rim Shot | 2 | Pressure · Strike | 13 | Build 3 | Counter | On hit: Staggered |
+| Edge Jab ↑ | 2 | Pressure · Strike | 17 (16) | Build 1, chip 1 | Safe, Starter, Linker | — |
+| Shield Bash ↑ | 3 | Pressure · Strike | 15 (14) | Build 3, chip 1 | Starter, Linker (new), Counter | — |
+| Rim Shot ↑ | 2 | Pressure · Strike | 14 (13) | Build 4, chip 1 (Build 3) | Counter | On hit: Staggered |
 | Sonic Cutter | 2 | Pressure · Projectile | 12 | Build 3, chip 2 | Safe | — |
-| Lockdown | 3 | Convert · Grab | 7 | chip 1 | Counter | — |
+| Lockdown ↑ | 3 | Convert · Grab | 7 | chip 1 | Counter | On hit: Knockdown (new) |
 | Shoulder Ram | 3 | Convert · Guard Break | 4 | chip 3 | Ender, Counter | — |
 | Shield Slam | 2 | Convert · Guard Break | 1 | chip 4 | Ender, Counter | — |
 | **Repulse** | 2 | Recover · Guard | — | — | — | If this beats a Pressure: they're Staggered next round. |
 | Recall, Charge, Read | 3, 2, 2 | Recover · Guard | — | — | — | The defence core |
 
-- **13 Counters (50%;** the Benchmark has 8); 5 Starters; 4 Safe.
+- **13 Counters (50%;** the Benchmark has 8); 5 Starters; 5 Linkers; 4 Safe; 3 Knockdowns (Lockdown).
 - **Specials:** **Aegis** (Recover · Guard · if this beats a Pressure: Knockdown) and **Shield Rush** (Pressure · Strike · 18 · Build 3, chip 1 · Starter, Counter).
 - **Super: Final Bastion.** Recover · Guard · if this beats a Pressure: they're Dizzy next round.
 
@@ -151,8 +170,8 @@
 - **Repulse keeps the Counter follow-up and gives up the core's rider.** A core Guard gains a card or meter whether it wins or loses. Repulse gains nothing unless it beats a Pressure; then it punishes as usual and Staggers them, even if the Pressure was Safe (Safe stops the follow-up, not the status).
 - **Why 13 Counters:** the core already gives a follow-up to most blocked Pressures, so more Counters don't add follow-ups. They make every follow-up his best card.
 - **His blocks escalate:** Repulse Staggers, Aegis knocks down, Final Bastion Dizzies. All three are public threats.
-- **Stagger makes up for his slow hands.** Staggered, the Benchmark's Jab drops to 14 and its Lunge to 12, under Bastion's Edge Jab (16).
-- **Weakness:** slow Pressures, and an opponent patient enough to Convert only when he's likely to Guard. With 9 cards that never deal damage, his games run long.
+- **Stagger wins him the next round's speed clashes.** Staggered, the Benchmark's Jab drops to 14 and its Lunge to 12, under Bastion's Edge Jab (17) and Shield Bash (15).
+- **Weakness:** an opponent patient enough to Convert only when he's likely to Guard. With 9 cards that never deal damage and HP 36, his games run long.
 
 ---
 
@@ -190,7 +209,7 @@
 
 ## Flags
 
-1. **Bastion is out of the band (about 30%).** The tested fix is above; the open question is whether a Guard-heavy deck can work when the deck is the play mix.
+1. **Bastion's mirror times out a quarter of the time** (24% at HP 36). As drafted he was out of the band (about 30%); at HP 36 with better attacks he's 53%.
 2. **Vex at HP 30 is just under the band (43%);** HP 32 gets 47%.
 3. **The time-out with HP from 30 to 38** (rules Flag 5). It compares HP left, so to win a time-out against Atlas, Vex must have dealt 9 more damage than she's taken. In the sim the effect is small (5% of Vex v Atlas games time out; Atlas wins 58% of those), but I'd still switch it to compare HP lost.
 4. **Speed statuses are nearly blank against Atlas.** Knockdown and Staggered barely change anything for the slowest fighter. The partner's Knockdown weight (1.5 HP) will overvalue them there.
@@ -202,15 +221,15 @@
 
 GitHub `Youngy34/card-game`, branch **`v18-roster`** (off `v18-safe`).
 
-- **Fighters:** `data/v18/vex.json`, `bastion.json`, `atlas.json`. The Bastion test variants are in `data/v18/variants/bastion-*.json`; `bastion-speed-all.json` is the 47% package.
+- **Fighters:** `data/v18/vex.json`, `bastion.json` (HP 36 since the afternoon), `atlas.json`. The Bastion test variants are in `data/v18/variants/bastion-*.json`: `bastion-as-drafted.json` is the morning's deck, `bastion-speed-all.json` the HP 34 package (47%), `bastion-36-attacks.json` HP 36 without the speed changes (45%).
 - **New card fields:** `twin: true` on a Linker; `onBlock: "staggered" | "knockdown" | "dizzy"` on a Recover (Dizzy only on a Super); `special: true` is now allowed on a Recover (with no core rider).
 - **Engine:** `src/engine/v16/engine.js` (Twin in `decideClash16`, onBlock in `startClash16`, Confiscate's floor in `finishClash`); card text and checks in `cards.js`; the page's Twin prompt in `src/app/v16/play16.js`.
-- **Checks:** `node tools/test18-roster.mjs` (55 pass); `test18` (66), `test17` (36), `test16` (96), `test16-warden` (28) still pass; the browser smoke test (`tools/smoke/browser18.cjs`) 487 of 487, including a Twin prompt and a block status (Repulse, Aegis or Final Bastion) as Vex against Bastion.
+- **Checks:** `node tools/test18-roster.mjs` (59 pass); `test18` (66), `test17` (36), `test16` (96), `test16-warden` (28) still pass; the browser smoke test (`tools/smoke/browser18.cjs`) passes on every build (405 of 405 on the latest), including a Twin prompt and a block status (Repulse, Aegis or Final Bastion) as Vex against Bastion.
 - **Diagnosis tool:** `node tools/breakdown18.mjs bastion benchmark -n 300` (damage by source, clash wins by type pairing, combos and Twins, per side).
 
 ## Next
 
 1. Mark playtests the three on the 8 November page.
-2. Decide Bastion: take the 47% package (his attacks at the Benchmark's level, HP 34), or rethink how a counter-puncher works in a once-through deck.
+2. Bastion's mirror length (24% time-outs).
 3. Vex to HP 32.
 4. The time-out comparing HP lost.

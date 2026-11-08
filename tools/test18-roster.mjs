@@ -16,7 +16,7 @@ let fails = 0, passes = 0
 const ok = (cond, msg) => { if (cond) passes++; else { fails++; console.log('FAIL:', msg) } }
 
 // 1. The three fighters validate, with the draft's numbers
-const want = { vex: [30, 13, 6, 7, 8], bastion: [32, 9, 8, 9, 13], atlas: [38, 11, 8, 7, 8] }
+const want = { vex: [30, 13, 6, 7, 8], bastion: [36, 9, 8, 9, 13], atlas: [38, 11, 8, 7, 8] }     // Bastion: HP 36 since the afternoon of 8 Nov
 for (const [n, [hp, p, c, r, ct]] of Object.entries(want)) {
   const f = read(`../data/v18/${n}.json`)
   const v = validateFighter16(f)
@@ -47,7 +47,10 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   const w = read('../data/v18/warden.json'), own = w.cards.filter(x => !x.special)
   ok(!validateFighter16(w).errors.length && own.reduce((s, x) => s + x.copies, 0) === 26, 'the Warden is 26 cards (8 Nov), like the others')
   ok(own.find(x => x.name === 'Haul In')?.copies === 1 && own.find(x => x.name === 'Ankle Hook')?.copies === 3, 'his two new cards: Haul In and a third Ankle Hook')
-  ok(own.find(x => x.name === 'Chain Toss')?.safe === true && own.filter(x => x.safe).reduce((s, x) => s + x.copies, 0) === 3, 'Chain Toss is Safe: his three Safe cards')
+  const toss = own.find(x => x.name === 'Chain Toss')
+  ok(toss?.safe === true && !(toss.icons || []).length && toss.build === 3 && toss.chip === 2, 'Chain Toss is Safe, with no icons, Build 3, chip 2 (like Shot)')
+  const bas = read('../data/v18/bastion.json').cards
+  ok(bas.find(x => x.name === 'Lockdown')?.onHit === 'knockdown' && bas.find(x => x.name === 'Shield Bash')?.icons.includes('linker') && bas.find(x => x.name === 'Rim Shot')?.build === 4, "Bastion's better attacks: Lockdown knocks down, Shield Bash links, Rim Shot Build 4")
 }
 
 // 2. Twin: Fang Rush beats a Convert; Twin Fang, a second Twin Fang, then Pommel Strike
