@@ -152,7 +152,26 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(G.A.hand.length === 2 && (G.A.owe || 0) === 0, 'a normal combo down to 2 cards: the floor holds, nothing owed')
 }
 
-// 8. Whole games run for every pairing, inside the time-out
+// 8. The grey cap (test switch): a pile that reaches it at the end of the round is cashed
+{
+  const capRules = { ...rules, greyCap: 9 }
+  const mk = (pa, pb) => { const G = newGame16(BM, BM, capRules, 3); return { ...G, phase: 'clash', A: { ...G.A, ...pa }, B: { ...G.B, ...pb } } }
+  const JAB = id(BM, 'Jab'), REC = id(BM, 'Recall')
+  let G = startClash16(mk({ hand: [REC], pile: 7, hp: 30 }, { hand: [JAB], pile: 2 }), REC, JAB)
+  ok(G.A.pile === 0, 'Recall beat Jab: the pile of 7 is cleared')
+  G = startClash16(mk({ hand: [JAB], pile: 0, hp: 30 }, { hand: [JAB], pile: 8, hp: 30 }), JAB, JAB)
+  const before = G.B.pile
+  G = startDraw16(G)
+  ok(before === 8 && G.B.pile === 0 && G.B.hp === 30 - 9 && G.capCash?.[1] === 9, `a pile of 8 plus the round's grey reaches 9 and is cashed for 9 (HP ${G.B.hp}, pile ${G.B.pile})`)
+  ok(G.A.pile > 0 && G.A.pile < 9 && G.capCash?.[0] === 0, `the other pile, under the cap, stays (${G.A.pile})`)
+  G = startClash16(mk({ hand: [JAB], hp: 30 }, { hand: [JAB], pile: 9, hp: 5 }), JAB, JAB)
+  G = startDraw16(G)
+  ok(G.result === 1 && G.phase === 'over', `a cap cash that KOs ends the game (result ${G.result})`)
+  G = startDraw16(startClash16({ ...mk({ hand: [JAB] }, { hand: [JAB], pile: 12 }), rules }, JAB, JAB))
+  ok(G.B.pile >= 13 && !G.capCash?.[1], 'with no cap, a big pile stays')
+}
+
+// 9. Whole games run for every pairing, inside the time-out
 {
   const F = { vex: V, bastion: B, atlas: A, benchmark: BM }
   let games = 0, twins = 0, blocks = 0

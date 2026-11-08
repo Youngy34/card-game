@@ -44,7 +44,7 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
   initiative: false, tableCards: false, refillAtReveal: false,
-  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false }
+  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0 }
 // Rules v18 switches (rules-overview 18.md), off for v16 and v17:
 //   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
 //     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
@@ -61,6 +61,9 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //     a big reversal, but not a quick strike), since there is no neutral step to skip.
 //   knockdownSlow (6 Nov, replaces knockdownLocks): a knocked-down player loses every speed clash next
 //     round (same-type attacks, ties included); if both are down, speeds compare as usual.
+//   greyCap (8 Nov, test): at the end of the round, after the grey, a pile that has reached greyCap is
+//     cashed: its owner loses that much HP and the pile empties. 0 = no cap. Checked at the end of the round,
+//     so a winning Convert still cashes everything and a combo's Ender still has its pile.
 // Rules v17 switches (rules-overview 17.md), off for v16:
 //   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
 //     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
@@ -660,11 +663,14 @@ export function runClash16(G, a, b, decide, lite = false, opts = null) {
 export function startDraw16(G) {
   const R = { s: G.rng }
   const P = [cloneP(G.A), cloneP(G.B)]
-  for (const X of P) {
+  const capCash = [0, 0]
+  for (const [k, X] of P.entries()) {
     for (const i of X.used) if (i !== 'S') toDiscard(X, i, G.rules)
     X.used = []; X.fx = {}; X.pendingMeter = 0
     drawCards(X, 1, R)
     if (G.rules.greyPerRound) X.pile += G.rules.greyPerRound      // everyone takes grey with their draw
+    // greyCap (test): a pile that has reached the cap is cashed now
+    if (G.rules.greyCap && X.pile >= G.rules.greyCap) { capCash[k] = X.pile; X.hp -= X.pile; X.pile = 0 }
     if (X.nhand) {
       for (const i of X.nused) X.ndiscard.push(i)
       X.nused = []
@@ -672,7 +678,7 @@ export function startDraw16(G) {
     }
   }
   const over = P.map((X, k) => Math.max(0, X.hand.length - handLimitOf(X, P[1 - k], G.rules)))
-  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over }
+  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over, capCash }
   return over.some(n => n > 0) ? g : finishRound16(g)
 }
 
@@ -710,6 +716,8 @@ export function finishRound16(G) {
   }
   const round = G.round + 1
   let result = round > (G.rules.maxRounds ?? 60) ? 0.5 : null
+  // greyCap (test): a pile cashed at the end of the round can KO (both down: the one less far below 0 wins)
+  if (P[0].hp <= 0 || P[1].hp <= 0) result = P[0].hp <= 0 && P[1].hp <= 0 ? (P[0].hp > P[1].hp ? 1 : P[0].hp < P[1].hp ? 0 : 0.5) : P[0].hp <= 0 ? 0 : 1
   // Rules v18: a deck that's run out ends the game at the end of the round; the higher HP wins
   let timedOut = false
   if (result === null && G.rules.timeout && (!P[0].deck.length || !P[1].deck.length)) {

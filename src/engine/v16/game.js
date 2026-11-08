@@ -185,8 +185,10 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     while (G.phase === 'draw') {
       for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
     }
+    if (G.capCash?.some(n => n > 0)) rec.capCash = G.capCash
   }
-  return { result: G.result, rounds, timedOut: !!G.timedOut, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
+  const capKO = G.result !== null && !G.timedOut && !!rounds.at(-1)?.capCash && (G.A.hp <= 0 || G.B.hp <= 0)
+  return { result: G.result, rounds, timedOut: !!G.timedOut, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
 }
 
 // The random bot's choice for its clash card's Read or Recall rider: any legal option, at random

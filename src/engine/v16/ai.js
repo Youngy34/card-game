@@ -52,6 +52,9 @@ export function score16(X, W, rules, Y = null) {
   let h = X.hand.length - (X.owe || 0) + (X.pendingDraw || 0)
   if (Y) { const lim = handLimitOf(X, Y, rules || {}); if (h + 1 > lim) h -= h + 1 - lim }
   let e = X.hp - W.alpha * X.pile + W.card * h + W.meter * X.meter + (X.inPlay != null ? (W.inPlay ?? 0.4) : 0)
+  // greyCap (test): a pile that will reach the cap with this round's grey is cashed for certain
+  const cap = rules?.greyCap, end = X.pile + (rules?.greyPerRound || 0)
+  if (cap && end >= cap) e += W.alpha * X.pile - end
   if (X.table) e += (W.owned ?? 1) * (X.f.cards.filter(c => c.special).length - X.table.length)
   if (superReady(X, rules)) e += W.superReady
   const n = X.next

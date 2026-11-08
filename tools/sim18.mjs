@@ -65,13 +65,15 @@ function summarise18(games, F) {
   const specials = F.map(f => new Set(f.cards.filter(c => c.special).map(c => c.name)))
   const X = { timeouts: 0, timeoutWins: 0, koGames: 0, koWins: 0, timeoutMargin: [], deckEnd: [[], []], loserDeckAtKO: [], reshuffled: 0,
     meter: [0, 0], wasted: [0, 0], reads: [{ draw: 0, special: 0, super: 0 }, { draw: 0, special: 0, super: 0 }], recalls: [0, 0],
-    specialsPlayed: [0, 0], supersPlayed: [0, 0], braceReflect: [0, 0], parryFollow: [0, 0], starved: [0, 0], clashes: [0, 0] }
+    specialsPlayed: [0, 0], supersPlayed: [0, 0], braceReflect: [0, 0], parryFollow: [0, 0], starved: [0, 0], clashes: [0, 0], capCash: [0, 0], capHP: [0, 0], capKO: 0 }
   for (const g of games) {
     if (g.timedOut) { X.timeouts++; X.timeoutWins += g.result; X.timeoutMargin.push(Math.abs(g.final[0].hp - g.final[1].hp)) } else { X.koGames++; X.koWins += g.result }
     for (const k of [0, 1]) X.deckEnd[k].push(g.final[k].deck)
     if (g.reshuffles.some(v => v > 0)) X.reshuffled++
     if (!g.timedOut && g.result !== 0.5) { const loser = g.result === 1 ? 1 : 0; X.loserDeckAtKO.push(g.final[loser].deck) }
+    if (g.capKO) X.capKO++
     for (const r of g.rounds) {
+      for (const k of [0, 1]) if (r.capCash?.[k]) { X.capCash[k]++; X.capHP[k] += r.capCash[k] }
       for (const k of [0, 1]) {
         const names = [r.cards[k], ...(r.follow?.side === k ? [r.follow.name] : []), ...r.combo.filter(c => c.side === k).map(c => c.name)].filter(Boolean)
         X.specialsPlayed[k] += names.filter(nm => specials[k].has(nm)).length
@@ -91,7 +93,7 @@ function summarise18(games, F) {
   // the time-out is a route of its own (summarise16 files it under its last round)
   R.routes = {}
   for (const g of games) {
-    const key = g.timedOut ? 'time-out' : winRoute16(g.rounds[g.rounds.length - 1], g.result)
+    const key = g.timedOut ? 'time-out' : g.capKO ? 'cap cash' : winRoute16(g.rounds[g.rounds.length - 1], g.result)
     R.routes[key] = (R.routes[key] || 0) + 1
   }
   return { ...R, x: X }
@@ -113,6 +115,7 @@ function report(r) {
   console.log(`deck left at the end: ${avg(X.deckEnd[0]).toFixed(1)} / ${avg(X.deckEnd[1]).toFixed(1)} · loser's deck at the KO: ${bucket(X.loserDeckAtKO)}`)
   console.log(`outcomes: ${share(r.outcomes, Rn)} · speed ties to the holder ${pct((r.tieByInit[0] + r.tieByInit[1]) / Rn)}`)
   console.log(`combos ${pct(r.combos / Rn)} of rounds, ${(r.comboLen / Math.max(r.combos, 1)).toFixed(2)} cards, ${(r.comboDmg / Math.max(r.combos, 1)).toFixed(1)} HP · Guard beats Pressure ${pct(r.guardWins / Rn)}, followed up ${pct(r.follows / Math.max(r.guardWins, 1))} (${(r.followDmg / Math.max(r.follows, 1)).toFixed(1)} HP)`)
+  if (rules.greyCap) console.log(`grey cap ${rules.greyCap}: cashed ${per(X.capCash[0] + X.capCash[1])} times a game (${((X.capHP[0] + X.capHP[1]) / Math.max(1, X.capCash[0] + X.capCash[1])).toFixed(1)} HP each) · games ended by it ${pct(X.capKO / r.games)}`)
   console.log(`statuses a game: ${Object.entries(r.statuses).map(([k, v]) => `${k} ${(v / r.games).toFixed(2)}`).join(', ') || 'none'}`)
   for (const k of [0, 1]) {
     const T = Object.values(r.types[k]).reduce((s, v) => s + v, 0)
