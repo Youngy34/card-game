@@ -120,7 +120,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok((await body()).includes('rules v18'), 'header says rules v18')
   ok((await page.locator('.fpick[aria-pressed="true"]').allInnerTexts()).every(t => t.toLowerCase().includes('benchmark')), 'Benchmark picked on both sides')
   ok((await body()).includes(`${BM.hp} hp · ${BM_SIZE} cards + 2 specials`), `the picker shows HP ${BM.hp} and the ${BM_SIZE}-card deck`)
-  ok((await body()).includes('32 hp · 24 cards + 2 specials'), 'the Warden at HP 32')
+  ok((await body()).includes('32 hp · 26 cards + 2 specials · super: chain prison'), 'the Warden at HP 32, 26 cards')
   ok((await body()).includes('the game times out when a deck runs out') && (await body()).includes('one step a round'), 'setup states the time-out and the one-step round')
   ok((await body()).includes('knows you can\'t see its own'), 'setup describes the new partner')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })

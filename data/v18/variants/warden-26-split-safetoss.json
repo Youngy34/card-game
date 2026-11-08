@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "warden18-split-safe",
+  "name": "The Warden",
+  "epithet": "Grappler",
+  "concept": "A grappler with chains, on one 24-card deck. Grabs beat Guards and most Counters are grabs. Coil takes a card on hit, Shackles cuts their hand to 5 on hit, Chain Spin builds meter, Chain Toss reads; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
+  "hp": 32,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Chain Lash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "copies": 3
+    },
+    {
+      "name": "Ankle Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 3,
+      "chip": 1,
+      "icons": [
+        "ender"
+      ],
+      "onHit": "knockdown",
+      "copies": 3
+    },
+    {
+      "name": "Chain Toss",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Shakedown",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 8,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "reveal": {
+        "confiscate": 1
+      },
+      "copies": 2
+    },
+    {
+      "name": "Haul In",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 9,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "copies": 1,
+      "flavour": "Drag them in before they can set."
+    },
+    {
+      "name": "Coil",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 4,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "confiscate": 1,
+      "copies": 2
+    },
+    {
+      "name": "Shackles",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 6,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "discardDownTo": 5,
+      "copies": 2,
+      "flavour": "Chained up, you can't carry much."
+    },
+    {
+      "name": "Chain Spin",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "copies": 3
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Charge",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "meter": 2
+      },
+      "flavour": "Cover up and build the bar."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 2,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Iron Haul",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 10,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "confiscate": 1,
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "The chain finds you before you move."
+    },
+    {
+      "name": "Chain Whip",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 2,
+      "chip": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "special": true,
+      "meter": 1,
+      "copies": 1,
+      "flavour": "A crack of the chain from out of reach."
+    }
+  ],
+  "super": {
+    "name": "Chain Prison",
+    "type": "convert",
+    "kind": "grab",
+    "speed": 10,
+    "chip": 3,
+    "icons": [
+      "counter"
+    ],
+    "meter": 2,
+    "discardDownTo": 3
+  },
+  "notes": "Rules v18 (rules-overview 18.md), 3 November 2026: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
+}

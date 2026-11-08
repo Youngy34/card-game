@@ -4,7 +4,7 @@
   "id": "warden18",
   "name": "The Warden",
   "epithet": "Grappler",
-  "concept": "A grappler with chains, on one 24-card deck. Grabs beat Guards and most Counters are grabs. Coil takes a card on hit, Shackles cuts their hand to 5 on hit, Chain Spin builds meter, Chain Toss reads; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
+  "concept": "A grappler with chains, on one 26-card deck. Grabs beat Guards and most Counters are grabs. Coil takes a card on hit, Shackles cuts their hand to 5 on hit, Chain Spin builds meter, Chain Toss reads; his specials are Iron Haul and Chain Whip, and Chain Prison cuts their hand to 3.",
   "hp": 32,
   "passive": null,
   "cards": [
@@ -32,7 +32,7 @@
         "ender"
       ],
       "onHit": "knockdown",
-      "copies": 2
+      "copies": 3
     },
     {
       "name": "Chain Toss",
@@ -59,6 +59,18 @@
         "confiscate": 1
       },
       "copies": 2
+    },
+    {
+      "name": "Haul In",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 9,
+      "chip": 2,
+      "icons": [
+        "counter"
+      ],
+      "copies": 1,
+      "flavour": "Drag them in before they can set."
     },
     {
       "name": "Coil",
@@ -175,5 +187,5 @@
     "meter": 2,
     "discardDownTo": 3
   },
-  "notes": "Rules v18 (rules-overview 18.md), 3 November 2026: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
+  "notes": "Rules v18. 8 November 2026: 26 cards to match the other fighters (Mark), adding Haul In x1 (cut to fit 24 on 3 November) and a third Ankle Hook: Pressure 9, Convert 10, Recover 7. In sim against the 7 November Benchmark it changed nothing (44.2% at 24 and at 26, two seeds of 400); the 24-card deck is variants/warden-24.json. 3 November: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 (3 November) Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
 }

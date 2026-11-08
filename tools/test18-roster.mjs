@@ -43,6 +43,12 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   return { ...G, init, A: { ...G.A, ...patchA }, B: { ...G.B, ...patchB } }
 }
 
+{
+  const w = read('../data/v18/warden.json'), own = w.cards.filter(x => !x.special)
+  ok(!validateFighter16(w).errors.length && own.reduce((s, x) => s + x.copies, 0) === 26, 'the Warden is 26 cards (8 Nov), like the others')
+  ok(own.find(x => x.name === 'Haul In')?.copies === 1 && own.find(x => x.name === 'Ankle Hook')?.copies === 3, 'his two new cards: Haul In and a third Ankle Hook')
+}
+
 // 2. Twin: Fang Rush beats a Convert; Twin Fang, a second Twin Fang, then Pommel Strike
 {
   const RUSH = id(V, 'Fang Rush'), TWIN = id(V, 'Twin Fang'), POM = id(V, 'Pommel Strike'), CROSS = id(V, 'Crossing Slash'), SWING = id(BM, 'Big Swing')
