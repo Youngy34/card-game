@@ -135,7 +135,7 @@ Benchmark with its own cap against Benchmark on 9, overflow + cash on a win, 300
 
 | Own cap | 5 | 7 | 9 | 11 | 13 |
 |---|---|---|---|---|---|
-| Win | 37% | 43% | 50% | 49% | 57% |
+| Win | 37% | 43% | 49% (mirror) | 49% | 57% |
 | Time-outs | 2% | 5% | 5% | 6% | 9% |
 | Games ending on a Convert cash | 35% | 41% | 43% | 44% | 50% |
 
