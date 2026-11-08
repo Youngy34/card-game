@@ -30,7 +30,7 @@ The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck 
 | Fighter | HP | Deck | Specials (1 meter) | Super (2 meter, once) |
 |---|---|---|---|---|
 | **Benchmark** (reference) | 34 | **26**: 19 attacks and the core (below) | Rising Strike; Breaker | Overdrive |
-| **The Warden** (draft) | 32 | **26** (8 Nov; 24 before, now `variants/warden-24.json`): 19 attacks (Chain Lash ×3, Ankle Hook ×3, Chain Toss ×3, Shakedown ×2, Haul In ×1, Coil ×2, Shackles ×2, Chain Spin ×3) and the core. No Safe cards yet. | Iron Haul; Chain Whip | Chain Prison |
+| **The Warden** (draft) | 32 | **26** (8 Nov; 24 before, now `variants/warden-24.json`): 19 attacks (Chain Lash ×3, Ankle Hook ×3, Chain Toss ×3, Shakedown ×2, Haul In ×1, Coil ×2, Shackles ×2, Chain Spin ×3) and the core. **Chain Toss is Safe** (8 Nov). | Iron Haul; Chain Whip | Chain Prison |
 | **Vex** (draft, 8 Nov) | 30 | 26: 13 Pressures (Quick Fang, Fang Rush, Twin Fang, Crossing Slash, Heel Drop), 6 Converts (Undercut, Pommel Strike) and the core | Cross-Up (a Convert Starter); Flying Fang | Hundred Fang (Dizzy) |
 | **Bastion** (draft, 8 Nov) | 32 | 26: 9 Pressures (Edge Jab, Shield Bash, Rim Shot, Sonic Cutter), 8 Converts (Lockdown, Shoulder Ram, Shield Slam), Repulse ×2 and the core | Aegis (a Guard); Shield Rush | Final Bastion (a Guard) |
 | **Atlas** (draft, 8 Nov) | 38 | 26: 11 Pressures (Haft Strike, Overhead, Ground Smash, Hammer Sweep), 8 Converts (Shoulder Check, Hammer Spin, Earthsplitter) and the core | Lariat; Upheaval | Avalanche |
@@ -69,13 +69,13 @@ The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck 
 - **Twin** (`twin: true` on a Linker, Vex's Twin Fang): after it's played as a Linker, a second copy can follow as another Linker. The page asks "Twin: play the second copy as another Linker", with "No second Linker" to go on to the Ender.
 - **A status on a block** (`onBlock` on a Recover: Bastion's Repulse Staggers, Aegis knocks down, Final Bastion leaves them Dizzy): it lands when the Recover beats a Pressure, as well as the usual follow-up (a Safe Pressure stops the follow-up, not the status). Narrated as "…turns the blow aside: they're Staggered next round."
 - **Recover specials** (Aegis): taken from the table with Read like any special, and back on the table after use.
-- **The Warden at 26 cards** (8 November, republished on the same page): Haul In ×1 (cut to fit 24 on 3 November, Convert · Grab · 9 · chip 2 · Counter) and a third Ankle Hook, so every deck times out at the end of round 20.
+- **The Warden at 26 cards** (8 November, republished on the same page): Haul In ×1 (cut to fit 24 on 3 November, Convert · Grab · 9 · chip 2 · Counter) and a third Ankle Hook, so every deck times out at the end of round 20. Then **Chain Toss is Safe** (Mark: at least one Safe card for him): 47% against the Benchmark, from 44%.
 - **Confiscate's floor is checked after the clash:** a player who owed a discard On reveal and then spent cards on a combo never discards below 2.
 
 ## Checks (8 November)
 
-- `node tools/test18-roster.mjs`: 57 pass (the three fighters, Twin, the Convert Starter, the block statuses, Recover specials, Confiscate's floor, whole games for every pairing). `test18` (66), `test17` (36), `test16` (96), `test16-warden` (28) still pass.
-- Browser smoke `tools/smoke/browser18.cjs`: 487 of 487 on the first build and 445 of 445 on the Warden's (the count depends on how many games it takes for each prompt to come up), with no page errors, now also playing as Vex against Bastion until the Twin prompt and a block status have come up, and as Atlas against Vex. Run with the installed Chrome (Playwright's launcher pointed at `/usr/bin/google-chrome`) and Preact 10.24.3 and htm 3.1.1 source clones.
+- `node tools/test18-roster.mjs`: 58 pass (the three fighters, Twin, the Convert Starter, the block statuses, Recover specials, Confiscate's floor, whole games for every pairing). `test18` (66), `test17` (36), `test16` (96), `test16-warden` (28) still pass.
+- Browser smoke `tools/smoke/browser18.cjs`: 487 of 487 on the first build and 445 and 447 on the Warden's two builds (the count depends on how many games it takes for each prompt to come up), with no page errors, now also playing as Vex against Bastion until the Twin prompt and a block status have come up, and as Atlas against Vex. Run with the installed Chrome (Playwright's launcher pointed at `/usr/bin/google-chrome`) and Preact 10.24.3 and htm 3.1.1 source clones.
 
 ## Checks (7 November)
 

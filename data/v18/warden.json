@@ -44,7 +44,8 @@
       "copies": 3,
       "icons": [
         "starter"
-      ]
+      ],
+      "safe": true
     },
     {
       "name": "Shakedown",
@@ -187,5 +188,5 @@
     "meter": 2,
     "discardDownTo": 3
   },
-  "notes": "Rules v18. 8 November 2026: 26 cards to match the other fighters (Mark), adding Haul In x1 (cut to fit 24 on 3 November) and a third Ankle Hook: Pressure 9, Convert 10, Recover 7. In sim against the 7 November Benchmark it changed nothing (44.2% at 24 and at 26, two seeds of 400); the 24-card deck is variants/warden-24.json. 3 November: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 (3 November) Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
+  "notes": "Rules v18. 8 November 2026: Chain Toss is Safe (Mark: at least one Safe card); against the 7 November Benchmark he wins 47% (47.3% and 46.5%, two seeds of 400; 44.2% without it). Also 8 November: 26 cards to match the other fighters (Mark), adding Haul In x1 (cut to fit 24 on 3 November) and a third Ankle Hook: Pressure 9, Convert 10, Recover 7. In sim against the 7 November Benchmark it changed nothing (44.2% at 24 and at 26, two seeds of 400); the 24-card deck is variants/warden-24.json. 3 November: the shared defence core (Recall, Charge, Read); Chain Toss and Chain Spin are plain attacks now. HP 32: against the HP 34 (3 November) Benchmark he won 41% at 30, 49% at 32 and 57% at 34 in sim."
 }
