@@ -4,7 +4,7 @@
   "id": "benchmark19",
   "name": "Benchmark",
   "epithet": "Reference",
-  "concept": "The plain v18 fighter: one 26-card deck (at most 3 of any card) with Safe pokes and punishable big strikes, the shared defence core (Recall, Charge, Read: every one a Guard with a Counter follow-up and a rider), two specials on the table (Rising Strike, Breaker) and a single-use Super.",
+  "concept": "The plain v18 fighter: one 26-card deck (at most 3 of any card) with Safe pokes and punishable big strikes, the shared defence core (Recall, Charge, Read: every one a Guard with a Counter follow-up and a rider), two specials on the table (Rising Strike, Breaker) and a single-use Super. Two combo lines: Pressures (Jab, Lunge into Slash, Sweep) and one Convert line, Big Swing into Wind-Up.",
   "hp": 32,
   "passive": null,
   "cards": [
@@ -89,7 +89,10 @@
       "kind": "guardBreak",
       "speed": 3,
       "chip": 3,
-      "copies": 3
+      "copies": 3,
+      "icons": [
+        "starter"
+      ]
     },
     {
       "name": "Wind-Up",
@@ -97,7 +100,10 @@
       "kind": "guardBreak",
       "speed": 1,
       "chip": 4,
-      "copies": 2
+      "copies": 2,
+      "icons": [
+        "ender"
+      ]
     },
     {
       "name": "Recall",
@@ -170,5 +176,5 @@
     "onHit": "knockdown",
     "flavour": "Once a game: a big cash and a knockdown."
   },
-  "notes": "v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Big Swing, Wind-Up, Breaker and Overdrive lose Ender; Sweep is the only Ender. HP 32. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Lunge, Sweep gain it. Rules v18, 7 November 2026: 26 cards. Safe Jab (x2, Build 1, chip 1) and Shot (x2, speed 12, Build 3, chip 2, no icons); new Lunge x3 (the unsafe Jab); Slash x2; Sweep x2; Throw x3 (chip 1, On hit: Knockdown); Big Swing x3; Wind-Up x2 (the slow heavy: speed 1, chip 4, Ender). The 3 November deck is variants/benchmark-3nov.json."
+  "notes": "v19 (8 November 2026, night): two combo lines (Mark): a combo continues only with cards of its Starter's type; grabs stay out of combos except the Warden's. Convert line: Big Swing (Starter) into Wind-Up (Ender); Throw is a grab, so not in it. v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Big Swing, Wind-Up, Breaker and Overdrive lose Ender; Sweep is the only Ender. HP 32. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Lunge, Sweep gain it. Rules v18, 7 November 2026: 26 cards. Safe Jab (x2, Build 1, chip 1) and Shot (x2, speed 12, Build 3, chip 2, no icons); new Lunge x3 (the unsafe Jab); Slash x2; Sweep x2; Throw x3 (chip 1, On hit: Knockdown); Big Swing x3; Wind-Up x2 (the slow heavy: speed 1, chip 4, Ender). The 3 November deck is variants/benchmark-3nov.json."
 }

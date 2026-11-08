@@ -70,6 +70,11 @@ export function Settings16() {
           <option value="win">Only as the clash card: a Convert played as a Linker, Ender or follow-up just deals its damage (v19)</option>
           <option value="any">Whenever it hits, combos and follow-ups included (v18)</option>
         </select></label>` : null}
+      ${v18 ? html`<label class="field"><span>Combo lines</span>
+        <select id="s-combolines" value=${d.rules.comboSameType ? 'same' : 'any'} onChange=${e => rule({ comboSameType: e.target.value === 'same' })}>
+          <option value="same">Two lines: a combo continues only with cards of its Starter's type (v19)</option>
+          <option value="any">One line: any Linker or Ender (v18)</option>
+        </select></label>` : null}
       <label class="field"><span>Speed ties: two attacks of the same type at the same speed</span>
         <select id="s-tie" value=${d.rules.speedTie} onChange=${e => rule({ speedTie: e.target.value })}>
           <option value="cancel">They cancel: neither lands</option>

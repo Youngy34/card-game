@@ -246,7 +246,8 @@ export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative
 // The draw step's grey, in words ('' when off)
 export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '')
   + (R.greyCap ? (R.greyOverflow ? `; grey cap ${R.greyCap} (some fighters have their own): a pile can't go above its cap, and grey beyond it is lost as HP at once` : `; grey cap ${R.greyCap}: a pile that has reached it at the end of the round is cashed for its size`) : '')
-  + (R.cashOnWin ? '; a Convert cashes only as the clash card, so Converts are never Linkers or Enders' : '')
+  + (R.cashOnWin ? (R.comboSameType ? '; a Convert cashes only as the clash card' : '; a Convert cashes only as the clash card, so Converts are never Linkers or Enders') : '')
+  + (R.comboSameType ? '; a combo continues only with cards of its Starter\'s type: Pressures into Pressures, Converts into Converts (no grabs, except the Warden\'s)' : '')
 // The HUD's grey pile: its cap in words, and a flag when it's full (overflow) or will be cashed (cash cap)
 const pileTitle = (X, R) => { const c = capOf(X, R); return !c ? '' : R.greyOverflow ? `Grey cap ${c}: the pile can't go above it; grey beyond it is lost as HP at once` : `Grey cap ${c}: a pile that reaches it at the end of the round is cashed for its size` }
 const pileFlag = (X, R) => { const c = capOf(X, R); if (!c) return null; if (R.greyOverflow) return X.pile >= c ? 'Full: more grey costs HP' : null; return X.pile + (R.greyPerRound || 0) >= c ? 'Cashed at the end of the round' : null }

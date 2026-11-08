@@ -4,8 +4,8 @@
   "id": "vex19",
   "name": "Vex",
   "epithet": "Rushdown",
-  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, a low HP and a low grey cap (7): fragile, but there is never much to cash on her. Twin Fang can link into a second Twin Fang; Heel Drop and Hundred Fang end her combos. Specials: Cross-Up (a guard break that starts a combo) and Flying Fang (a fast, Safe thrown blade). Super: Hundred Fang (Dizzy).",
-  "hp": 31,
+  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, a low HP and a low grey cap (7): fragile, but there is never much to cash on her. Twin Fang can link into a second Twin Fang; Heel Drop and Hundred Fang end her Pressure combos. Her Convert line: Undercut or Cross-Up into Pommel Strike. Specials: Cross-Up (a guard break that starts a combo) and Flying Fang (a fast, Safe thrown blade). Super: Hundred Fang (Dizzy).",
+  "hp": 32,
   "passive": null,
   "cards": [
     {
@@ -82,7 +82,10 @@
       "kind": "guardBreak",
       "speed": 6,
       "chip": 2,
-      "copies": 3
+      "copies": 3,
+      "icons": [
+        "starter"
+      ]
     },
     {
       "name": "Pommel Strike",
@@ -90,7 +93,10 @@
       "kind": "guardBreak",
       "speed": 3,
       "chip": 3,
-      "copies": 3
+      "copies": 3,
+      "icons": [
+        "ender"
+      ]
     },
     {
       "name": "Recall",
@@ -168,6 +174,6 @@
     "onHit": "dizzy",
     "flavour": "Once a game: a flurry that leaves them seeing stars."
   },
-  "notes": "v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Pommel Strike loses Ender. Her own grey cap: 7. HP 31. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written.",
+  "notes": "v19 (8 November 2026, night): two combo lines (Mark): a combo continues only with cards of its Starter's type; grabs stay out of combos except the Warden's. Convert line: Undercut or Cross-Up (Starters) into Pommel Strike (Ender). Cross-Up used to lead into her Pressures; now it starts this line, so HP 32 (from 31): 42% against Bastion before, 50% after. v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Pommel Strike loses Ender. Her own grey cap: 7. HP 31. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written.",
   "greyCap": 7
 }

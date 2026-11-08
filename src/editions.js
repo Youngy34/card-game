@@ -44,7 +44,7 @@ export const EDITIONS = {
   },
   // v19 test (8 Nov): v18 with Counters only on Pressures and the grey cap (9)
   v19: {
-    title: 'Yomi Playtest v19 test', subtitle: 'rules v18 + v19 test: Counters on Pressures, overflow grey cap, Converts cash only on a win', out: 'yomi-playtest-v19.html', settings: 'v19/settings.json',
+    title: 'Yomi Playtest v19 test', subtitle: 'rules v18 + v19 test: Counters on Pressures, overflow grey cap, Converts cash only on a win, two combo lines', out: 'yomi-playtest-v19.html', settings: 'v19/settings.json',
     fighters: [],
     reference: [['v19', 'benchmark']],
     drafts: [['v19', 'warden'], ['v19', 'vex'], ['v19', 'bastion'], ['v19', 'atlas']],

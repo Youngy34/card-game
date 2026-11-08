@@ -25,7 +25,8 @@
     "knockdownSlow": true,
     "greyCap": 9,
     "greyOverflow": true,
-    "cashOnWin": true
+    "cashOnWin": true,
+    "comboSameType": true
   },
   "ai": {
     "alpha": 0.6,

@@ -2,7 +2,7 @@
 
 *Mark's idea: Counter icons sit mostly on Converts, so a Guard that beats a Pressure clears its own pile **and** cashes theirs, which loosens the triangle's read. Put Counters only on Pressures, and stop Pressure spam with a cap: a pile that reaches it is cashed for damage regardless. "Cap doesn't have to be 9, whatever works." First simmed on the Benchmark mirror; then (Mark: "Try it") all five fighters were converted and put on their own page.*
 
-**Playable: the v19 test page, https://claude.ai/artifact/TDrkScu7TZrGNnmHyHxhL9** ("Yomi Playtest v19 test (overflow cap)"). **Since the evening of 8 November it plays the overflow version** (the last section: the pile stops at its cap, a Convert cashes only as the clash card, every fighter converted and retuned). The first version described below (cash at the cap) is in git as tag `v19-cashcap` and in `data/v19/cashcap/`. The v18 page is unchanged.
+**Playable: the v19 test page, https://claude.ai/artifact/TDrkScu7TZrGNnmHyHxhL9** ("Yomi Playtest v19 test (overflow cap)"). **Since the night of 8 November it plays the overflow version with two combo lines** (the last two sections: the pile stops at its cap, a Convert cashes only as the clash card, Converts combo only into Converts, every fighter retuned). The first version described below (cash at the cap) is in git as tag `v19-cashcap` and in `data/v19/cashcap/`. The v18 page is unchanged.
 
 ## All Five Fighters (the first v19 test set, now `data/v19/cashcap/`)
 
@@ -199,7 +199,7 @@ Mark: go with the two rules; a Convert converts only as the initial hit, or only
 
 **If adopted:** this is the v19 candidate. The Convert Enders are gone, so "Ender" now always means a Pressure that builds (or knocks down); combos are a building tool and Converts are the kill. Watch at the table whether combos still feel worth landing (about 3–5 HP of grey each), and whether full piles bleeding 1 a round reads well.
 
-## 8 Nov Night: Two Combo Lines (Simmed, Not on the Page Yet)
+## 8 Nov Night: Two Combo Lines (On the Page)
 
 Mark: Converts (guard breaks) could combo, but only into Converts; Pressures only into Pressures. Two separate combo lines, and guard breaks combo without breaking the triangle. **Grabs stay out of combos, except perhaps the Warden's.**
 
@@ -237,4 +237,6 @@ Mark: Converts (guard breaks) could combo, but only into Converts; Pressures onl
 - **Time-outs 0–8%** (most 1–6%; Bastion's mirror 5–6%, from 8.7% without lines). Medians 12–15.
 - First pass, before the Atlas and Vex changes (one seed): averages 47–54%, Atlas 59% against the Benchmark, Vex 42% against Bastion.
 
-Files: `data/v19/variants/lines/final/` (the five fighters as tuned), `data/v19/variants/lines/` (the first pass). Checks in `tools/test18-roster.mjs` (105 pass): a Convert Starter is offered only Convert Enders, a Pressure Starter only Pressures, a Convert Ender after the cash deals only its own damage.
+Files: the five fighters as tuned are now `data/v19/` (copies in `data/v19/variants/lines/final/`; the first pass in `data/v19/variants/lines/`), with `comboSameType: true` in `data/v19/settings.json`. Checks in `tools/test18-roster.mjs` (110 pass): a Convert Starter is offered only Convert Enders, a Pressure Starter only Pressures, a Convert Ender after the cash deals only its own damage; each fighter's line as listed, no Convert Linkers, no grab in a combo but the Warden's.
+
+**On the page** (8 Nov, 21:40): setup states the rule ("a combo continues only with cards of its Starter's type: Pressures into Pressures, Converts into Converts"); Settings has **Combo lines** (two lines, v19; or one, v18); the combo prompts only offer cards of the line's type. Browser smoke test 442 of 442 on the v19 page, 481 of 481 on the v18 page.

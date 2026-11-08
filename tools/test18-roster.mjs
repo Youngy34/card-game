@@ -212,14 +212,18 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
 // 8c. The v19 set (8 Nov evening): no Convert links or ends a combo; each fighter's cap; the page's rules
 {
   const S19 = read('../data/v19/settings.json').rules
-  ok(S19.greyCap === 9 && S19.greyOverflow === true && S19.cashOnWin === true, 'v19 settings: cap 9, overflow, Converts cash only on a win')
-  const want19 = { benchmark: [32, 9], warden: [31, 9], vex: [31, 7], bastion: [36, 6], atlas: [34, 12] }
+  ok(S19.greyCap === 9 && S19.greyOverflow === true && S19.cashOnWin === true && S19.comboSameType === true, 'v19 settings: cap 9, overflow, Converts cash only on a win, two combo lines')
+  const want19 = { benchmark: [32, 9], warden: [31, 9], vex: [32, 7], bastion: [36, 6], atlas: [34, 12] }
+  const lines19 = { benchmark: 'Big Swing>Wind-Up', warden: 'Haul In>Coil', vex: 'Undercut,Cross-Up>Pommel Strike', bastion: 'Shoulder Ram>Shield Slam', atlas: 'Shoulder Check>Hammer Spin' }
   for (const [n, [hp, cap]] of Object.entries(want19)) {
     const f = read(`../data/v19/${n}.json`), v = validateFighter16(f)
     const all = [...f.cards, ...(f.super ? [f.super] : [])]
-    const bad = all.filter(c => c.type === 'convert' && (c.icons || []).some(i => i === 'linker' || i === 'ender')).map(c => c.name)
+    // the night's two lines: each fighter's Convert line is one Starter (or two, Vex) into one Ender, no Linkers, and no grabs but the Warden's
+    const cv = all.filter(c => c.type === 'convert'), names = k => cv.filter(c => (c.icons || []).includes(k)).map(c => c.name).join(',')
+    const line = `${names('starter')}>${names('ender')}`
     ok(!v.errors.length, `v19 ${n} validates`)
-    ok(!bad.length, `v19 ${n}: no Convert is a Linker or Ender (${bad.join(', ')})`)
+    ok(line === lines19[n] && !names('linker'), `v19 ${n}: Convert line ${line} (want ${lines19[n]}), no Convert Linkers`)
+    ok(n === 'warden' || !cv.some(c => c.kind === 'grab' && (c.icons || []).some(i => ['starter', 'linker', 'ender'].includes(i))), `v19 ${n}: no grab in a combo`)
     ok(f.hp === hp && (f.greyCap || 9) === cap, `v19 ${n}: HP ${f.hp} (want ${hp}), cap ${f.greyCap || 9} (want ${cap})`)
     ok(all.some(c => c.type === 'pressure' && (c.icons || []).includes('starter')), `v19 ${n} still has a Starter`)
   }

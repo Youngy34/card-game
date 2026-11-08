@@ -133,6 +133,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   if (CAP) ok((await body()).includes(`${VX.hp} hp${capTxt(VX)}`) && (await body()).includes(`${AT.hp} hp${capTxt(AT)}`), `the picker shows Vex's and Atlas's own caps (${VX.greyCap || CAP}, ${AT.greyCap || CAP})`)
   if (RULES.cashOnWin) ok((await body()).includes('a convert cashes only as the clash card'), 'setup states that a Convert cashes only as the clash card')
   if (OVF) ok((await body()).includes('grey beyond it is lost as hp'), 'setup states the overflow cap')
+  if (RULES.comboSameType) ok((await body()).includes("a combo continues only with cards of its starter's type"), 'setup states the two combo lines')
   ok((await body()).includes('the game times out when a deck runs out') && (await body()).includes('one step a round'), 'setup states the time-out and the one-step round')
   ok((await body()).includes('knows you can\'t see its own'), 'setup describes the new partner')
   SHOTS && await page.screenshot({ path: SHOTS + '01-setup.png', fullPage: true })
