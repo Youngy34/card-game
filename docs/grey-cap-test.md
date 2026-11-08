@@ -186,7 +186,7 @@ Mark: go with the two rules; a Convert converts only as the initial hit, or only
 
 - **Medians 12–16 rounds; time-outs 1–9%** (Bastion's mirror 8.7%, Bastion v Benchmark 7%, the rest 1–6%).
 - **How games end:** a Convert cash in 44–67% (most in the Warden's and Atlas's mirrors), combos 3–20% (most in Vex's mirror), a full pile's grey at the end of a round 6–13%.
-- **Bots against Hard, Benchmark mirror:** Pressure 20%, Guard 27%, Convert 30%, random 31%, Easy 32%.
+- **Bots against Hard, Benchmark mirror:** Pressure 20%, Guard 27%, Convert 30%, random 31%, Easy 32%, Medium 43%. **In Bastion's mirror** (200 games, ±7): Pressure 16%, Guard 32% (35.5% under the cash cap), random 33%, Easy and Medium 44.5%: in his mirror, skill counts for less.
 - **Seed 5 (Atlas at HP 35) for comparison:** averages 47–54%; Atlas 54% with Vex 62% against him there, the reason for HP 34.
 
 ### The Page
