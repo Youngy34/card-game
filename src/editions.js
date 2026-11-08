@@ -38,7 +38,7 @@ export const EDITIONS = {
     title: 'Yomi Playtest v18', subtitle: 'rules v18', out: 'yomi-playtest-v18.html', settings: 'v18/settings.json',
     fighters: [],
     reference: [['v18', 'benchmark']],
-    drafts: [['v18', 'warden']],
+    drafts: [['v18', 'warden'], ['v18', 'vex'], ['v18', 'bastion'], ['v18', 'atlas']],
     labels: {},
     defaultSides: ['benchmark18', 'benchmark18'],
   },

@@ -382,6 +382,7 @@ function owe(Y, n, ev, side, from, down = false) {
   const k = down ? Math.min(n, h) : Math.min(n, Math.max(0, h - FLOOR))
   if (k <= 0) return
   Y.owe = (Y.owe || 0) + k
+  if (down) Y.oweDown = true
   ev?.push({ side, kind: 'confiscate', n: k, from })
 }
 
@@ -391,7 +392,7 @@ export function confiscate16(G, side, cards) {
   if (cards.length !== (X.owe || 0)) throw new Error(`discard exactly ${X.owe || 0}`)
   for (const i of cards) { takeFromHand(X, i); toDiscard(X, i, G.rules, { confiscated: true }) }
   X.confiscated = (X.confiscated || 0) + cards.length
-  X.owe = 0
+  X.owe = 0; X.oweDown = false
   return { ...G, [side === 0 ? 'A' : 'B']: X }
 }
 export const owes = G => [G.A.owe || 0, G.B.owe || 0]
@@ -575,6 +576,12 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     // Rules v18: a Brace that beats a Pressure gives no follow-up; instead the Pressure's Build
     // goes onto its owner's pile (reflect), or they're Staggered next round (stagger)
     const wcd = cards[winner]
+    // Rules v18 (8 Nov, Bastion): a Recover with onBlock puts a status on them when it beats a Pressure,
+    // as well as its follow-up (Safe stops the follow-up, not the status)
+    if (outcome === 'triangle' && wcd.onBlock && wcd.t === 'R' && lc?.t === 'P') {
+      applyStatus(L.next, wcd.onBlock)
+      ev.push({ side: 1 - winner, kind: 'status', status: wcd.onBlock, from: wcd.name, block: true })
+    }
     if (outcome === 'triangle' && wcd.brace && wcd.t === 'R' && lc?.t === 'P') {
       if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name }) }
       else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
@@ -607,6 +614,10 @@ function ask(G, stage, side) {
 
 function finishClash(G) {
   if (G.A.fresh || G.B.fresh) G = { ...G, A: { ...G.A, pile: G.A.pile + (G.A.fresh || 0), fresh: 0 }, B: { ...G.B, pile: G.B.pile + (G.B.fresh || 0), fresh: 0 } }
+  // Confiscate's floor is checked after the clash (8 Nov fix): a player who owed a discard On reveal and then
+  // spent cards on a combo never discards below the floor (or, for "discard down to", below nothing)
+  const settle = X => { if (!X.owe) return X; const max = X.oweDown ? X.hand.length : Math.max(0, X.hand.length - confiscateFloor(G.rules)); return X.owe > max ? { ...X, owe: max } : X }
+  if (G.A.owe || G.B.owe) G = { ...G, A: settle(G.A), B: settle(G.B) }
   return { ...G, pending: null, clash: { ...G.clash, done: true }, phase: G.result !== null ? 'over' : 'draw' }
 }
 
@@ -629,6 +640,10 @@ export function decideClash16(G, choice, lite = false) {
   if (next.result !== null) return finishClash(next)
   if (stage === 'follow' && P[side].fx.parry && c.starter) return ask(next, 'link', side)     // Parry: the punish can combo
   if (stage !== 'link') return finishClash(next)
+  // Twin (8 Nov, Vex): a second copy of the same card can follow it as a second Linker (two Linkers at most)
+  if (c.twin && clash.combo.filter(x => x.side === side && x.stage === 'link').length === 1 && P[side].hand.includes(choice) && canUse(P[side], c)) {
+    return { ...next, clash: { ...clash, offered: { ...(clash.offered || {}), twin: 1 } }, pending: { stage: 'link', side, options: [choice], twin: true } }
+  }
   return ask(next, 'end', side)
 }
 

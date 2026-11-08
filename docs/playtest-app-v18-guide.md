@@ -1,16 +1,17 @@
 # Yomi Playtest v18 — the app
 
-The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck gone through once, no neutral step (its effects are **On reveal riders** on clash cards), the shared defence core (Recall ×3, Charge ×2, Read ×2), **the time-out**, and specials that go back to the table. First built on 3 November 2026 (night) with the new Hard partner; **rebuilt on 7 November** with the 26-card Benchmark, **Safe** Pressures and the new **Knockdown** (you lose every speed clash next round).
+The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck gone through once, no neutral step (its effects are **On reveal riders** on clash cards), the shared defence core (Recall ×3, Charge ×2, Read ×2), **the time-out**, and specials that go back to the table. First built on 3 November 2026 (night) with the new Hard partner; **rebuilt on 7 November** with the 26-card Benchmark, **Safe** Pressures and the new **Knockdown** (you lose every speed clash next round); **8 November** adds the draft fighters **Vex, Bastion and Atlas** (`characters v18 draft.md`).
 
 ## The pages
 
-- **Current (7 November): https://claude.ai/artifact/RFc7cnTjT6XvTKDkY73HLA** ("Yomi Playtest v18 (7 Nov)", private to Mark until shared). Built from branch **`v18-safe`**. Its database started empty, so it runs the bundled fighters and settings. It declares the same database rules as the earlier pages (fighters and settings: editors write; the playtest log: anyone who plays writes).
+- **Current (8 November): https://claude.ai/artifact/SpKQuR7XBsYizp67ijACHA** ("Yomi Playtest v18 (8 Nov)", private to Mark until shared). Built from branch **`v18-roster`**: the 7 November page plus Vex, Bastion and Atlas, Twin, Recovers with a status on a block, Recover specials, and Confiscate's floor checked after the clash. Its database started empty, so it runs the bundled fighters and settings; it declares the same database rules as the earlier pages. It's a new page because a session with network access off can change only pages it created.
+- **7 November: https://claude.ai/artifact/RFc7cnTjT6XvTKDkY73HLA** ("Yomi Playtest v18 (7 Nov)"). Built from branch **`v18-safe`**. Its database started empty, so it runs the bundled fighters and settings. It declares the same database rules as the earlier pages (fighters and settings: editors write; the playtest log: anyone who plays writes).
 - **3 November:** https://claude.ai/artifact/3gkhzd1DGfoym2R6dCFowo ("Yomi Playtest v18"): the 24-card Benchmark and the old Knockdown (Lock Pressure), from branch `v18`. It was made in an earlier session, and a session can only republish artifacts it created, which is why the 7 November build is a new page. Its playtest log stays on it.
 - **Unchanged:** the v17 page (https://claude.ai/artifact/XFLF2iRy3nzRB7qRiAjtaJ) and the v16 pages, with the old partner.
 
 ## Source
 
-- GitHub `Youngy34/card-game`, branch **`v18-safe`** (off `v18`).
+- GitHub `Youngy34/card-game`, branch **`v18-roster`** (off `v18-safe`, which is off `v18`).
 - **To rebuild:** `node tools/build-artifact.mjs --edition v18` (writes `dist/yomi-playtest-v18.html`), then publish it over the current page, from the session that created it, or as a new page (declaring the same database rules).
 - v18 runs on the v16 engine and screens (`src/engine/v16/`, `src/app/v16/`) with rule switches on; v16 and v17 games are unchanged with them off.
 
@@ -30,6 +31,9 @@ The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck 
 |---|---|---|---|---|
 | **Benchmark** (reference) | 34 | **26**: 19 attacks and the core (below) | Rising Strike; Breaker | Overdrive |
 | **The Warden** (draft) | 32 | 24: 17 attacks (Chain Lash, Ankle Hook, Chain Toss, Shakedown, Coil, Shackles, Chain Spin) and the core. No Safe cards yet. | Iron Haul; Chain Whip | Chain Prison |
+| **Vex** (draft, 8 Nov) | 30 | 26: 13 Pressures (Quick Fang, Fang Rush, Twin Fang, Crossing Slash, Heel Drop), 6 Converts (Undercut, Pommel Strike) and the core | Cross-Up (a Convert Starter); Flying Fang | Hundred Fang (Dizzy) |
+| **Bastion** (draft, 8 Nov) | 32 | 26: 9 Pressures (Edge Jab, Shield Bash, Rim Shot, Sonic Cutter), 8 Converts (Lockdown, Shoulder Ram, Shield Slam), Repulse ×2 and the core | Aegis (a Guard); Shield Rush | Final Bastion (a Guard) |
+| **Atlas** (draft, 8 Nov) | 38 | 26: 11 Pressures (Haft Strike, Overhead, Ground Smash, Hammer Sweep), 8 Converts (Shoulder Check, Hammer Spin, Earthsplitter) and the core | Lariat; Upheaval | Avalanche |
 
 **The Benchmark, 7 November** (`data/v18/benchmark.json`; the 3 November deck is `data/v18/variants/benchmark-3nov.json`):
 
@@ -59,6 +63,18 @@ The digital playtest table for **rules v18** (`rules-overview 18.md`): one deck 
 - **The HUD** shows the deck count, flagged "time-out near" at 3 cards or fewer, and the Table row with each special and the Super.
 - **Board notes** add the time-out once either deck is down to 4, and any attack the opponent brought back with Recall.
 - **Settings** and **Lab** as on 3 November (100 Hard-v-Hard games take about a minute).
+
+## The 8 November additions
+
+- **Twin** (`twin: true` on a Linker, Vex's Twin Fang): after it's played as a Linker, a second copy can follow as another Linker. The page asks "Twin: play the second copy as another Linker", with "No second Linker" to go on to the Ender.
+- **A status on a block** (`onBlock` on a Recover: Bastion's Repulse Staggers, Aegis knocks down, Final Bastion leaves them Dizzy): it lands when the Recover beats a Pressure, as well as the usual follow-up (a Safe Pressure stops the follow-up, not the status). Narrated as "…turns the blow aside: they're Staggered next round."
+- **Recover specials** (Aegis): taken from the table with Read like any special, and back on the table after use.
+- **Confiscate's floor is checked after the clash:** a player who owed a discard On reveal and then spent cards on a combo never discards below 2.
+
+## Checks (8 November)
+
+- `node tools/test18-roster.mjs`: 55 pass (the three fighters, Twin, the Convert Starter, the block statuses, Recover specials, Confiscate's floor, whole games for every pairing). `test18` (66), `test17` (36), `test16` (96), `test16-warden` (28) still pass.
+- Browser smoke `tools/smoke/browser18.cjs`: 487 of 487 on the built page, with no page errors, now also playing as Vex against Bastion until the Twin prompt and a block status have come up, and as Atlas against Vex. Run with the installed Chrome (Playwright's launcher pointed at `/usr/bin/google-chrome`) and Preact 10.24.3 and htm 3.1.1 source clones.
 
 ## Checks (7 November)
 

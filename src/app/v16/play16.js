@@ -228,7 +228,7 @@ function ClashView({ m, clash, names, prefs }) {
       <${Card16} card=${(x.name === X[x.side].f.sup?.name ? X[x.side].f.sup : X[x.side].f.cards.find(c => c.name === x.name)).src} isSuper=${x.name === X[x.side].f.sup?.name} cls="won small" />
     </div>`)}</div>` : null}
     ${m.phase === 'confiscate' ? html`<p class="followup-ask">${m.mode === 'ai' && m.turn === 0 ? 'You' : names[m.turn]} must discard to Confiscate.</p>` : null}
-    ${m.phase === 'stage' ? html`<p class="followup-ask">${m.mode === 'ai' && m.turn === 0 ? 'You' : names[m.turn]} ${m.G.pending.stage === 'follow' ? 'may follow up with a Counter' : m.G.pending.stage === 'link' ? 'may combo: a Linker, then an Ender' : 'may end the combo with an Ender'}.</p>` : null}
+    ${m.phase === 'stage' ? html`<p class="followup-ask">${m.mode === 'ai' && m.turn === 0 ? 'You' : names[m.turn]} ${m.G.pending.stage === 'follow' ? 'may follow up with a Counter' : m.G.pending.twin ? 'may play the second Twin, then an Ender' : m.G.pending.stage === 'link' ? 'may combo: a Linker, then an Ender' : 'may end the combo with an Ender'}.</p>` : null}
     <ul class="narr16">${lines.map(l => html`<li>${l}</li>`)}</ul>
     ${prefs.odds && last?.mix && m.phase !== 'stage' ? html`<div class="mix">
       <span class="label">The sparring partner's mix this round</span>
@@ -329,15 +329,15 @@ function Action16({ m, setM, side, prefs, names, who }) {
   if (m.phase === 'stage') {
     const p = m.G.pending
     const ok = new Set(p.options)
-    const groups = M.handGroups(X, ok, () => ({ follow: 'Not a Counter', link: 'Not a Linker', end: 'Not an Ender' })[p.stage])
+    const groups = M.handGroups(X, ok, () => (p.twin ? 'Only the second copy can follow' : { follow: 'Not a Counter', link: 'Not a Linker', end: 'Not an Ender' }[p.stage]))
     const sup = X.f.sup
-    const what = { follow: 'Follow up with a Counter', link: 'Combo: play a Linker', end: 'End the combo: play an Ender' }[p.stage]
+    const what = p.twin ? 'Twin: play the second copy as another Linker' : { follow: 'Follow up with a Counter', link: 'Combo: play a Linker', end: 'End the combo: play an Ender' }[p.stage]
     return html`<div class="spread"><h3>${what}</h3>
         <div class="actions">
           <button class="btn" disabled=${sel === null} onClick=${() => setM(M.chooseStage(m, sel))}>Play it</button>
-          <button class="btn ghost" onClick=${() => setM(M.chooseStage(m, null))}>${p.stage === 'link' ? 'Skip the Linker' : p.stage === 'end' ? 'No Ender' : 'No follow-up'}</button>
+          <button class="btn ghost" onClick=${() => setM(M.chooseStage(m, null))}>${p.twin ? 'No second Linker' : p.stage === 'link' ? 'Skip the Linker' : p.stage === 'end' ? 'No Ender' : 'No follow-up'}</button>
         </div></div>
-      <p class="small">${p.stage === 'follow' ? 'Your Guard beat their Pressure: one Counter from your hand lands unopposed. It never starts a combo.' : p.stage === 'link' ? 'Your Starter landed. A Linker lands unopposed, then you may end with an Ender. Skip the Linker to go straight to the Ender.' : 'An Ender lands unopposed and ends the combo: a Convert cashes the whole pile, a status Ender leaves them loaded.'}</p>
+      <p class="small">${p.twin ? 'Twin: a second copy of the Linker you just played lands unopposed too, then you may end with an Ender. It costs you another card.' : p.stage === 'follow' ? 'Your Guard beat their Pressure: one Counter from your hand lands unopposed. It never starts a combo.' : p.stage === 'link' ? 'Your Starter landed. A Linker lands unopposed, then you may end with an Ender. Skip the Linker to go straight to the Ender.' : 'An Ender lands unopposed and ends the combo: a Convert cashes the whole pile, a status Ender leaves them loaded.'}</p>
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
           stamp=${g.ok && X.st.lock?.[g.c.t] ? 'Locked: voided' : null}

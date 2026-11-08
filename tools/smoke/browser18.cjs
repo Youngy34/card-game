@@ -48,7 +48,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
 
   // Play one whole game against the partner (or two players), answering every prompt
   async function playGame(page, { shots = false, maxSteps = 700 } = {}) {
-    const seen = { follow: 0, link: 0, end: 0, discard: 0, confiscate: 0, rider: 0, read: 0, recall: 0, took: 0, pass: 0, rounds: 0, table: 0, timeout: 0, ko: 0, timeNote: 0, knownNote: 0 }
+    const seen = { follow: 0, link: 0, end: 0, discard: 0, confiscate: 0, rider: 0, read: 0, recall: 0, took: 0, pass: 0, rounds: 0, table: 0, timeout: 0, ko: 0, timeNote: 0, knownNote: 0, twin: 0, block: 0 }
     let shotN = 0
     const shot = async name => { if (shots && SHOTS && shotN < 12) { shotN++; await page.screenshot({ path: `${SHOTS}${name}.png`, fullPage: true }) } }
     for (let step = 0; step < maxSteps; step++) {
@@ -59,6 +59,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
       if (t.includes('· in hand') || t.includes('· used')) seen.table++
       if (t.includes('time-out: ') && t.includes('left in your deck')) seen.timeNote++
       if (t.includes('with recall: it')) seen.knownNote++
+      if (t.includes('turns the blow aside')) seen.block++
       const rider = page.locator('.hand-wrap h3', { hasText: /: (read|recall)$/i })
       if (await rider.count()) {
         seen.rider++
@@ -84,6 +85,9 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         const h = (await page.locator('.hand-wrap h3').first().innerText()).toLowerCase()
         const key = h.includes('counter') ? 'follow' : h.includes('linker') ? 'link' : 'end'
         seen[key]++
+        if (h.startsWith('twin')) { seen.twin++; await shot('04-twin'); await page.locator('.hand button.card:not([disabled])').first().click(); await btn(page, 'Play it').click(); continue }
+        const twin = page.locator('.hand button.card:not([disabled])', { hasText: 'Twin Fang' })
+        if (key === 'link' && await twin.count()) { await twin.first().click(); await btn(page, 'Play it').click(); continue }
         if (seen[key] === 1) await shot(`04-${key}`)
         const cards = page.locator('.hand button.card:not([disabled])')
         if (await cards.count() && step % 3) { await cards.first().click(); await btn(page, 'Play it').click() }
@@ -162,6 +166,30 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(all.table > 0, 'the table row shows a special in hand')
   ok(all.timeNote > 0, 'board notes warn of the time-out near the end of the deck')
   console.log('endings: KO', all.ko, '· time-out', all.timeout)
+
+  // the 8 November drafts: you as Vex against Bastion (Twin, Repulse), then you as Atlas against Vex
+  await btn(page, 'New match').click()
+  ok((await body()).includes('30 hp · 26 cards + 2 specials') && (await body()).includes('38 hp · 26 cards + 2 specials'), 'the picker lists Vex (HP 30) and Atlas (HP 38)')
+  ok((await page.locator('.pickers .fighters').nth(0).locator('.fpick', { hasText: 'Bastion' }).count()) === 1, 'the picker lists Bastion')
+  await page.locator('.pickers .fighters').nth(0).locator('.fpick', { hasText: 'Vex' }).click()
+  await page.locator('.pickers .fighters').nth(1).locator('.fpick', { hasText: 'Bastion' }).click()
+  await btn(page, 'Start the match').click()
+  await page.waitForSelector('.hand button.card')
+  ok((await body()).includes('aegis · 1 meter') && (await body()).includes('final bastion · 2 meter'), "Bastion's Guard special and Guard Super are on the table")
+  ok((await page.locator('.hand button.card', { hasText: /Fang|Undercut|Pommel|Crossing|Heel|Recall|Charge|Read/ }).count()) > 0, "you hold Vex's cards")
+  const d = {}
+  for (let g = 0; g < 10 && !(d.twin && d.block); g++) { if (g) await btn(page, 'Rematch').click(); sum(d, await playGame(page, { shots: g === 0 })) }
+  console.log('Vex v Bastion:', JSON.stringify(d))
+  ok(d.twin > 0, 'Twin: the second Twin Fang was offered as another Linker')
+  ok(d.block > 0, "a Repulse, Aegis or Final Bastion block's status was narrated")
+  await btn(page, 'New match').click()
+  await page.locator('.pickers .fighters').nth(0).locator('.fpick', { hasText: 'Atlas' }).click()
+  await page.locator('.pickers .fighters').nth(1).locator('.fpick', { hasText: 'Vex' }).click()
+  await btn(page, 'Start the match').click()
+  await page.waitForSelector('.hand button.card')
+  const a = await playGame(page)
+  console.log('Atlas v Vex:', JSON.stringify(a))
+  ok(a.ko + a.timeout === 1, 'Atlas v Vex plays to the end')
 
   // the log
   await page.getByRole('button', { name: 'Playtest log' }).click()

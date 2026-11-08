@@ -35,6 +35,8 @@ export const ICONS = {
 export const ICON_ORDER = ['starter', 'linker', 'ender', 'counter']
 // Safe (rules v18, 6 Nov): a card property shown with the icons
 export const SAFE_LINE = 'Safe: if a Recover beats this, it gets no follow-up.'
+// Twin (rules v18, 8 Nov, Vex): a Linker that a second copy of itself can follow in a combo
+export const twinLine = name => `Twin: in a combo, a second ${name} can follow this one.`
 
 // Statuses last through the target's next round
 export const STATUSES = {
@@ -67,7 +69,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -99,6 +101,8 @@ export function cardLines16(c, { isSuper = false } = {}) {
   else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")
   else if (t === 'R' && c.noFollow) text.push('No follow-up.')
   else if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
+  if (t === 'R' && c.onBlock) text.push(`If it beats a Pressure: they're ${c.onBlock === 'knockdown' ? 'knocked down' : STATUSES[c.onBlock]?.label} next round${c.parry || c.brace || c.noFollow ? '' : ' (you still follow up)'}.`)
+  if (c.twin) text.push(twinLine(c.name))
   if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
   if (c.now) text.push(Object.entries(c.now).filter(([k, v]) => NOW[k] && v).map(([k, v]) => NOW[k].line(v)).join(' ')
     + (c.orSelect ? ' Or take a special or your Super from the table instead, paying its meter.' : '')
@@ -154,7 +158,8 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.cost !== undefined) validStatus(c.cost, E, 'cost')
   if (c.onLossSelf !== undefined && (!isInt(c.onLossSelf) || c.onLossSelf < 1)) E('onLossSelf must be 1 or more.')
   if (c.meter !== undefined) { if (!isSuper && !c.special) E('Only a Super or a special costs meter.'); else if (!isInt(c.meter) || c.meter < 1 || c.meter > 5) E('meter must be 1–5.') }
-  if (c.special !== undefined && (t === 'N' || t === 'R' || c.special !== true || (!isSuper && c.copies !== 1))) E('special is true, on an attack with 1 copy.')
+  if (c.special !== undefined && (t === 'N' || c.special !== true || (!isSuper && c.copies !== 1))) E('special is true, on an attack or a Recover with 1 copy.')
+  if (c.special && t === 'R' && (c.reveal || c.core)) E('A Recover special has no rider: the core keeps those.')
   if (c.orSelect !== undefined && (t !== 'N' || c.orSelect !== true)) E('orSelect is true, on a neutral card.')
   if (c.orFetch !== undefined && (t !== 'N' || c.orFetch !== true)) E('orFetch is true, on a neutral card.')
   if (c.thisRound !== undefined) {
@@ -190,6 +195,13 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.noFollow !== undefined && (t !== 'R' || c.noFollow !== true || c.parry || c.brace)) E('noFollow is true, on a Recover that is neither a Parry nor a Brace.')
   if (c.core !== undefined && c.core !== true) E('core is true (a card from the shared defence core).')
   if (c.safe !== undefined && (t !== 'P' || c.safe !== true)) E('safe is true, on a Pressure.')
+  if (c.twin !== undefined && (c.twin !== true || !(c.icons || []).includes('linker'))) E('twin is true, on a Linker.')
+  if (c.onBlock !== undefined) {
+    if (t !== 'R') E('onBlock goes on a Recover (what it does if it beats a Pressure).')
+    else if (!['knockdown', 'staggered', 'dizzy'].includes(c.onBlock)) E('onBlock is knockdown, staggered or dizzy.')
+    else if (c.onBlock === 'dizzy' && !isSuper) E('Dizzy only appears on Supers.')
+    if (c.brace) E('A Brace already does something instead of the follow-up: no onBlock as well.')
+  }
   return { errors, warnings }
 }
 
@@ -248,6 +260,7 @@ function norm(c, isSuper) {
     meter: isSuper ? (c.meter ?? 3) : c.special ? (c.meter ?? 1) : 0, special: !!c.special, orSelect: !!c.orSelect, orFetch: !!c.orFetch, thisRound: c.thisRound ?? null, now: c.now ?? null, stays: !!c.stays, prevent: c.prevent ?? null,
     confiscate: c.confiscate ?? 0, discardDownTo: c.discardDownTo ?? null, atClash: c.atClash ?? null, capHand: c.capHand ?? null, endsOn: c.endsOn ?? null,
     reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow, safe: !!c.safe,
+    twin: !!c.twin, onBlock: c.onBlock ?? null,
     sup: isSuper, src: c,
   }
 }
