@@ -4,7 +4,7 @@
 
 **Playable: the v19 test page, https://claude.ai/artifact/TDrkScu7TZrGNnmHyHxhL9** ("Yomi Playtest v19 test (overflow cap)"). **Since the evening of 8 November it plays the overflow version** (the last section: the pile stops at its cap, a Convert cashes only as the clash card, every fighter converted and retuned). The first version described below (cash at the cap) is in git as tag `v19-cashcap` and in `data/v19/cashcap/`. The v18 page is unchanged.
 
-## All Five Fighters (the v19 test set, `data/v19/`)
+## All Five Fighters (the first v19 test set, now `data/v19/cashcap/`)
 
 **Counters moved to Pressures.** Every Convert loses its Counter icon. Gaining it:
 
@@ -187,7 +187,7 @@ Mark: go with the two rules; a Convert converts only as the initial hit, or only
 - **Medians 12–16 rounds; time-outs 1–9%** (Bastion's mirror 8.7%, Bastion v Benchmark 7%, the rest 1–6%).
 - **How games end:** a Convert cash in 44–67% (most in the Warden's and Atlas's mirrors), combos 3–20% (most in Vex's mirror), a full pile's grey at the end of a round 6–13%.
 - **Bots against Hard, Benchmark mirror:** Pressure 20%, Guard 27%, Convert 30%, random 31%, Easy 32%, Medium 43%. **In Bastion's mirror** (200 games, ±7): Pressure 16%, Guard 32% (35.5% under the cash cap), random 33%, Easy and Medium 44.5%: in his mirror, skill counts for less.
-- **Seed 5 (Atlas at HP 35) for comparison:** averages 47–54%; Atlas 54% with Vex 62% against him there, the reason for HP 34.
+- **Seed 5 (Atlas at HP 35) for comparison:** averages 47–54%; Atlas 54%, and 62% against Vex there: the reason for HP 34.
 
 ### The Page
 
