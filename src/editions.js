@@ -42,6 +42,15 @@ export const EDITIONS = {
     labels: {},
     defaultSides: ['benchmark18', 'benchmark18'],
   },
+  // v19 test (8 Nov): v18 with Counters only on Pressures and the grey cap (9)
+  v19: {
+    title: 'Yomi Playtest v19 test', subtitle: 'rules v18 + v19 test: Counters on Pressures, grey cap 9', out: 'yomi-playtest-v19.html', settings: 'v19/settings.json',
+    fighters: [],
+    reference: [['v19', 'benchmark']],
+    drafts: [['v19', 'warden'], ['v19', 'vex'], ['v19', 'bastion'], ['v19', 'atlas']],
+    labels: {},
+    defaultSides: ['benchmark19', 'benchmark19'],
+  },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
     fighters: [],

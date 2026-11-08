@@ -22,7 +22,8 @@
     "specialsReturn": true,
     "timeout": true,
     "knockdownLocks": false,
-    "knockdownSlow": true
+    "knockdownSlow": true,
+    "greyCap": 0
   },
   "ai": {
     "alpha": 0.6,

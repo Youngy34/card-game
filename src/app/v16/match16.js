@@ -294,6 +294,12 @@ function finishClash(m) {
 // ---- 3. draw ----------------------------------------------------------------------
 export function nextRound16(m) {
   let G = startDraw16(m.G)
+  // greyCap (v19 test): say whose pile was cashed at the end of the round
+  const capNote = G.capCash?.some(n => n > 0)
+    ? [0, 1].filter(k => G.capCash[k]).map(k => `End of round ${m.G.round}: ${P(m, k).f.name}'s grey reached the cap of ${G.rules.greyCap} and was cashed for ${G.capCash[k]} damage.`).join(' ')
+    : null
+  m = { ...m, capNote }
+  if (capNote && m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), capCash: G.capCash }] }
   // In initiative order: a person discards before a later partner chooses (both choices are public)
   m = { ...m, G, last: null }
   return nextDiscard(m)
@@ -354,6 +360,15 @@ export const clashSet = (m, side) => new Set(clashOptions16(P(m, side), m.G.rule
 export function boardNotes16(m, side) {
   const X = P(m, side), Y = P(m, 1 - side), name = Y.f.name
   const notes = []
+  // greyCap (v19 test): last round's cap cash, and piles near the cap
+  if (m.capNote) notes.push({ tone: 'bad', text: m.capNote })
+  const cap = m.G.rules.greyCap, gpr = m.G.rules.greyPerRound || 0
+  if (cap) {
+    if (X.pile + gpr >= cap) notes.push({ tone: 'bad', text: `Your grey (${X.pile}) reaches the cap of ${cap} with this round's grey: unless you clear it (a Guard), it's cashed for ${X.pile + gpr} at the end of the round.` })
+    else if (X.pile + gpr + 3 >= cap) notes.push({ tone: 'bad', text: `Your grey is ${X.pile}: a Pressure hit now could take you to the cap of ${cap}, and it's cashed at the end of the round.` })
+    if (Y.pile + gpr >= cap) notes.push({ tone: 'good', text: `${name}'s grey (${Y.pile}) reaches the cap of ${cap} with this round's grey: unless they clear it, it's cashed for ${Y.pile + gpr} at the end of the round.` })
+    else if (Y.pile + gpr + 3 >= cap) notes.push({ tone: 'good', text: `${name}'s grey is ${Y.pile}: one Pressure hit could take them to the cap of ${cap}.` })
+  }
   const unseen = unseenCounts(Y)
   const could = pred => Y.f.cards.reduce((s, c, i) => s + (pred(c) ? unseen[i] : 0), 0)
   const pool = unseenPool(Y).length

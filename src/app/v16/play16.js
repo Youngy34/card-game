@@ -156,7 +156,7 @@ function Hud16({ X, who, m }) {
     </div>
     <${LifeBar} X=${X} />
     <div class="hud-row">
-      <div class="pile"><span class="label">Grey</span><span class="pile-n">${X.pile}</span><${Tokens} n=${X.pile} /></div>
+      <div class="pile" title=${m.G.rules.greyCap ? `Grey cap ${m.G.rules.greyCap}: a pile that reaches it at the end of the round is cashed for its size` : ''}><span class="label">Grey</span><span class="pile-n">${X.pile}${m.G.rules.greyCap ? `/${m.G.rules.greyCap}` : ''}</span><${Tokens} n=${X.pile} />${m.G.rules.greyCap && X.pile + (m.G.rules.greyPerRound || 0) >= m.G.rules.greyCap ? html`<span class="flag status">Cashed at the end of the round</span>` : null}</div>
       <div class="meter" aria-label=${`Meter ${X.meter} of ${m.G.rules.meterMax}`}><span class="label">Meter</span>${Array.from({ length: m.G.rules.meterMax }, (_, i) => html`<span class=${cx('pipm', i < X.meter && 'on')}></span>`)}</div>
     </div>
     <div class="hud-row small">
@@ -190,7 +190,7 @@ function Stage16({ m, names, prefs }) {
     ${m.phase === 'over' ? html`<div class="outcome">
       <span class="ko">${m.timedOut ? 'Time' : res === 0.5 ? 'Draw' : 'K.O.'}</span>
       <b>${m.timedOut ? (res === 0.5 ? 'Time-out: level on HP, a draw' : `Time-out: ${names[res === 1 ? 0 : 1]} wins on HP`) : res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
-      <span>Round ${G.round}.${m.timedOut ? ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.` : ''}</span>
+      <span>Round ${G.round}.${m.timedOut ? ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.` : ''}${m.capNote ? ` ${m.capNote}` : ''}</span>
     </div>` : null}
     <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal', rider: 'Reveal' }[m.phase]}</span>
     ${neutral ? html`<div class="neutral-line">${[1, 0].map(k => html`<div><b>${names[k]}</b> <span>${neutralLine16(neutral[k], m.G[k === 0 ? 'A' : 'B'].f)}</span></div>`)}</div>` : null}
@@ -244,7 +244,7 @@ const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?'
 export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative holder' : R.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel')
 
 // The draw step's grey, in words ('' when off)
-export const greyRule = R => (R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : ''
+export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '') + (R.greyCap ? `; grey cap ${R.greyCap}: a pile that has reached it at the end of the round is cashed for its size` : '')
 
 // The neutral step's options, in words
 export const neutralRule = R => R.merged

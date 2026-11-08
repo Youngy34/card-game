@@ -49,6 +49,7 @@ export function Settings16() {
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${v18 ? null : num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
         ${num('greyPerRound', 0, 3, 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
+        ${v18 ? num('greyCap', 0, 30, 'Grey cap (0 = off)', 'v19 test: at the end of the round, after the grey, a pile that has reached the cap is cashed for its size. 9 on the v19 test page; 0 is v18.') : null}
         ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
         ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${v18 ? null : num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
