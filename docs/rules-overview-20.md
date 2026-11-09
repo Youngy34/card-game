@@ -116,6 +116,8 @@ The deck never reshuffles. When a player draws their last card, the round finish
 - **A cap is offence now** (Design Flag 1): price it with HP.
 - *Unchanged:* type effects are fixed; every Break chips; Guards never deal damage; Dizzy only on Supers; specials are threats, not surprises.
 
+**Card text added 4–8 November, kept:** **Safe** (a Guard that beats it gets no follow-up); **Twin** (a second copy of a Linker can follow it in a combo); a **Break Starter** (Vex's Cross-Up); **a status on a block** (a Guard that beats a Pressure Staggers, knocks down or Dizzies them as well as its follow-up; Safe stops the follow-up, not the status); **Guard specials** (Bastion's Aegis). Confiscate's floor of 2 is checked after the clash. The Warden is a grappler with one combo route, and his grab line (Haul In into Coil) is the only grab combo.
+
 ---
 
 ## The Fighters (v20, first pass)
@@ -189,4 +191,4 @@ Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card li
 - **Code:** branch `v20-heat`. Engine switches `heat` and `specialCost` (in `src/engine/v16/engine.js`: `buyOptions20`, `buy20`, `applyBuy20`, `heatOf`, `ownCap`); the partner's `chooseBuy20` and the bots' `botBuy20` in `ai.js`. The page's words (Pressure, Break, Guard; prices in heat) come from `useHeatWords` in `cards.js`, switched on when the page's settings have `heat`.
 - **Fighters and settings:** `data/v20/`.
 - **Sim:** `node tools/sim18.mjs --edition v20 game benchmark warden -n 300` (any fighter by name or path; `--set specialCost=4`, `--set greyPerRound=2`, `--hp a,b`).
-- **Checks:** `node tools/test20.mjs` (65 pass); `test18` (66), `test18-roster` (114), `test17` (36), `test16` (96), `test16-warden` (28) still pass. Browser: `node tools/smoke/browser20.cjs dist/yomi-playtest-v20.html <vendor dir>` (92 checks: games against the partner and hot seat, the shop, the words, a phone screen).
+- **Checks:** `node tools/test20.mjs` (65 pass); `test18` (66), `test18-roster` (114), `test17` (36), `test16` (96), `test16-warden` (28) still pass. Browser: `node tools/smoke/browser20.cjs dist/yomi-playtest-v20.html <vendor dir>` (about 90–120 checks a run, all passing: games against the partner and in hot seat, the shop, the words, a phone screen).
