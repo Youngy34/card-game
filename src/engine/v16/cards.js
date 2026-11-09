@@ -27,9 +27,9 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 
 // Combo and follow-up icons, printed on attacks
 export const ICONS = {
-  starter: { label: 'Starter', short: 'S', line: 'Starter: if it wins its clash, you may combo (a Linker, then an Ender).' },
-  linker: { label: 'Linker', short: 'L', line: 'Linker: can be played second in a combo.' },
-  ender: { label: 'Ender', short: 'E', line: 'Ender: can end a combo.' },
+  starter: { label: 'Starter', short: 'S', line: 'Starter: if it wins its clash, you may combo: a Linker carries it on, an Ender ends it.' },
+  linker: { label: 'Linker', short: 'L', line: 'Linker: carries a combo on, after the Starter.' },
+  ender: { label: 'Ender', short: 'E', line: 'Ender: ends a combo, straight after the Starter or after a Linker.' },
   counter: { label: 'Counter', short: 'Ct', line: 'Counter: can be the follow-up after your Guard beats a Pressure.' },
 }
 export const ICON_ORDER = ['starter', 'linker', 'ender', 'counter']

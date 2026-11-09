@@ -274,6 +274,28 @@ function continueClash(m) {
   return settleConfiscates(m, 'finish')
 }
 
+// The Linker step also offers the Enders you could play by skipping the Linker (9 Nov, Mark): after a Starter
+// (or a Linker) you play a Linker and carry on, or an Ender and the combo ends. The engine already allowed
+// Starter → Ender; the page used to hide it behind "Skip the Linker".
+export function stageOptions(m) {
+  const p = m.G.pending
+  if (!p || p.stage !== 'link') return { link: p?.options || [], end: [] }
+  const skip = decideClash16(m.G, null)
+  return { link: p.options, end: skip.pending?.stage === 'end' && skip.pending.side === p.side ? skip.pending.options : [] }
+}
+// Play a card at the Linker step: a Linker as usual, or an Ender (the Linker skipped)
+export function chooseStageCard(m, choice) {
+  const p = m.G.pending
+  if (p?.stage === 'link' && choice !== null && !p.options.includes(choice)) return chooseStage(chooseStage(m, null), choice)
+  return chooseStage(m, choice)
+}
+// Stop the combo here: no Linker and no Ender
+export function stopCombo(m) {
+  const side = m.G.pending?.side
+  let x = chooseStage(m, null)
+  if (x.G.pending?.stage === 'end' && x.G.pending.side === side) x = chooseStage(x, null)
+  return x
+}
 export function chooseStage(m, choice) {
   const { stage, side } = m.G.pending
   const G = decideClash16(m.G, choice)

@@ -256,6 +256,26 @@ const setup = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   ok(G.pending?.options?.includes(WIND), 'without the switch, Jab could end on Wind-Up')
 }
 
+// 8e. The page's Linker step offers Enders too (9 Nov, Mark: an Ender can follow the Starter or a Linker, and always ends the combo)
+{
+  const M = await import('../src/app/v16/match16.js')
+  const S19 = read('../data/v19/settings.json')
+  const fj = read('../data/v19/benchmark.json')
+  let m = M.startMatch16({ fighters: [fj, fj], mode: 'ai', settings: { rules: { ...rules, ...S19.rules }, ai: W18 }, seed: 11 })
+  const LB = toFighter16(fj), JAB = id(LB, 'Jab'), SLASH = id(LB, 'Slash'), SWEEP = id(LB, 'Sweep'), WIND = id(LB, 'Wind-Up'), THROW = id(LB, 'Throw'), BIG = id(LB, 'Big Swing'), REC = id(LB, 'Recall')
+  const at = (ha, hb, a, b) => { const G0 = m.G; const G = startClash16({ ...G0, phase: 'clash', A: { ...G0.A, hand: ha, hp: 30 }, B: { ...G0.B, hand: hb, hp: 30, pile: 4 } }, a, b); return { ...m, G, phase: 'stage', decisions: { ...(m.decisions || {}), stages: [] } } }
+  let s = at([JAB, SLASH, SWEEP, WIND], [THROW], JAB, THROW)
+  let o = M.stageOptions(s)
+  ok(s.G.pending?.stage === 'link' && o.link.includes(SLASH) && o.end.includes(SWEEP) && !o.end.includes(WIND), `after Jab: Slash to carry on, or Sweep to finish (not Wind-Up, a Convert) ${JSON.stringify(o)}`)
+  let after = M.chooseStageCard(s, SWEEP)
+  const combo = after.G.clash?.combo || after.last?.clash?.combo || []
+  ok(combo.length === 1 && combo[0].name === 'Sweep' && combo[0].stage === 'end' && after.phase !== 'stage', `Jab → Sweep straight away ends the combo (${JSON.stringify(combo)}, phase ${after.phase})`)
+  after = M.stopCombo(at([JAB, SLASH, SWEEP], [THROW], JAB, THROW))
+  ok(after.phase !== 'stage' && !(after.G.clash?.combo || after.last?.clash?.combo || []).length, '"Stop here" ends it with nothing played')
+  s = at([BIG, WIND, SWEEP], [REC], BIG, REC)
+  ok(s.G.pending?.stage === 'end' && s.G.pending.options.includes(WIND) && !s.G.pending.options.includes(SWEEP), 'Big Swing beats Recall: the Ender step, Wind-Up only (no Convert Linkers to offer)')
+}
+
 // 9. Whole games run for every pairing, inside the time-out
 {
   const F = { vex: V, bastion: B, atlas: A, benchmark: BM }

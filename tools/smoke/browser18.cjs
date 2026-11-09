@@ -98,6 +98,14 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         const twin = page.locator('.hand button.card:not([disabled])', { hasText: 'Twin Fang' })
         if (key === 'link' && await twin.count()) { await twin.first().click(); await btn(page, 'Play it').click(); continue }
         if (seen[key] === 1) await shot(`04-${key}`)
+        // 9 Nov: the Linker step offers Enders too (an Ender here skips the Linker and ends the combo)
+        if (key === 'link') {
+          const enders = page.locator('.hand button.card:not([disabled])').filter({ has: page.locator('.icon.ender') }).filter({ hasNot: page.locator('.icon.linker') })
+          if (await enders.count()) {
+            seen.enderAtLink = (seen.enderAtLink || 0) + 1
+            if (step % 2) { await enders.first().click(); await btn(page, 'Play it').click(); seen.enderPlayed = (seen.enderPlayed || 0) + 1; continue }
+          }
+        }
         const cards = page.locator('.hand button.card:not([disabled])')
         if (await cards.count() && step % 3) { await cards.first().click(); await btn(page, 'Play it').click() }
         else await page.locator('.hand-wrap .actions .btn.ghost').first().click()
@@ -183,7 +191,8 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(all.table > 0, 'the table row shows a special in hand')
   ok(all.timeNote > 0, 'board notes warn of the time-out near the end of the deck')
   console.log('endings: KO', all.ko, '· time-out', all.timeout, '· cap notes', all.cap || 0)
-  console.log('full-pile notes', all.full || 0)
+  console.log('full-pile notes', all.full || 0, '· Enders offered at the Linker step', all.enderAtLink || 0, '· played there', all.enderPlayed || 0)
+  ok((all.enderAtLink || 0) > 0, 'the Linker step offers an Ender (Starter straight to Ender)')
   if (OVF) ok((all.full || 0) > 0, 'a full pile was narrated (grey lost as HP)')
   else if (CAP) ok((all.cap || 0) > 0, 'a cap cash was narrated (board note or game-over line)')
 
