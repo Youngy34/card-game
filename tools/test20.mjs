@@ -104,9 +104,16 @@ const base = (fa, fb, patchA = {}, patchB = {}, init = 0) => {
   let G = base(BM, BM, { pile: 0, used: [] }, { pile: 0, used: [] }, 0)
   G = startDraw16({ ...G, phase: 'draw', clash: null })
   ok(G.phase !== 'buy', `1 heat each is too little to buy: no shop (${G.phase})`)
-  let H = base(BM, BM, { pile: 9, used: [], hp: 1 }, { pile: 2, used: [] }, 0)
-  H = startDraw16({ ...H, phase: 'draw', clash: null })
-  ok(H.phase === 'over' && H.result === 0, `the round's heat past side 1's cap KOs side 0: no shop (${H.phase}, ${H.result})`)
+  // the first v20 page (roundHeatCaps off): the round's heat past the cap lands as damage, and a KO then closes the shop
+  let H = newGame16(BM, BM, { ...rules, roundHeatCaps: false }, 5)
+  H = { ...H, init: 0, A: { ...H.A, pile: 9, used: [], hp: 1 }, B: { ...H.B, pile: 2, used: [] }, phase: 'draw', clash: null }
+  H = startDraw16(H)
+  ok(H.phase === 'over' && H.result === 0, `round heat as damage: past side 1's cap it KOs side 0, and the shop doesn't open (${H.phase}, ${H.result})`)
+  // as written (9 Nov, Mark): the round's heat stops at the cap; at max it does nothing
+  let K = base(BM, BM, { pile: 9, used: [], hp: 1 }, { pile: 2, used: [] }, 0)
+  ok(rules.roundHeatCaps === true, 'v20 settings: the round\'s heat stops at the cap')
+  K = startDraw16({ ...K, phase: 'draw', clash: null })
+  ok(K.A.hp === 1 && heatOf(K, 1) === 9 && K.result === null, `at max, the round's heat does nothing (HP ${K.A.hp}, heat ${heatOf(K, 1)})`)
 }
 // 8. A special leaves your hand back to the table; the Super is used once
 {

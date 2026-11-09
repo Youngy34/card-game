@@ -61,6 +61,11 @@ export function Settings16() {
           <option value="0">Reusable: meter is the only gate (as written)</option>
           <option value="1">Once per game</option>
         </select></label>`}
+      ${d.rules.heat ? html`<label class="field"><span>At max heat, the round's heat</span>
+        <select id="s-roundheat" value=${d.rules.roundHeatCaps ? 'stop' : 'damage'} onChange=${e => rule({ roundHeatCaps: e.target.value === 'stop' })}>
+          <option value="stop">Stops at the cap: only your Pressures land in full (v20, 9 Nov)</option>
+          <option value="damage">Lands on the opponent as damage (the first v20 page)</option>
+        </select></label>` : null}
       ${v18 && d.rules.greyCap && !d.rules.heat ? html`<label class="field"><span>At the cap</span>
         <select id="s-overflow" value=${d.rules.greyOverflow ? 'overflow' : 'cash'} onChange=${e => rule({ greyOverflow: e.target.value === 'overflow' })}>
           <option value="overflow">Overflow: the pile stops at the cap, and grey beyond it is lost as HP at once (v19)</option>

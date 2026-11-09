@@ -1,9 +1,9 @@
 # Rules Overview — v20 (heat)
 
-*Drafted 9 November 2026 from Mark's decisions that afternoon. This is v19's tested rules, adopted, plus **heat**: the tokens are your fighter powering up, not a burden on the defender. v18 and the v19 test page stay playable on their own pages.*
+*Drafted 9 November 2026 from Mark's decisions that afternoon; revised that evening (the round's heat stops at the cap, every HP lower). This is v19's tested rules, adopted, plus **heat**: the tokens are your fighter powering up, not a burden on the defender. v18 and the v19 test page stay playable on their own pages.*
 
 - ***v19, adopted:*** *Counters only on Pressures; each fighter's own cap with overflow; a Break (Convert) cashes only as the clash card; two combo lines.*
-- ***Heat:*** *the tokens your winning Pressures build are yours. They stop at your own cap; past it, every point you gain lands as straight damage. A Break that beats a Guard spends all of it. A Guard that beats your Pressure douses it.*
+- ***Heat:*** *the tokens your winning Pressures build are yours. They stop at your own cap; past it, every point your Pressures build lands as straight damage. A Break that beats a Guard spends all of it. A Guard that beats your Pressure douses it.*
 - ***No meter:*** *specials cost 3 heat and the Super your whole cap, bought at the end of a round. Read just draws; Charge leaves the core.*
 - ***New names:*** *Pressure, Break, Guard.*
 
@@ -20,6 +20,7 @@
 - **The core is six: Recall ×3 and Read ×3** (Charge gone), and each deck gains one of its own cards to stay at 26.
 - **Buying happens at the end of the round, the initiative holder first.** Read just draws.
 - **Prices: a special 3 heat; the Super your whole cap** (so only at max heat).
+- **(Evening, after playing the page) The round's heat stops at the cap.** Being at max already pays (every Pressure lands in full, the biggest cash, the Super), so it doesn't need to burn them for 1 a round too. That burn was only speeding games up; every HP is about 3 lower instead.
 
 **Claude's calls (to confirm):**
 
@@ -55,7 +56,7 @@
 
 1. **Discard the cards you used.** A special goes back to the table; a played Super is removed from the game.
 2. **Draw 1.**
-3. **Everyone gains 1 heat.** At your cap, it lands on your opponent as 1 damage instead.
+3. **Everyone gains 1 heat,** up to their cap (at max it does nothing).
 4. **The shop,** the holder first (below).
 5. **Discard down to your hand limit** (8), the holder first.
 6. Last round's statuses end. **Pass the initiative token.**
@@ -65,12 +66,12 @@
 
 - **Your heat is yours:** it sits on your side, counted against your own cap, printed on your fighter.
 - **You gain it** when your Pressure wins: its Build, as the clash card, a follow-up, a Linker or an Ender. And 1 at the end of every round.
-- **Your cap:** your heat can't go above it. **Heat you'd gain past your cap lands on your opponent as straight damage, at once.** At max, every Pressure that lands is full damage, and the round's heat burns them for 1.
+- **Your cap:** your heat can't go above it. **Heat your Pressures would build past your cap lands on your opponent as straight damage, at once.** At max, every Pressure that lands is full damage. The round's 1 heat just stops at the cap.
 - **You spend it** when your **Break wins the clash:** all your heat as damage, plus its chip. A Break played as a follow-up, Linker or Ender just deals its chip.
 - **You lose it** when **their Guard beats your Pressure:** they douse all your heat (and may follow up). Two Guards douse each other's.
 - **Or you spend it at the shop** (below). Heat spent there is heat a Break can't cash.
 
-*In the engine, your heat is stored as the pile on your opponent, so the clash resolves exactly as v19 did; only whose cap applies, and the shop, are new (`heat` in `data/v20/settings.json`).*
+*In the engine, your heat is stored as the pile on your opponent, so the clash resolves exactly as v19 did; only whose cap applies, the round's heat stopping at it, and the shop are new (`heat` and `roundHeatCaps` in `data/v20/settings.json`).*
 
 ## The Shop (end of round)
 
@@ -122,38 +123,39 @@ The deck never reshuffles. When a player draws their last card, the round finish
 
 ## The Fighters (v20, first pass)
 
-| Fighter | HP (v19) | Cap (v19) | Extra card (to reach 26) | Other |
+| Fighter | HP (first pass; v19) | Cap (v19) | Extra card (to reach 26) | Other |
 |---|---|---|---|---|
-| **Benchmark** | 26 (32) | 9 (9) | Wind-Up ×3 (the Break line had 3 Starters to 2 Enders) | — |
-| **The Warden** | 27 (31) | 8 (9) | Haul In ×2 (his grab line had one Starter) | — |
-| **Vex** | 22 (32) | 8 (7) | Crossing Slash ×3 | **Hundred Fang knocks down** (was Dizzy) |
-| **Bastion** | 26 (36) | 8 (6) | Sonic Cutter ×3 (a Safe Counter, for a counter-puncher) | — |
-| **Atlas** | 32 (34) | 10 (12) | Shoulder Check ×3 (the Break line had 2 Starters to 3 Enders) | — |
+| **Benchmark** | **23** (26; 32) | 9 (9) | Wind-Up ×3 (the Break line had 3 Starters to 2 Enders) | — |
+| **The Warden** | **24** (27; 31) | 8 (9) | Haul In ×2 (his grab line had one Starter) | — |
+| **Vex** | **20** (22; 32) | 8 (7) | Crossing Slash ×3 | **Hundred Fang knocks down** (was Dizzy) |
+| **Bastion** | **22** (26; 36) | 8 (6) | Sonic Cutter ×3 (a Safe Counter, for a counter-puncher) | — |
+| **Atlas** | **28** (32; 34) | 10 (12) | Shoulder Check ×3 (the Break line had 2 Starters to 3 Enders) | — |
 
 Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card lists: `data/v20/`, and the Decks tab on the page.
 
-**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang knocking down instead of Dizzy fixed both (with Dizzy, at 7 heat, Vex's Super was worth about 11 points of her win rate: 63% against the Benchmark with it, 52% without).
+**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang knocking down instead of Dizzy fixed both (the first pass). Dropping the round's heat damage in the evening took about 3 HP a game out, so every HP came down again: 2 or 3 for most, 4 for Bastion and Atlas (with Dizzy, at 7 heat, Vex's Super was worth about 11 points of her win rate: 63% against the Benchmark with it, 52% without).
 
-## Sim Check (9 November, the sparring partner on Hard against itself)
+## Sim Check (9 November, evening: the sparring partner on Hard against itself)
 
 **Every matchup** (two seeds, 400 games a matchup; row's win rate):
 
 | | Benchmark | Warden | Vex | Bastion | Atlas | **Average** |
 |---|---|---|---|---|---|---|
-| **Benchmark** | | 49% | 53% | 47% | 47% | **49%** |
-| **The Warden** | 51% | | 49% | 45% | 54% | **50%** |
-| **Vex** | 47% | 52% | | 54% | 53% | **51%** |
-| **Bastion** | 53% | 55% | 46% | | 49% | **51%** |
-| **Atlas** | 53% | 46% | 47% | 51% | | **49%** |
+| **Benchmark** | | 47% | 51% | 54% | 47% | **50%** |
+| **The Warden** | 53% | | 46% | 49% | 57% | **51%** |
+| **Vex** | 49% | 54% | | 55% | 51% | **52%** |
+| **Bastion** | 46% | 52% | 45% | | 49% | **48%** |
+| **Atlas** | 53% | 43% | 49% | 51% | | **49%** |
 
-- **Every fighter 49–51%, every matchup 45–55%.**
-- **Time-outs 7%** overall (3–8% a matchup, except **Atlas–Warden 14%**). Median game 11–13 rounds.
-- **The shop:** each fighter buys about 2–2.5 specials a game, and plays specials about 1.3 times a game (v18: 0.6–0.8). **Supers are bought 0.06–0.18 times a game per fighter** (Vex most, the Benchmark least) **and played 0.01–0.15** (v18: 0.01–0.02 played): most that are bought sit in hand. Only Vex's Hundred Fang comes out often.
-- **Heat past the cap** deals about 3 HP a game at the end of rounds, and ends about 1 game in 10.
+- **Every fighter 48–52%; every matchup 45–55% but one: the Warden beats Atlas 57%.**
+- **Time-outs 5%** overall (2–7% a matchup, except **Atlas–Warden 10%**). Median game 11–13 rounds.
+- **The shop:** each fighter buys 2–2.7 specials a game and plays specials 1.1–1.9 times a game (v18: 0.6–0.8). **Supers are bought 0.05–0.2 times a game per fighter and played 0.02–0.16** (v18: 0.01–0.02 played). Only Vex's Hundred Fang comes out often; most other Supers that are bought sit in hand.
 
-**The Benchmark mirror** (300 games): 52%, median 11, time-outs 6%. Games end: Break cash 46%, chip 15%, combo 12%, the round's heat at max 10%, a combo ending in a Break 7%. Combos 39% of rounds; a Guard beats a Pressure in 23% of rounds and follows up 45% of the time.
+**The Benchmark mirror** (300 games): 49%, median 11, time-outs 2%. Games end: Break cash 51%, chip 17%, combo 17%, a combo ending in a Break 8%.
 
-**Mindless bots against Hard** (Benchmark mirror, 300 games, ±5): **Pressure every round 6.5%** (v19 24%), **Guard every round 15%** (v19 29%), random 22% (v19 32%). Easy 27%, Medium 45%. The bots shop greedily (the first special they can pay for), which spends heat they'd otherwise cash, so read the Pressure bot's number as partly the shopping.
+**Mindless bots against Hard** (Benchmark mirror, 300 games, ±5): **Pressure every round 13%** (v19 24%), **Guard every round 17%** (v19 29%), random 23% (v19 32%). Easy 29%, Medium 45%. The bots shop greedily (the first special they can pay for), which spends heat they'd otherwise cash, so read the Pressure bot's number as partly the shopping.
+
+**The round's heat at max** (the first v20 page burned the opponent for 1 a round): it dealt about 3 HP a game and was the finishing blow in about 1 game in 12. It didn't balance the fighters against each other: without it, at the same HP, every fighter still averaged 48–52%. It only kept games short: without it, time-outs went from 7% to 13%; with every HP 2 lower, 9%; with the HP above, 5%.
 
 **Tested and not adopted:**
 
@@ -161,14 +163,15 @@ Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card li
 |---|---|
 | No shop (specials unaffordable) | Time-outs 7% against 12% with it: the shop is a heat sink |
 | Specials 4 or 5 heat | Fewer bought (3.9, 3.4 a game), time-outs no better |
+| The round's heat as 1 damage at max (the first v20 page) | Kept games short, not fighters balanced (Sim Check); dropped in the evening |
 | **2 heat each round** (on the first-pass decks) | **Time-outs 0–2%** even in Atlas–Warden, but games shorter (median 9–11) and heat at max ends 14–17% of games |
 | The Benchmark's cap 5, 7, 9, 11, 13 against cap 9 | 62%, 55%, 44%, 43%, 46% (150 games, ±8): below 9 each point is worth a few points of win rate; above 9, nearly nothing |
 
 ## Design Flags
 
-1. **A cap is offence now, and HP pays for it.** Vex and Bastion are 10 HP lower than on v19; Bastion no longer has more HP than the Benchmark (Mark: higher HP suits him). Above 9 a cap buys almost nothing, so a high cap can't be traded for HP. To give Bastion his HP back, his deck has to deal less damage, or a high cap needs a payoff of its own.
+1. **A cap is offence now, and HP pays for it.** Vex is 12 HP lower than on v19 and Bastion 14; Bastion now has less HP than the Benchmark (Mark: higher HP suits him). Above 9 a cap buys almost nothing, so a high cap can't be traded for HP. To give Bastion his HP back, his deck has to deal less damage, or a high cap needs a payoff of its own.
 2. **Supers are still rare, except Vex's.** Buying one empties a full bar, worth a whole cash, and the partner undervalues the Super; once bought, most sit in hand unplayed. Levers: the Super needs max heat but costs less (say half your cap), or it spends your heat when played rather than when bought.
-3. **Atlas–Warden times out 14%** (two slow fighters). 2 heat a round fixes it but shortens every game.
+3. **Atlas–Warden times out 10%** (two slow fighters), and the Warden wins it 57%. 2 heat a round (up to the cap) would speed every game up.
 4. **The shop drains damage:** heat bought into specials isn't cashed. That's the intended tradeoff, but it's why HP had to fall.
 5. **Bigger hands:** about 6.8 cards at the clash (v18: 5.8), since bought specials join the hand. Hand size is the dial for hidden information; watch whether reads feel thinner.
 6. **Guard spam looks solved in the sim** (15%), but the partner still doesn't learn habits. Check at the table.
@@ -189,6 +192,6 @@ Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card li
 
 - **Page:** https://claude.ai/artifact/9U6NPwg6kUEtYrceFVfqTN, built with `node tools/build-artifact.mjs --edition v20`.
 - **Code:** branch `v20-heat`. Engine switches `heat` and `specialCost` (in `src/engine/v16/engine.js`: `buyOptions20`, `buy20`, `applyBuy20`, `heatOf`, `ownCap`); the partner's `chooseBuy20` and the bots' `botBuy20` in `ai.js`. The page's words (Pressure, Break, Guard; prices in heat) come from `useHeatWords` in `cards.js`, switched on when the page's settings have `heat`.
-- **Fighters and settings:** `data/v20/`.
+- **Fighters and settings:** `data/v20/` (`roundHeatCaps: true`; on the page, Settings: **At max heat, the round's heat**).
 - **Sim:** `node tools/sim18.mjs --edition v20 game benchmark warden -n 300` (any fighter by name or path; `--set specialCost=4`, `--set greyPerRound=2`, `--hp a,b`).
-- **Checks:** `node tools/test20.mjs` (65 pass); `test18` (66), `test18-roster` (114), `test17` (36), `test16` (96), `test16-warden` (28) still pass. Browser: `node tools/smoke/browser20.cjs dist/yomi-playtest-v20.html <vendor dir>` (about 90–120 checks a run, all passing: games against the partner and in hot seat, the shop, the words, a phone screen).
+- **Checks:** `node tools/test20.mjs` (67 pass); `test18` (66), `test18-roster` (114), `test17` (36), `test16` (96), `test16-warden` (28) still pass. Browser: `node tools/smoke/browser20.cjs dist/yomi-playtest-v20.html <vendor dir>` (about 90–120 checks a run, all passing: games against the partner and in hot seat, the shop, the words, a phone screen).

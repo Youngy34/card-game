@@ -424,9 +424,9 @@ export function boardNotes16(m, side) {
     // rules v20: your heat is the pile on them, up to your own cap; theirs is the pile on you
     const mine = Y.pile, theirs = X.pile, myCap = ownCap(X, m.G.rules), theirCap = ownCap(Y, m.G.rules)
     if (m.boughtNote?.[1 - side]) notes.push({ tone: 'bad', text: `${name} bought ${m.boughtNote[1 - side].name} for ${m.boughtNote[1 - side].cost} heat at the end of last round${m.boughtNote[1 - side].sup ? ': their Super is in their hand' : ''}.` })
-    if (mine >= myCap) notes.push({ tone: 'good', text: `You're at max heat (${mine} of ${myCap}): heat you gain now lands on ${name} as damage, the round's 1 too. A Break that beats their Guard spends all ${mine}; a Guard that beats your Pressure douses it.` })
+    if (mine >= myCap) notes.push({ tone: 'good', text: `You're at max heat (${mine} of ${myCap}): ${m.G.rules.roundHeatCaps ? `every Pressure that lands now hits ${name} in full: its Build is straight damage.` : `heat you gain now lands on ${name} as damage, the round's 1 too.`} A Break that beats their Guard spends all ${mine}; a Guard that beats your Pressure douses it.` })
     else if (mine + 3 >= myCap) notes.push({ tone: 'good', text: `Your heat is ${mine} of ${myCap}: one Pressure hit could take you to max.` })
-    if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is at max heat (${theirs} of ${theirCap}): heat they gain lands on you as damage. A Break of theirs that beats your Guard spends all ${theirs}; your Guard beating their Pressure douses it.` })
+    if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is at max heat (${theirs} of ${theirCap}): ${m.G.rules.roundHeatCaps ? 'every Pressure of theirs that lands now hits you in full.' : 'heat they gain lands on you as damage.'} A Break of theirs that beats your Guard spends all ${theirs}; your Guard beating their Pressure douses it.` })
     else if (theirs + 3 >= theirCap) notes.push({ tone: 'bad', text: `${name}'s heat is ${theirs} of ${theirCap}: one Pressure hit could take them to max.` })
   } else {
   const gpr = m.G.rules.greyPerRound || 0, cX = capOf(X, m.G.rules), cY = capOf(Y, m.G.rules)

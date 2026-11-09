@@ -28,7 +28,8 @@
     "comboSameType": true,
     "heat": true,
     "specialCost": 3,
-    "meterMax": 3
+    "meterMax": 3,
+    "roundHeatCaps": true
   },
   "ai": {
     "alpha": 0.6,

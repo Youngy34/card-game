@@ -55,7 +55,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
       if (await page.locator('.overlay').count()) { seen.pass++; await page.locator('.overlay .btn').click(); continue }
       if (t.includes('time-out:') && await btn(page, 'Rematch').count()) { seen.timeout++; await shot('09-over'); return seen }
       if (t.includes('k.o.') || t.includes('round limit reached')) { seen.ko++; await shot('09-over'); return seen }
-      if (t.includes('max: more heat lands as damage')) seen.maxFlag++
+      if (t.includes('max: your pressures land in full') || t.includes('max: more heat lands as damage')) seen.maxFlag++
       if (t.includes("you're at max heat") || t.includes('is at max heat (')) seen.maxNote++
       const narr = (await page.locator('.narr16').allInnerTexts()).join(' ').toLowerCase()
       if (narr.includes(' heat')) seen.heatLines++
@@ -157,6 +157,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const S = await body()
   ok(S.includes('a special costs (heat)'), 'Settings: the special price in heat')
   ok(!S.includes('meter track maximum'), 'Settings: no meter track')
+  ok(S.includes("at max heat, the round's heat") && S.includes('stops at the cap: only your pressures land in full'), "Settings: the round's heat stops at the cap, as written")
   await page.getByRole('button', { name: 'Play', exact: true }).click()
   await page.waitForTimeout(200)
 
