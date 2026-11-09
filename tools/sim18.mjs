@@ -28,9 +28,10 @@ const json = flag('--json')
 const hpSet = opt('--hp', null)
 const brace = opt('--brace', null)
 const sets = opts('--set'), aiSets = opts('--ai')
+const editionArg = opt('--edition', null)
 const mode = args[0]
 const v17 = mode === 'v17'
-const edition = v17 ? 'v17' : 'v18'
+const edition = editionArg || (v17 ? 'v17' : 'v18')      // --edition v20: data/v20 fighters and settings (heat)
 
 const settings = JSON.parse(fs.readFileSync(`${root}/data/${edition}/settings.json`, 'utf8'))
 const rules = { ...settings.rules }
@@ -65,7 +66,8 @@ function summarise18(games, F) {
   const specials = F.map(f => new Set(f.cards.filter(c => c.special).map(c => c.name)))
   const X = { timeouts: 0, timeoutWins: 0, koGames: 0, koWins: 0, timeoutMargin: [], deckEnd: [[], []], loserDeckAtKO: [], reshuffled: 0,
     meter: [0, 0], wasted: [0, 0], reads: [{ draw: 0, special: 0, super: 0 }, { draw: 0, special: 0, super: 0 }], recalls: [0, 0],
-    specialsPlayed: [0, 0], supersPlayed: [0, 0], braceReflect: [0, 0], parryFollow: [0, 0], starved: [0, 0], clashes: [0, 0], capCash: [0, 0], capHP: [0, 0], capSpill: [0, 0], capKO: 0 }
+    specialsPlayed: [0, 0], supersPlayed: [0, 0], braceReflect: [0, 0], parryFollow: [0, 0], starved: [0, 0], clashes: [0, 0], capCash: [0, 0], capHP: [0, 0], capSpill: [0, 0], capKO: 0,
+    bought: [{ special: 0, super: 0, heat: 0 }, { special: 0, super: 0, heat: 0 }], maxHeatRounds: [0, 0], rounds: 0 }
   for (const g of games) {
     if (g.timedOut) { X.timeouts++; X.timeoutWins += g.result; X.timeoutMargin.push(Math.abs(g.final[0].hp - g.final[1].hp)) } else { X.koGames++; X.koWins += g.result }
     for (const k of [0, 1]) X.deckEnd[k].push(g.final[k].deck)
@@ -75,6 +77,7 @@ function summarise18(games, F) {
     for (const r of g.rounds) {
       for (const k of [0, 1]) if (r.capCash?.[k]) { X.capCash[k]++; X.capHP[k] += r.capCash[k] }
       for (const k of [0, 1]) X.capSpill[k] += r.capSpill?.[k] || 0
+      for (const k of [0, 1]) if (r.bought?.[k]) { const b = r.bought[k]; X.bought[k][b.sup ? 'super' : 'special']++; X.bought[k].heat += b.cost }
       for (const k of [0, 1]) {
         const names = [r.cards[k], ...(r.follow?.side === k ? [r.follow.name] : []), ...r.combo.filter(c => c.side === k).map(c => c.name)].filter(Boolean)
         X.specialsPlayed[k] += names.filter(nm => specials[k].has(nm)).length
@@ -116,7 +119,8 @@ function report(r) {
   console.log(`deck left at the end: ${avg(X.deckEnd[0]).toFixed(1)} / ${avg(X.deckEnd[1]).toFixed(1)} · loser's deck at the KO: ${bucket(X.loserDeckAtKO)}`)
   console.log(`outcomes: ${share(r.outcomes, Rn)} · speed ties to the holder ${pct((r.tieByInit[0] + r.tieByInit[1]) / Rn)}`)
   console.log(`combos ${pct(r.combos / Rn)} of rounds, ${(r.comboLen / Math.max(r.combos, 1)).toFixed(2)} cards, ${(r.comboDmg / Math.max(r.combos, 1)).toFixed(1)} HP · Guard beats Pressure ${pct(r.guardWins / Rn)}, followed up ${pct(r.follows / Math.max(r.guardWins, 1))} (${(r.followDmg / Math.max(r.follows, 1)).toFixed(1)} HP)`)
-  if (rules.greyCap && rules.greyOverflow) console.log(`grey cap ${rules.greyCap} (overflow${rules.cashOnWin ? ', cash on a win only' : ''}): the round's grey spilled ${per(X.capSpill[0] + X.capSpill[1])} HP a game · games ended at the end of a round by it ${pct(X.capKO / r.games)}`)
+  if (rules.heat) console.log(`heat: overflow (heat past the holder's own cap) dealt ${per(X.capSpill[0] + X.capSpill[1])} HP a game at the end of rounds · games ended at the end of a round by it ${pct(X.capKO / r.games)}`)
+  else if (rules.greyCap && rules.greyOverflow) console.log(`grey cap ${rules.greyCap} (overflow${rules.cashOnWin ? ', cash on a win only' : ''}): the round's grey spilled ${per(X.capSpill[0] + X.capSpill[1])} HP a game · games ended at the end of a round by it ${pct(X.capKO / r.games)}`)
   else if (rules.greyCap) console.log(`grey cap ${rules.greyCap}: cashed ${per(X.capCash[0] + X.capCash[1])} times a game (${((X.capHP[0] + X.capHP[1]) / Math.max(1, X.capCash[0] + X.capCash[1])).toFixed(1)} HP each) · games ended by it ${pct(X.capKO / r.games)}`)
   console.log(`statuses a game: ${Object.entries(r.statuses).map(([k, v]) => `${k} ${(v / r.games).toFixed(2)}`).join(', ') || 'none'}`)
   for (const k of [0, 1]) {
@@ -125,7 +129,8 @@ function report(r) {
     console.log(`side ${k} (${r.fighters[k]}): types ${share(r.types[k], T)} · Supers played ${per(X.supersPlayed[k])} (as the clash card ${per(r.supers[k])}) · specials played ${per(X.specialsPlayed[k])} · confiscated ${per(r.conf[k])}`)
     console.log(`        plays ${share(r.plays[k], T)}`)
     console.log(`        hand at the clash ${r.handClashAvg[k].toFixed(2)} [${dist}] · starved (≤2) ${pct(X.starved[k] / Math.max(1, X.clashes[k]))}`)
-    if (!v17) console.log(`        meter gained ${per(X.meter[k], 1)} (wasted at the cap ${per(X.wasted[k], 1)}) · Read: drew ${per(X.reads[k].draw)}, took a special ${per(X.reads[k].special)}, took the Super ${per(X.reads[k].super)} · Recalls ${per(X.recalls[k])} · Brace reflects ${per(X.braceReflect[k])} · Parry follow-ups ${per(X.parryFollow[k])}`)
+    if (rules.heat) console.log(`        heat spent at the table ${per(X.bought[k].heat, 1)} a game: specials bought ${per(X.bought[k].special)}, the Super bought ${per(X.bought[k].super)} · Read drew ${per(X.reads[k].draw)} · Recalls ${per(X.recalls[k])}`)
+    else if (!v17) console.log(`        meter gained ${per(X.meter[k], 1)} (wasted at the cap ${per(X.wasted[k], 1)}) · Read: drew ${per(X.reads[k].draw)}, took a special ${per(X.reads[k].special)}, took the Super ${per(X.reads[k].super)} · Recalls ${per(X.recalls[k])} · Brace reflects ${per(X.braceReflect[k])} · Parry follow-ups ${per(X.parryFollow[k])}`)
     else console.log(`        neutral: ${share(r.neutral[k], Rn)} · taken: ${Object.entries(r.took[k]).map(([nm, v]) => `${nm} ${per(v)}`).join(', ')} · fetched ${per(r.fetched[k])}`)
   }
 }

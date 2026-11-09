@@ -1,7 +1,7 @@
 // Plain-English lines for a v16 round: the neutral actions, the clash's outcome,
 // and what each card did.
 
-import { LABEL16, STATUSES, LOCKABLE } from '../../engine/v16/cards.js'
+import { LABEL16, STATUSES, LOCKABLE, TEXT16 } from '../../engine/v16/cards.js'
 
 export function neutralLine16(a, f) {
   if (!a) return 'did nothing'
@@ -30,7 +30,7 @@ export function outcomeTitle16(c, names) {
     case 'armor': return { title: `${c.names[c.winner]} armors through ${c.names[1 - c.winner]}`, sub: 'Armor: this round, a Convert also beats a Pressure.' }
     case 'mixup': return { title: `${c.names[c.winner]} mixes up ${c.names[1 - c.winner]}`, sub: 'Mix-Up: this round, a Pressure also beats a Guard.' }
     case 'unopposed': return { title: `${c.names[c.winner]} lands`, sub: c.voided?.[1 - c.winner] ? `${names[1 - c.winner]}'s ${c.names[1 - c.winner]} was voided (Locked), so it lands unopposed.` : `${names[1 - c.winner]} played nothing, so it lands unopposed.` }
-    case 'guards': return { title: 'Both Guard', sub: 'Two Guards: each player clears their own pile.' }
+    case 'guards': return { title: 'Both Guard', sub: TEXT16.heat ? 'Two Guards: each douses the other\'s heat.' : 'Two Guards: each player clears their own pile.' }
     case 'cancel': return { title: `${a} and ${b} tie`, sub: 'Same type, same speed: the tie cancels and neither lands.' }
     case 'tie': return { title: `${c.names[c.winner]} wins the tie`, sub: `Same speed: the tie goes to ${names[c.winner]}.` }
     case 'speed': {
@@ -41,7 +41,7 @@ export function outcomeTitle16(c, names) {
     }
     default: {
       const w = c.winner, wt = c.types[w], lt = c.types[1 - w]
-      const why = { PC: 'a quick strike beats a wind-up', CR: 'a Convert breaks a Guard', RP: 'a Guard stops a strike' }[wt + lt]
+      const why = { PC: 'a quick strike beats a wind-up', CR: TEXT16.heat ? 'a heavy or a grab smashes through a Guard' : 'a Convert breaks a Guard', RP: 'a Guard stops a strike' }[wt + lt]
       return { title: `${c.names[w]} beats ${c.names[1 - w]}`, sub: `${LABEL16[wt]} beats ${LABEL16[lt]}: ${why}.` }
     }
   }
@@ -52,13 +52,18 @@ export function narrate16(ev, names) {
   const how = { clash: '', follow: 'Follow-up: ', link: 'Linker: ', end: 'Ender: ' }
   for (const e of ev) {
     const who = names[e.side], them = names[1 - e.side]
-    if (e.kind === 'hit') {
+    if (e.kind === 'hit' && TEXT16.heat) {
+      // rules v20: the pile on them is the hitter's heat
+      if (e.t === 'P') out.push(`${how[e.how]}${e.name}: ${who} builds ${e.build} heat${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? ` ${who} is at max heat: ${e.spill} more lands on ${them} as damage.` : ''}`)
+      else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} smashes through: ${e.cash ? `${who} spends ${e.cash} heat` : `${who} has no heat to spend`} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
+      else if (e.t === 'R') out.push(`${who}'s ${e.name} douses ${e.cleared ? `${them}'s ${e.cleared} heat` : `nothing: ${them} had no heat`}${e.chip ? ` and chips ${e.chip}` : ''}.`)
+    } else if (e.kind === 'hit') {
       if (e.t === 'P') out.push(`${how[e.how]}${e.name} puts ${e.build} grey on ${them}${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? ` ${them}'s pile is full: ${e.spill} of it is lost as HP.` : ''}`)
       else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} ${e.cash ? `cashes ${them}'s ${e.cash} grey` : 'cashes an empty pile'} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
       else if (e.t === 'R') out.push(`${who}'s ${e.name} clears ${e.cleared ? `${e.cleared} grey` : 'an empty pile'}${e.chip ? ` and chips ${e.chip}` : ''}.`)
     } else if (e.kind === 'status') out.push(e.block ? `${them}'s ${e.from} turns the blow aside: ${names[e.side]} is ${e.status === 'knockdown' ? 'knocked down' : status(e.status)} next round.` : `${names[e.side]} is hit with ${status(e.status)} (from ${e.from}) for next round.`)
     else if (e.kind === 'safe') out.push(`${who}'s ${e.name} is Safe: no follow-up.`)
-    else if (e.kind === 'onLoss') out.push(`${who}'s beaten card adds ${e.n} to their own pile.${e.spill ? ` It's full: ${e.spill} is lost as HP.` : ''}`)
+    else if (e.kind === 'onLoss') out.push(TEXT16.heat ? `${who}'s beaten card gives ${them} ${e.n} heat.` : `${who}'s beaten card adds ${e.n} to their own pile.${e.spill ? ` It's full: ${e.spill} is lost as HP.` : ''}`)
     else if (e.kind === 'prevented') out.push(`${who}'s ${e.by} stops the ${typeof e.status === 'string' ? (STATUSES[e.status]?.label || e.status).toLowerCase() : 'Lock'}, and is discarded.`)
     else if (e.kind === 'voided') out.push(`${who}'s ${e.name} is voided: their ${LABEL16[e.t]}s are Locked.`)
     else if (e.kind === 'play' && e.sup) out.push(e.gone ? `${who} plays their Super, ${e.name}: it's used up for the game.` : `${who} spends meter on ${e.name}.`)

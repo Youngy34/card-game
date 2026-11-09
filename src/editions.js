@@ -51,6 +51,16 @@ export const EDITIONS = {
     labels: {},
     defaultSides: ['benchmark19', 'benchmark19'],
   },
+  // v20 (9 Nov, Mark): heat. v19's rules, with the tokens as your own power: your heat, your cap, past it straight
+  // damage; no meter (specials 3 heat, the Super your whole cap, bought at the end of a round); core Recall x3, Read x3
+  v20: {
+    title: 'Yomi Playtest v20', subtitle: 'rules v20: heat (Pressure, Break, Guard)', out: 'yomi-playtest-v20.html', settings: 'v20/settings.json',
+    fighters: [],
+    reference: [['v20', 'benchmark']],
+    drafts: [['v20', 'warden'], ['v20', 'vex'], ['v20', 'bastion'], ['v20', 'atlas']],
+    labels: {},
+    defaultSides: ['benchmark20', 'benchmark20'],
+  },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
     fighters: [],

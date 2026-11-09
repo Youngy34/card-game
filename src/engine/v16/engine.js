@@ -44,7 +44,8 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
   oneReveal: false, neutralMeter: 0, burnNeutrals: true, focusMeter: 0, focusDraw: false, blankClash: false,
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
   initiative: false, tableCards: false, refillAtReveal: false,
-  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0, greyOverflow: false, cashOnWin: false, comboSameType: false }
+  merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0, greyOverflow: false, cashOnWin: false, comboSameType: false,
+  heat: false, specialCost: 3 }
 // Rules v18 switches (rules-overview 18.md), off for v16 and v17:
 //   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
 //     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
@@ -72,6 +73,16 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //     Convert that won, so it never touches a player who read it with a Pressure.
 //   cashOnWin (8 Nov, test): only a Convert that wins the clash cashes the pile; a Convert played as a
 //     follow-up, Linker or Ender just deals its damage.
+// Rules v20 (9 Nov, Mark): heat. The tokens are the attacker's power, not the defender's burden.
+//   heat: a player's heat is the pile on their opponent (X.pile is Y's heat), so the clash resolves
+//     exactly as before: a winning Pressure adds its Build to the winner's heat, a Convert (Break)
+//     that wins the clash spends all the winner's heat as damage, a Guard that beats a Pressure
+//     douses the attacker's heat. What changes: the cap that stops a player's heat is their own
+//     (X.oppCap: the cap that limits the pile on X is the opponent's fighter's), so past your cap,
+//     heat you gain lands as straight damage. There is no meter: at the end of the round, after
+//     the grey (1 heat each), each player in initiative order may spend heat on one card from the
+//     table: a special for specialCost, or the Super for their whole cap (only at max heat).
+//     Read just draws. Charge leaves the core.
 // Rules v17 switches (rules-overview 17.md), off for v16:
 //   initiative: a token (G.init, 0 or 1) passed every round. Its holder wins speed ties (with
 //     speedTie 'initiative') and goes first wherever an order is needed: choices after a reveal,
@@ -182,6 +193,12 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
     return X
   }
   const A = mk(fa), B = mk(fb)
+  if (rules.heat) {
+    // Rules v20: the pile on A is B's heat, so it stops at B's cap (and the other way round)
+    const own = f => f.greyCap || rules.greyCap || 0
+    A.oppCap = own(fb); B.oppCap = own(fa)
+    for (const X of [A, B]) { X.heatRules = true; X.heatCost = { special: rules.specialCost ?? 3, sup: own(X.f) } }
+  }
   const init = rules.initiative ? (rnd(R) < 0.5 ? 0 : 1) : null
   return { A, B, round: 1, rules, rng: R.s, phase: rules.merged ? 'clash' : 'neutral', result: null, pending: null, clash: null, neutral: null, init }
 }
@@ -217,7 +234,7 @@ export function neutralModes16(X, i, rules) {
   if (c.orFetch) for (const j of new Set(X.discard.filter(d => X.f.cards[d.i].special).map(d => d.i))) out.push({ fetch: j })
   return out
 }
-export const tableCost = (X, j) => (j === 'S' ? X.f.sup.meter : X.f.cards[j].meter)
+export const tableCost = (X, j) => (X.heatCost ? (j === 'S' ? X.heatCost.sup : X.heatCost.special) : j === 'S' ? X.f.sup.meter : X.f.cards[j].meter)
 
 // acts: [actA, actB], each null (nothing), { kind: 'draw' } (the Breather), { kind: 'focus' }, { kind: 'neutral', i, opt }
 // or { kind: 'burn', cards: [i, ...] } (only with burnMax above 0)
@@ -411,7 +428,8 @@ export const owes = G => [G.A.owe || 0, G.B.owe || 0]
 export const initOrder = G => (G.init === 1 ? [1, 0] : [0, 1])
 
 // A player's grey cap: the fighter's own, else the rule's; 0 when the rule's cap is off
-export const capOf = (X, rules) => (rules?.greyCap ? X.f.greyCap || rules.greyCap : 0)
+// Rules v20 (heat): the pile on X is the opponent's heat, so its cap is the opponent's (X.oppCap)
+export const capOf = (X, rules) => (rules?.greyCap ? (rules.heat && X.oppCap ? X.oppCap : X.f.greyCap || rules.greyCap) : 0)
 // greyOverflow (test): grey above the cap is lost as HP now; returns how much spilled
 function spill(X, rules) {
   const cap = rules?.greyOverflow ? capOf(X, rules) : 0
@@ -470,6 +488,7 @@ const resultOf = (A, B) => { const k = ko(A, B); return k === null ? null : k ==
 // table, paying its meter
 export function readModes18(X) {
   const out = ['draw']
+  if (X.heatRules) return out                                     // rules v20: Read just draws; heat buys at the end of the round
   for (const j of X.table || []) if (X.meter >= X.f.cards[j].meter) out.push({ take: j })
   if (X.superAt === 'table' && X.f.sup && X.meter >= X.f.sup.meter) out.push({ take: 'S' })
   return out
@@ -707,9 +726,59 @@ export function startDraw16(G) {
       drawNeutral(X, Math.max(0, (G.rules.neutralHand ?? 3) - X.nhand.length), R)
     }
   }
-  const over = P.map((X, k) => Math.max(0, X.hand.length - handLimitOf(X, P[1 - k], G.rules)))
-  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', discardDown: over, capCash, capSpill }
+  const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', capCash, capSpill }
+  // Rules v20: before discarding down, each player in initiative order may spend heat at the table
+  if (G.rules.heat) return nextBuy20({ ...g, phase: 'buy', bought: [null, null], buyLeft: initOrder(g) })
+  return toDiscardDown(g)
+}
+// The draw step's last part: who must discard down to the hand limit (or on to the next round)
+function toDiscardDown(g) {
+  const P = [g.A, g.B]
+  const over = P.map((X, k) => Math.max(0, X.hand.length - handLimitOf(X, P[1 - k], g.rules)))
+  g = { ...g, phase: 'draw', discardDown: over }
   return over.some(n => n > 0) ? g : finishRound16(g)
+}
+
+// ---- rules v20: heat -----------------------------------------------------------------
+// A player's heat: the pile on their opponent
+export const heatOf = (G, side) => (side === 0 ? G.B : G.A).pile
+// A player's own heat cap (the most heat they can hold; the Super's price)
+export const ownCap = (X, rules) => X.heatCost?.sup ?? (X.f.greyCap || rules?.greyCap || 0)
+// What a player may buy at the end of the round: null (nothing), a special on the table they can
+// pay for, or 'S' (the Super, only at max heat, for all of it). One card a round.
+export function buyOptions20(G, side) {
+  const X = side === 0 ? G.A : G.B, heat = heatOf(G, side)
+  const out = [null]
+  for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
+  if (X.superAt === 'table' && X.f.sup && heat >= tableCost(X, 'S') && tableCost(X, 'S') > 0) out.push('S')
+  return out
+}
+// Skip players with nothing they can buy; stop at the next player who has a choice
+function nextBuy20(g) {
+  const left = g.A.hp <= 0 || g.B.hp <= 0 ? [] : g.buyLeft.slice()          // a KO at the end of the round: no shopping
+  while (left.length && buyOptions20(g, left[0]).length < 2) left.shift()
+  if (!left.length) { const { buyLeft, ...rest } = g; return toDiscardDown(rest) }
+  return { ...g, buyLeft: left, buying: left[0] }
+}
+// Pay for a card from the table with heat (no turn order, no phase change): the partner looks ahead with it
+export function applyBuy20(G, side, choice) {
+  if (choice === null || choice === undefined) return G
+  const X = cloneP(side === 0 ? G.A : G.B, true), Y = { ...(side === 0 ? G.B : G.A) }
+  const cost = tableCost(X, choice)
+  Y.pile -= cost
+  if (choice === 'S') X.superAt = 'hand'
+  else { X.table = X.table.filter(j => j !== choice); X.hand.push(choice) }
+  const bought = (G.bought || [null, null]).slice()
+  bought[side] = { name: choice === 'S' ? X.f.sup.name : X.f.cards[choice].name, cost, sup: choice === 'S' }
+  return side === 0 ? { ...G, A: X, B: Y, bought } : { ...G, A: Y, B: X, bought }
+}
+// The player whose turn it is to buy answers: null (nothing), a special's index, or 'S'
+export function buy20(G, side, choice) {
+  if (G.phase !== 'buy' || G.buying !== side) throw new Error('not your turn to buy')
+  if (choice === undefined) choice = null
+  if (!buyOptions20(G, side).includes(choice)) throw new Error("can't buy that")
+  const g = applyBuy20({ ...G, buyLeft: G.buyLeft.filter(k => k !== side), buying: null }, side, choice)
+  return nextBuy20(g)
 }
 
 // A card leaving play or hand: to the discard pile, or (rules v18, specialsReturn) a special back to the table

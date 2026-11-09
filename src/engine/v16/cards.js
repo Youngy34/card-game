@@ -25,6 +25,16 @@ export const KINDS16 = {
 export const KINDS_OF16 = { P: ['strike', 'projectile'], C: ['guardBreak', 'grab'], R: ['guard'], N: [] }
 export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 
+// Rules v20 (heat): the page's vocabulary. useHeatWords() is called once at start on a heat page: the types
+// read Pressure, Break and Guard (kinds: Heavy and Grab; Block), and card text prices specials and the Super in heat.
+export const TEXT16 = { heat: null }
+export function useHeatWords(rules) {
+  TEXT16.heat = { special: rules.specialCost ?? 3 }
+  Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
+  KINDS16.guardBreak.label = 'Heavy'
+  KINDS16.guard.label = 'Block'
+}
+
 // Combo and follow-up icons, printed on attacks
 export const ICONS = {
   starter: { label: 'Starter', short: 'S', line: 'Starter: if it wins its clash, you may combo: a Linker carries it on, an Ender ends it.' },
@@ -34,7 +44,7 @@ export const ICONS = {
 }
 export const ICON_ORDER = ['starter', 'linker', 'ender', 'counter']
 // Safe (rules v18, 6 Nov): a card property shown with the icons
-export const SAFE_LINE = 'Safe: if a Recover beats this, it gets no follow-up.'
+export const SAFE_LINE = 'Safe: if a Guard beats this, it gets no follow-up.'
 // Twin (rules v18, 8 Nov, Vex): a Linker that a second copy of itself can follow in a combo
 export const twinLine = name => `Twin: in a combo, a second ${name} can follow this one.`
 
@@ -95,7 +105,7 @@ export function statusText(s, self = false) {
 export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
-  if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(REVEAL18[k].line(v))
+  if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(k === 'read' && TEXT16.heat ? 'On reveal: draw a card.' : REVEAL18[k].line(v))
   if (t === 'R' && c.parry) text.push('If it beats a Pressure, you may follow up with any attack from your hand, and it can start a combo.')
   else if (t === 'R' && c.brace === 'reflect') text.push("If it beats a Pressure: no follow-up; instead, the Pressure's Build goes onto its owner's pile.")
   else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")
@@ -114,8 +124,13 @@ export function cardLines16(c, { isSuper = false } = {}) {
   if (c.confiscate) text.push(`On hit: Confiscate${c.confiscate > 1 ? ` ×${c.confiscate}` : ''}.`)
   if (c.discardDownTo != null) text.push(`On hit: they discard down to ${c.discardDownTo} clash cards.`)
   if (c.onHit) text.push(typeof c.onHit === 'string' ? `On hit: ${STATUSES[c.onHit]?.label}.` : `On hit: ${statusText(c.onHit)} (no ${LABEL16[LOCKABLE[c.onHit.lock]]}s for them next round).`)
-  if (isSuper && c.meter) cost.push(`${c.meter} meter.`)
-  if (c.special) cost.push(`Special: take it from the table for ${c.meter ?? 1} meter.`)
+  if (TEXT16.heat) {
+    if (isSuper) cost.push('All your heat: buy it at max heat, at the end of a round. Once a game.')
+    if (c.special) cost.push(`Special: buy it from the table for ${TEXT16.heat.special} heat at the end of a round.`)
+  } else {
+    if (isSuper && c.meter) cost.push(`${c.meter} meter.`)
+    if (c.special) cost.push(`Special: take it from the table for ${c.meter ?? 1} meter.`)
+  }
   if (c.cost) cost.push(typeof c.cost === 'string' ? `Next round, you're ${STATUSES[c.cost]?.label}.` : `Next round, you can't play a ${LABEL16[LOCKABLE[c.cost.lock]]}.`)
   if (c.onLossSelf) cost.push(`On loss: add ${c.onLossSelf} token${c.onLossSelf > 1 ? 's' : ''} to your own pile.`)
   return { text, cost }
@@ -239,8 +254,8 @@ export function validateFighter16(f) {
     if (neutral) errors.push({ where: 'Deck', msg: 'A v18 deck has no neutral cards: put their effects on clash cards as riders.' })
     for (const c of f.cards) if (isInt(c?.copies) && c.copies > MAX_COPIES18) errors.push({ where: c.name, msg: `At most ${MAX_COPIES18} copies of a card (this has ${c.copies}).` })
     const riders = k => f.cards.reduce((s, c) => s + (c?.reveal?.[k] && !c.special ? c.copies || 0 : 0), 0)
-    if (!riders('meter')) warnings.push({ where: 'Deck', msg: 'No card gains meter (a Charge rider).' })
-    if (!riders('read')) warnings.push({ where: 'Deck', msg: 'No card can take from the table (a Read rider).' })
+    if (!riders('meter') && !TEXT16.heat) warnings.push({ where: 'Deck', msg: 'No card gains meter (a Charge rider).' })
+    if (!riders('read') && !TEXT16.heat) warnings.push({ where: 'Deck', msg: 'No card can take from the table (a Read rider).' })
   } else if (neutral < 4) errors.push({ where: 'Neutral deck', msg: `Needs at least 4 neutral cards (a hand of 3, and one to draw); this has ${neutral}.` })
   else if (neutral < 6) warnings.push({ where: 'Neutral deck', msg: `${neutral} neutral cards cycle very fast with a neutral hand of 3.` })
   for (const t of ['P', 'C', 'R']) if (!f.cards.some(c => T16[c?.type] === t)) warnings.push({ where: 'Deck', msg: `No ${LABEL16[t]}s.` })

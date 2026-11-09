@@ -40,7 +40,7 @@ export function Settings16() {
     <span class="small muted">${lo}–${hi}${base.rules[key] !== d.rules[key] ? html` · <span class="diff">As written: ${base.rules[key]}</span>` : ''}</span></label>`
   return html`<div class="stack" style=${{ gap: '24px', maxWidth: '760px' }}>
     <div class="stack"><h1>Settings</h1>
-      <p class="lede">Rules v${v18 ? 18 : d.rules.tableCards ? 17 : 16}'s dials and the sparring partner's weights. They apply to new matches and Lab runs, and every logged game records the settings it ran under.</p></div>
+      <p class="lede">Rules v${d.rules.heat ? 20 : v18 ? 18 : d.rules.tableCards ? 17 : 16}'s dials and the sparring partner's weights. They apply to new matches and Lab runs, and every logged game records the settings it ran under.</p></div>
     ${readOnly ? html`<div class="banner">Only editors of this page can change settings.</div>` : null}
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
       <h3>Rules</h3>
@@ -48,10 +48,11 @@ export function Settings16() {
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${v18 ? null : num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
-        ${num('greyPerRound', 0, 3, 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
-        ${v18 ? num('greyCap', 0, 30, 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
+        ${d.rules.heat ? num('specialCost', 1, 9, 'A special costs (heat)', 'Rules v20: bought at the end of a round, in initiative order; the Super costs your whole cap. 3 as written.') : null}
+        ${num('greyPerRound', 0, 3, d.rules.heat ? 'Heat each player gains each round' : 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
+        ${v18 ? num('greyCap', 0, 30, d.rules.heat ? 'Heat cap for a fighter that prints none' : 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
         ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
-        ${num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
+        ${d.rules.heat ? null : num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${v18 ? null : num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}
       </div>
@@ -60,7 +61,7 @@ export function Settings16() {
           <option value="0">Reusable: meter is the only gate (as written)</option>
           <option value="1">Once per game</option>
         </select></label>`}
-      ${v18 && d.rules.greyCap ? html`<label class="field"><span>At the cap</span>
+      ${v18 && d.rules.greyCap && !d.rules.heat ? html`<label class="field"><span>At the cap</span>
         <select id="s-overflow" value=${d.rules.greyOverflow ? 'overflow' : 'cash'} onChange=${e => rule({ greyOverflow: e.target.value === 'overflow' })}>
           <option value="overflow">Overflow: the pile stops at the cap, and grey beyond it is lost as HP at once (v19)</option>
           <option value="cash">Cash: a pile that has reached the cap at the end of the round is cashed for its size (the first v19 test)</option>

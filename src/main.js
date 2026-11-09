@@ -6,6 +6,7 @@ import { initData, connect } from './app/store.js'
 import { App } from './app/app.js'
 import { App16 } from './app/v16/app16.js'
 import { EDITIONS } from './editions.js'
+import { useHeatWords } from './engine/v16/cards.js'
 
 // Running locally: the edition comes from the address (index.html?edition=v15)
 async function loadData() {
@@ -27,10 +28,11 @@ async function loadData() {
 
 function start(boot) {
   loadData().then(data => {
+    if (data.settings?.rules?.heat) useHeatWords(data.settings.rules)       // rules v20: Pressure, Break, Guard; prices in heat
     initData(data)
     const el = document.getElementById('app')
     el.textContent = ''                      // drop the loading line, which Preact would otherwise leave behind
-    const Shell = ['v16', 'v17', 'v18', 'v19'].includes(data.edition?.key) ? App16 : App
+    const Shell = ['v16', 'v17', 'v18', 'v19', 'v20'].includes(data.edition?.key) ? App16 : App
     render(html`<${Shell} boot=${boot || {}} />`, el)
     connect()
   }, e => {

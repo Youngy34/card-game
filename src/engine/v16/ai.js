@@ -12,7 +12,7 @@
 // beyond the next round (a knockdown is worth only what the weights say).
 
 import { maximin, bayesMaximin, bayesGame } from '../lp.js'
-import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf } from './engine.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf, buyOptions20, applyBuy20 } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -358,6 +358,37 @@ export function chooseRead18(G, side, picks, opts, W) {
     if (v > bestV + 1e-9) { bestV = v; best = o }
   }
   return best
+}
+
+// Rules v20: at the end of the round, the partner may spend heat on a special or (at max heat) its Super.
+// It tries each option (nothing included) and scores the next round's clash it would lead to, against the
+// same dealt hands, with this round's statuses moved on. Easy and Medium soften the choice.
+export function chooseBuy20(G, side, W, rng, level = 'hard') {
+  const opts = buyOptions20(G, side)
+  if (opts.length < 2) return null
+  const op = side === 0 ? G.B : G.A
+  const deal = dealer(op, rng)
+  const hands = Array.from({ length: W.buySamples ?? W.neutralSamples ?? 3 }, deal)
+  const Wq = { ...W, mySamples: 1 }
+  const values = opts.map(o => {
+    let g = applyBuy20(G, side, o)
+    // look at the position the next clash starts from: statuses move on (discards and the shuffle aside)
+    const on = X => ({ ...X, st: X.next, next: {}, fx: {} })
+    g = { ...g, A: on(g.A), B: on(g.B), phase: 'clash', round: G.round + 1, init: G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init }
+    return clashMix16(g, side, Wq, rng, 'hard', hands).value
+  })
+  const lambda = LEVELS16[level]?.neutral ?? 60
+  const p = softmax(values, lambda)
+  let r = rng(), k = p.length - 1
+  for (let i = 0; i < p.length; i++) { r -= p[i]; if (r < 0) { k = i; break } }
+  return opts[k]
+}
+// Bots: the random bot buys at random; the others take the first special they can pay for, then the Super
+export function botBuy20(G, side, bot, rng) {
+  const opts = buyOptions20(G, side)
+  if (opts.length < 2) return null
+  if (bot === 'random') return opts[Math.floor(rng() * opts.length)]
+  return opts.find(o => o !== null && o !== 'S') ?? opts.find(o => o === 'S') ?? null
 }
 
 // ---- bots and small decisions ------------------------------------------------------

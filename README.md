@@ -17,6 +17,7 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 | Edition | Page | Fighters | Build |
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
+| `v20` | Yomi Playtest v20 (heat) | The five v20 fighters (`data/v20/`). v19's rules plus heat: the pile your Pressures build is yours, stops at your own cap and past it lands as straight damage; no meter, a shop at the end of the round (specials 3 heat, the Super your whole cap); Pressure, Break, Guard. Switches `heat` and `specialCost` on the v16 engine. See `docs/rules-overview-20.md` and `docs/playtest-app-v20-guide.md` | `node tools/build-artifact.mjs --edition v20` |
 | `v18` | Yomi Playtest v18 | The v18 Benchmark and the Warden (`data/v18/`). Rules v18 run on the v16 engine and screens with `merged`, `timeout`, `specialsReturn` and `knockdownLocks` on, and the new partner (`pooled`, `mySamples`). See `docs/rules-overview-18.md` and `docs/playtest-app-v18-guide.md` | `node tools/build-artifact.mjs --edition v18` |
 | `v17` | Yomi Playtest v17 | The v17 Benchmark and the Warden (`data/v17/`). Rules v17 run on the v16 engine and screens with four switches on: `initiative`, `tableCards`, `refillAtReveal` (off) and `speedTie: "initiative"`. See `docs/rules-overview-17.md` and `docs/playtest-app-v17-guide.md` | `node tools/build-artifact.mjs --edition v17` |
 | `v16` | Yomi Playtest v16 | The v16 Benchmark deck (`data/v16/`). Rules v16 (decks, the neutral phase, combos, statuses, meter) run on their own engine in `src/engine/v16/` and their own screens in `src/app/v16/` | `node tools/build-artifact.mjs --edition v16` |
@@ -24,6 +25,16 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 
 Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`, `?edition=v18`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
 
+
+### Rules v20 (heat)
+
+`docs/rules-overview-20.md` (also in the Claude project). v19's rules (Counters only on Pressures, each fighter's own cap with overflow, a Convert cashes only as the clash card, two combo lines) with the tokens turned round: a player's heat is the pile on their opponent (`heatOf`), so the clash resolves as before, but the cap that stops it is the heat-holder's own (`X.oppCap`), and past it heat lands as straight damage. There is no meter: after the round's heat, each player in initiative order may buy one card from the table (`buyOptions20`, `buy20`): a special for `specialCost` (3) or the Super for their whole cap. Read just draws; the core is Recall ×3 and Read ×3. The partner shops with `chooseBuy20` (each option scored by the next round's clash); bots with `botBuy20`. The page's words (Pressure, Break, Guard; Heavy, Block; prices in heat) come from `useHeatWords`.
+
+```
+node tools/test20.mjs                                            # rule checks for v20
+node tools/sim18.mjs --edition v20 game benchmark warden -n 300  # a v20 matchup
+node tools/smoke/browser20.cjs dist/yomi-playtest-v20.html <vendor dir> [shots dir]
+```
 
 ### Rules v18
 

@@ -7,7 +7,7 @@ import { LifeBar, Tokens, Seg, StatusChip } from '../ui.js'
 import { roster, saveGame, newId } from '../store.js'
 import { settings16 } from './fighters16.js'
 import * as M from './match16.js'
-import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost, capOf } from '../../engine/v16/engine.js'
+import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost, capOf, heatOf, ownCap as heatCap } from '../../engine/v16/engine.js'
 import { ICONS, LABEL16, STATUSES, CONFISCATE_LINE } from '../../engine/v16/cards.js'
 import { deckSize } from '../../engine/v16/cards.js'
 import { narrate16, outcomeTitle16, neutralLine16 } from './narrate16.js'
@@ -32,7 +32,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">${s.rules.merged ? 'Rules v18: each fighter plays one shuffled deck (24 to 26 cards), gone through once, with hands hidden. Each round, both play a clash card together; riders on the cards (Charge, Read, Recall) fire on reveal, win or lose. Specials and the Super wait face up on the table until a Read takes them for meter; a special goes back to the table once used, the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter${s.rules.merged ? ', unless it\'s Safe. Knocked down, you lose every speed clash next round' : ''}.</p>
+      <p class="lede">${s.rules.heat ? 'Rules v20: heat. Each fighter plays one shuffled deck of 26, gone through once, with hands hidden. Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. A winning Pressure builds your heat; a Break that beats a Guard spends all of it as damage; a Guard that beats a Pressure douses the attacker\'s heat and punishes. Your heat stops at your own cap: past it, every point lands as straight damage. At the end of each round you may spend heat at the table: a special for 3, your Super for all of it (only at max). The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.merged ? 'Rules v18: each fighter plays one shuffled deck (24 to 26 cards), gone through once, with hands hidden. Each round, both play a clash card together; riders on the cards (Charge, Read, Recall) fire on reveal, win or lose. Specials and the Super wait face up on the table until a Read takes them for meter; a special goes back to the table once used, the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter${s.rules.merged ? ', unless it\'s Safe. Knocked down, you lose every speed clash next round' : ''}.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -46,7 +46,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
     ${prefs.mode === 'ai' ? html`<div class="stack">
       <span class="label">Difficulty</span>
       <${Seg} value=${difficulty} options=${levels.map(([k, l]) => [k, l.label])} onChange=${d => setPrefs({ ...prefs, difficulty: d })} label="Difficulty" />
-      <p class="small muted">${M.LEVELS16[difficulty].about} ${(s.rules.merged ? { easy: 'In the Benchmark mirror, Hard beats it about 65 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 59 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out.' } : { easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' })[difficulty]}</p>
+      <p class="small muted">${M.LEVELS16[difficulty].about} ${(s.rules.heat ? { easy: 'In the Benchmark mirror, Hard beats it about 73 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 55 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out. In the shop it looks one round ahead.' } : s.rules.merged ? { easy: 'In the Benchmark mirror, Hard beats it about 65 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 59 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out.' } : { easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' })[difficulty]}</p>
     </div>` : null}
     <div class="pickers">
       ${[0, 1].map(k => html`<div class="stack">
@@ -63,7 +63,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
       <label class="check"><input type="checkbox" checked=${prefs.hints !== false} onChange=${e => setPrefs({ ...prefs, hints: e.target.checked })} /> Show board notes while you choose (lethal range, live Supers, statuses, Counters they could hold, speed duels)</label>
       <label class="check"><input type="checkbox" checked=${!!prefs.odds} onChange=${e => setPrefs({ ...prefs, odds: e.target.checked })} /> Show the sparring partner's mix after each reveal</label>
       ${prefs.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${!!prefs.showHands} onChange=${e => setPrefs({ ...prefs, showHands: e.target.checked })} /> Show both hands</label>` : null}
-      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}${greyRule(s.rules)}; meter track 0–${s.rules.meterMax}; the Super is ${s.rules.tableCards ? 'taken from the table and used once' : s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${tieRule(s.rules)}${s.rules.timeout ? '; no reshuffle: the game times out when a deck runs out' : ''}. Change these in Settings.</p>
+      <p class="small muted">Opening hand ${s.rules.openingHand}, hand limit ${s.rules.handLimit}; ${neutralRule(s.rules)}${greyRule(s.rules)}${s.rules.heat ? '' : `; meter track 0–${s.rules.meterMax}`}; the Super is ${s.rules.tableCards ? 'taken from the table and used once' : s.rules.superUses ? 'once per game' : 'reusable (meter is the gate)'}; speed ties ${tieRule(s.rules)}${s.rules.timeout ? '; no reshuffle: the game times out when a deck runs out' : ''}. Change these in Settings.</p>
       <div class="actions"><button class="btn" onClick=${start}>Start the match</button></div>
     </div>
   </div>`
@@ -104,7 +104,7 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <section class="hand-wrap" aria-label="Your move">
         ${myTurn ? html`<${Action16} m=${m} setM=${setM} side=${m.turn} prefs=${prefs} names=${names} who=${who} />` : null}
         ${!myTurn && m.phase === 'reveal' ? html`<div class="actions">
-          <button class="btn" onClick=${() => setM(M.nextRound16(m))}>${(m.G.rules.greyPerRound ?? 0) > 0 ? `Draw · take ${m.G.rules.greyPerRound} grey · ${m.G.rules.initiative ? 'pass the initiative' : 'next round'}` : 'Draw · next round'}</button>
+          <button class="btn" onClick=${() => setM(M.nextRound16(m))}>${m.G.rules.heat ? `Draw · ${m.G.rules.greyPerRound || 0} heat each · spend heat · pass the initiative` : (m.G.rules.greyPerRound ?? 0) > 0 ? `Draw · take ${m.G.rules.greyPerRound} grey · ${m.G.rules.initiative ? 'pass the initiative' : 'next round'}` : 'Draw · next round'}</button>
           ${m.mode === 'watch' ? html`<label class="check"><input type="checkbox" checked=${auto} onChange=${e => setAuto(e.target.checked)} /> Play on automatically</label>` : null}
         </div>` : null}
         ${m.phase === 'over' ? html`<div class="spread">
@@ -130,7 +130,7 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <div class="overlay-box">
         <span class="label">Round ${m.G.round}</span>
         <h2>Pass the device to ${who[m.turn]}</h2>
-        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option', rider: 'Their rider\'s choice' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
+        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option', rider: 'Their rider\'s choice', buy: 'Their purchase' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
         <button class="btn" onClick=${() => setM(M.continueAfterPass(m))}>I'm ${who[m.turn]}</button>
       </div>
     </div>` : null}
@@ -156,8 +156,9 @@ function Hud16({ X, who, m }) {
     </div>
     <${LifeBar} X=${X} />
     <div class="hud-row">
-      <div class="pile" title=${pileTitle(X, m.G.rules)}><span class="label">Grey</span><span class="pile-n">${X.pile}${capOf(X, m.G.rules) ? `/${capOf(X, m.G.rules)}` : ''}</span><${Tokens} n=${X.pile} />${pileFlag(X, m.G.rules) ? html`<span class="flag status">${pileFlag(X, m.G.rules)}</span>` : null}</div>
-      <div class="meter" aria-label=${`Meter ${X.meter} of ${m.G.rules.meterMax}`}><span class="label">Meter</span>${Array.from({ length: m.G.rules.meterMax }, (_, i) => html`<span class=${cx('pipm', i < X.meter && 'on')}></span>`)}</div>
+      ${m.G.rules.heat ? (() => { const h = Y.pile, c = heatCap(X, m.G.rules); return html`<div class="pile heat" title=${`Heat: built by your winning Pressures (and 1 each round), spent by a Break that beats a Guard, doused when a Guard beats your Pressure. It stops at your own cap of ${c}: past it, heat you gain lands as straight damage. At the end of a round you may spend 3 on a special, or all ${c} on your Super.`}><span class="label">Heat</span><span class="pile-n">${h}/${c}</span><${Tokens} n=${h} />${h >= c ? html`<span class="flag sup ready">Max: more heat lands as damage</span>` : null}</div>` })()
+      : html`<div class="pile" title=${pileTitle(X, m.G.rules)}><span class="label">Grey</span><span class="pile-n">${X.pile}${capOf(X, m.G.rules) ? `/${capOf(X, m.G.rules)}` : ''}</span><${Tokens} n=${X.pile} />${pileFlag(X, m.G.rules) ? html`<span class="flag status">${pileFlag(X, m.G.rules)}</span>` : null}</div>
+      <div class="meter" aria-label=${`Meter ${X.meter} of ${m.G.rules.meterMax}`}><span class="label">Meter</span>${Array.from({ length: m.G.rules.meterMax }, (_, i) => html`<span class=${cx('pipm', i < X.meter && 'on')}></span>`)}</div>`}
     </div>
     <div class="hud-row small">
       <span class="count"><b>${X.hand.length}</b> in hand</span>
@@ -168,8 +169,8 @@ function Hud16({ X, who, m }) {
     </div>
     ${X.table ? html`<div class="hud-row small neutral-row" aria-label="On the table">
       <span class="label">Table</span>
-      ${X.f.cards.map((c, i) => (c.special ? html`<span class=${cx('flag', X.table.includes(i) ? 'status' : 'sup')} title=${X.table.includes(i) ? `Read can take it for ${c.meter} meter` : m.G.rules.specialsReturn ? 'Taken: in their hand, back to the table once it leaves it' : 'Taken: in their deck for the game'}>${c.name} ${X.table.includes(i) ? `· ${c.meter} meter` : m.G.rules.specialsReturn ? '· in hand' : '· taken'}</span>` : null))}
-      ${sup ? html`<span class=${cx('flag sup', X.superAt === 'hand' && 'ready', X.superAt === 'gone' && 'spent')} title="Their Super: taken from the table by Read, used once">${sup.name} ${X.superAt === 'table' ? `· ${sup.meter} meter` : X.superAt === 'hand' ? '· in hand' : '· used'}</span>` : null}
+      ${X.f.cards.map((c, i) => (c.special ? html`<span class=${cx('flag', X.table.includes(i) ? 'status' : 'sup')} title=${X.table.includes(i) ? (m.G.rules.heat ? `Bought at the end of a round for ${tableCost(X, i)} heat` : `Read can take it for ${c.meter} meter`) : m.G.rules.specialsReturn ? 'Taken: in their hand, back to the table once it leaves it' : 'Taken: in their deck for the game'}>${c.name} ${X.table.includes(i) ? `· ${tableCost(X, i)} ${m.G.rules.heat ? 'heat' : 'meter'}` : m.G.rules.specialsReturn ? '· in hand' : '· taken'}</span>` : null))}
+      ${sup ? html`<span class=${cx('flag sup', X.superAt === 'hand' && 'ready', X.superAt === 'gone' && 'spent')} title=${m.G.rules.heat ? 'Their Super: bought at max heat for all of it, at the end of a round; used once' : 'Their Super: taken from the table by Read, used once'}>${sup.name} ${X.superAt === 'table' ? `· ${tableCost(X, 'S')} ${m.G.rules.heat ? 'heat (max)' : 'meter'}` : X.superAt === 'hand' ? '· in hand' : '· used'}</span>` : null}
     </div>` : null}
     ${X.nhand ? html`<div class="hud-row small neutral-row">
       ${X.inPlay != null ? html`<span class="flag status" title=${X.f.cards[X.inPlay].src ? '' : ''}>In play: ${X.f.cards[X.inPlay].name}</span>` : null}
@@ -192,7 +193,7 @@ function Stage16({ m, names, prefs }) {
       <b>${m.timedOut ? (res === 0.5 ? 'Time-out: level on HP, a draw' : `Time-out: ${names[res === 1 ? 0 : 1]} wins on HP`) : res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
       <span>Round ${G.round}.${m.timedOut ? ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.` : ''}${m.capNote ? ` ${m.capNote}` : ''}</span>
     </div>` : null}
-    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal', rider: 'Reveal' }[m.phase]}</span>
+    <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal', rider: 'Reveal', buy: 'End of round' }[m.phase]}</span>
     ${neutral ? html`<div class="neutral-line">${[1, 0].map(k => html`<div><b>${names[k]}</b> <span>${neutralLine16(neutral[k], m.G[k === 0 ? 'A' : 'B'].f)}</span></div>`)}</div>` : null}
     ${m.phase === 'rider' ? html`<div class="clash-cards">
       ${[1, 0].map((k, n) => { const X = k === 0 ? G.A : G.B, i = m.picks[k]; return html`${n ? html`<span class="vs">VS</span>` : null}${i === null || i === undefined ? html`<div class="card card-back" style=${{ opacity: 0.4 }}><span>—</span></div>` : html`<${Card16} card=${card16(X, i).src} isSuper=${i === 'S'} />`}` })}
@@ -202,7 +203,7 @@ function Stage16({ m, names, prefs }) {
     : !clash ? html`<div class="clash-cards">
       ${[1, 0].map((k, n) => html`${n ? html`<span class="vs">VS</span>` : null}<div class="card card-back" style=${{ opacity: (m.phase === 'clash' && m.picks[k] !== undefined) ? 1 : 0.35 }}><span>${m.phase === 'clash' && m.picks[k] !== undefined ? 'YOMI' : '?'}</span></div>`)}
     </div>
-    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? (m.G.rules.merged ? 'Both clash cards reveal together; their riders fire win or lose.' : 'Both clash cards reveal together.') : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
+    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? (m.G.rules.merged ? 'Both clash cards reveal together; their riders fire win or lose.' : 'Both clash cards reveal together.') : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : m.phase === 'buy' ? 'End of the round: each player may spend heat at the table, the initiative holder first.' : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
   </section>`
 }
 
@@ -244,7 +245,7 @@ const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?'
 export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative holder' : R.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel')
 
 // The draw step's grey, in words ('' when off)
-export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '')
+export const greyRule = R => R.heat ? `; each player gains ${R.greyPerRound ?? 0} heat with their draw; your heat stops at your own cap and past it lands as damage; a Break cashes only as the clash card; a combo continues only with cards of its Starter's type; specials ${R.specialCost ?? 3} heat, the Super your whole cap` : ((R.greyPerRound ?? 0) > 0 ? `; each player takes ${R.greyPerRound} grey with their draw` : '')
   + (R.greyCap ? (R.greyOverflow ? `; grey cap ${R.greyCap} (some fighters have their own): a pile can't go above its cap, and grey beyond it is lost as HP at once` : `; grey cap ${R.greyCap}: a pile that has reached it at the end of the round is cashed for its size`) : '')
   + (R.cashOnWin ? (R.comboSameType ? '; a Convert cashes only as the clash card' : '; a Convert cashes only as the clash card, so Converts are never Linkers or Enders') : '')
   + (R.comboSameType ? '; a combo continues only with cards of its Starter\'s type: Pressures into Pressures, Converts into Converts (no grabs, except the Warden\'s)' : '')
@@ -252,7 +253,7 @@ export const greyRule = R => ((R.greyPerRound ?? 0) > 0 ? `; each player takes $
 const pileTitle = (X, R) => { const c = capOf(X, R); return !c ? '' : R.greyOverflow ? `Grey cap ${c}: the pile can't go above it; grey beyond it is lost as HP at once` : `Grey cap ${c}: a pile that reaches it at the end of the round is cashed for its size` }
 const pileFlag = (X, R) => { const c = capOf(X, R); if (!c) return null; if (R.greyOverflow) return X.pile >= c ? 'Full: more grey costs HP' : null; return X.pile + (R.greyPerRound || 0) >= c ? 'Cashed at the end of the round' : null }
 // A fighter's own cap, for the picker ('' when the rule's cap is off or it uses the rule's)
-const ownCap = (f, R) => (R?.greyCap ? ` · grey cap ${f.greyCap || R.greyCap}` : '')
+const ownCap = (f, R) => (R?.greyCap ? ` · ${R.heat ? 'heat' : 'grey'} cap ${f.greyCap || R.greyCap}` : '')
 
 // The neutral step's options, in words
 export const neutralRule = R => R.merged
@@ -350,7 +351,7 @@ function Action16({ m, setM, side, prefs, names, who }) {
           <button class="btn" disabled=${sel === null} onClick=${() => setM(M.chooseStageCard(m, sel))}>Play it</button>
           <button class="btn ghost" onClick=${() => setM(p.stage === 'link' ? M.stopCombo(m) : M.chooseStage(m, null))}>${p.stage === 'link' ? 'Stop here' : p.stage === 'end' ? 'No Ender' : 'No follow-up'}</button>
         </div></div>
-      <p class="small">${p.twin ? `Twin: a second copy of the Linker you just played lands unopposed too and the combo goes on; or play an Ender and it ends.${line}` : p.stage === 'follow' ? 'Your Guard beat their Pressure: one Counter from your hand lands unopposed. It never starts a combo.' : p.stage === 'link' ? `Your Starter landed. A Linker lands unopposed and the combo goes on; an Ender lands unopposed and ends it.${line}` : m.G.rules.cashOnWin ? 'An Ender lands unopposed and ends the combo: a Pressure Ender builds (a status Ender leaves them loaded); a Convert Ender deals its damage, the clash card having cashed the pile.' : 'An Ender lands unopposed and ends the combo: a Convert cashes the whole pile, a status Ender leaves them loaded.'}</p>
+      <p class="small">${p.twin ? `Twin: a second copy of the Linker you just played lands unopposed too and the combo goes on; or play an Ender and it ends.${line}` : p.stage === 'follow' ? 'Your Guard beat their Pressure: one Counter from your hand lands unopposed. It never starts a combo.' : p.stage === 'link' ? `Your Starter landed. A Linker lands unopposed and the combo goes on; an Ender lands unopposed and ends it.${line}` : m.G.rules.heat ? 'An Ender lands unopposed and ends the combo: a Pressure Ender builds your heat; a Break Ender deals its damage (your heat was spent by the clash card).' : m.G.rules.cashOnWin ? 'An Ender lands unopposed and ends the combo: a Pressure Ender builds (a status Ender leaves them loaded); a Convert Ender deals its damage, the clash card having cashed the pile.' : 'An Ender lands unopposed and ends the combo: a Convert cashes the whole pile, a status Ender leaves them loaded.'}</p>
       <div class="hand">
         ${groups.map(g => html`<div key=${g.i}><${Card16} as="button" card=${g.c.src} count=${g.n > 1 ? g.n : null} disabled=${!g.ok} why=${g.why}
           stamp=${g.ok && X.st.lock?.[g.c.t] ? 'Locked: voided' : null}
@@ -386,6 +387,14 @@ function Action16({ m, setM, side, prefs, names, who }) {
       <p class="small">Both clash cards are face up. ${m.G.init === side ? 'You hold the initiative, so you choose first.' : 'Your opponent chose first (they hold the initiative).'} ${c.reveal.read ? `Meter ${X.meter} of ${m.G.rules.meterMax}. A card you take is yours at once: it can be your follow-up this round.` : 'The card comes back from your face-up discard pile, so your opponent knows you hold it. It can be your follow-up this round.'}</p>
       <div class="actions">${list.filter(o => !o.card).map(o => html`<button class="btn" onClick=${() => setM(M.chooseRider(m, side, o.opt))}>${o.label}</button>`)}</div>
       ${list.some(o => o.card) ? html`<div class="hand">${list.filter(o => o.card).map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} isSuper=${!!o.sup} onClick=${() => setM(M.chooseRider(m, side, o.opt))} /><span class="small">${o.label}</span></div>`)}</div>` : null}`
+  }
+  if (m.phase === 'buy') {
+    const list = M.buyList(m, side)
+    const Y = side === 0 ? m.G.B : m.G.A
+    return html`<div class="spread"><h3>Spend heat · end of round ${m.G.round}</h3>
+        <div class="actions"><button class="btn ghost" onClick=${() => setM(M.chooseBuy(m, side, null))}>${list[0].label}</button></div></div>
+      <p class="small">You have ${heatOf(m.G, side)} heat (your cap is ${heatCap(X, m.G.rules)}). ${m.G.init === side ? 'You hold the initiative, so you buy first.' : 'Your opponent bought first (they hold the initiative).'} One card a round: a special goes into your hand and back to the table once you've used it; the Super is bought at max heat for all of it, and used once. Heat you spend is heat a Break can't cash, and ${Y.f.name} can see what you buy.</p>
+      <div class="hand">${list.filter(o => o.card).map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} isSuper=${!!o.sup} onClick=${() => setM(M.chooseBuy(m, side, o.opt))} /><span class="small">${o.label}</span></div>`)}</div>`
   }
   if (m.phase === 'confiscate') {
     const need = X.owe || 0
@@ -426,7 +435,8 @@ function RoundLog16({ m, names }) {
             ${r.follow ? html`<span class="muted">· follow-up:</span> ${r.follow.name}` : null}
             ${r.combo.length ? html`<span class="muted">· combo:</span> ${r.combo.map(x => x.name).join(' → ')}` : null}</div>
           ${r.confiscated?.some(a => a.length) ? html`<div class="small muted">Confiscated: ${[0, 1].filter(k => r.confiscated[k].length).map(k => `${names[k]} ${r.confiscated[k].join(', ')}`).join(' · ')}</div>` : null}
-          <div class="small muted num">${names[0]} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${names[1]} ${r.after[1].hp} HP · ${r.after[1].pile} grey</div>
+          ${r.bought?.some(Boolean) ? html`<div class="small muted">Bought: ${[0, 1].filter(k => r.bought[k]).map(k => `${names[k]} ${r.bought[k].name} (${r.bought[k].cost} heat)`).join(' · ')}</div>` : null}
+          <div class="small muted num">${m.G.rules.heat ? `${names[0]} ${r.after[0].hp} HP · ${r.after[1].pile} heat — ${names[1]} ${r.after[1].hp} HP · ${r.after[0].pile} heat` : `${names[0]} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${names[1]} ${r.after[1].hp} HP · ${r.after[1].pile} grey`}</div>
         </div>
       </div>`)}
     </div>

@@ -1,8 +1,8 @@
 // Rules v16: whole games between sparring partners (or bots), round records
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
-import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked } from './engine.js'
-import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18 } from './ai.js'
+import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20 } from './engine.js'
+import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18, chooseBuy20, botBuy20 } from './ai.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -182,6 +182,12 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     rounds.push(rec)
     if (G.result !== null) break
     G = startDraw16(G)
+    // Rules v20: spending heat at the table, in initiative order
+    while (G.phase === 'buy') {
+      const k = G.buying
+      G = buy20(G, k, BOTS16[levels[k]] ? botBuy20(G, k, levels[k], rng) : chooseBuy20(G, k, Ws[k], rng, levels[k]))
+    }
+    if (G.bought?.some(Boolean)) rec.bought = G.bought
     while (G.phase === 'draw') {
       for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
     }

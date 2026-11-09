@@ -1,7 +1,7 @@
 // The v16 card face, written from the card's data so it always matches the engine.
 
 import { html, cx } from '../lib.js'
-import { T16, LABEL16, KINDS16, ICONS, ICON_ORDER, SAFE_LINE, cardLines16, CONFISCATE_LINE } from '../../engine/v16/cards.js'
+import { T16, LABEL16, KINDS16, ICONS, ICON_ORDER, SAFE_LINE, cardLines16, CONFISCATE_LINE, TEXT16 } from '../../engine/v16/cards.js'
 
 // card: the card's JSON (an engine card's .src)
 export function Card16({ card, isSuper = false, copies = null, cls = '', stamp = null, why = null, as = 'div', onClick, disabled, label, style, count = null }) {
@@ -19,7 +19,7 @@ export function Card16({ card, isSuper = false, copies = null, cls = '', stamp =
       ${card.art ? html`<img class="card-art" src=${card.art} alt=${card.name} />` : html`
         <div class="card-band">
           <span>${isSuper ? `Super · ${typeName}` : typeName}</span>
-          <span>${isSuper ? `${card.meter ?? 3} meter` : copies ? `×${copies}` : ''}</span>
+          <span>${isSuper ? (TEXT16.heat ? 'Max heat' : `${card.meter ?? 3} meter`) : copies ? `×${copies}` : ''}</span>
         </div>
         <div class="card-name">${card.name}</div>
         <div class="card-stats">

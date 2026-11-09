@@ -6,6 +6,7 @@ import { roster } from '../store.js'
 import { settings16, toFighter16 } from './fighters16.js'
 import { runBalance16 } from '../../engine/v16/game.js'
 import { LEVELS16, BOTS16 } from '../../engine/v16/ai.js'
+import { LABEL16, TEXT16 } from '../../engine/v16/cards.js'
 import { Seg, StatusChip, NumField } from '../ui.js'
 import { neutralRule, greyRule } from './play16.js'
 
@@ -114,7 +115,7 @@ function Report16({ r }) {
         const T = Object.values(r.types[k]).reduce((s, v) => s + v, 0)
         return html`<div class="panel stack"><h3>${r.names[k]}${r.names[0] === r.names[1] ? ` (${k ? 'B' : 'A'})` : ''}</h3>
           ${r.rules?.merged ? null : html`<p class="small"><span class="label">Neutral phase</span><br />${share(r.neutral[k], R)}</p>`}
-          <p class="small"><span class="label">Clash types</span><br />${share(Object.fromEntries(Object.entries(r.types[k]).map(([t, v]) => [{ P: 'Pressure', C: 'Convert', R: 'Guard', '-': 'nothing' }[t] || t, v])), T)}</p>
+          <p class="small"><span class="label">Clash types</span><br />${share(Object.fromEntries(Object.entries(r.types[k]).map(([t, v]) => [{ P: LABEL16.P, C: LABEL16.C, R: 'Guard', '-': 'nothing' }[t] || t, v])), T)}</p>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Clash card</th><th class="r">Share</th></tr></thead>
             <tbody>${Object.entries(r.plays[k]).sort((x, y) => y[1] - x[1]).map(([c, v]) => html`<tr><td>${c}</td><td class="r">${pct(v / T)}</td></tr>`)}</tbody></table></div>
           <p class="small muted">Hand after a round: ${r.handAvg[k].toFixed(1)} cards${r.handClashAvg ? ` · at the clash: ${r.handClashAvg[k].toFixed(1)}` : ''} · reshuffles ${(r.reshuffles[k] / n).toFixed(2)} a game</p>
