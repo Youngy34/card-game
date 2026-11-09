@@ -7,7 +7,7 @@
 - ***No meter:*** *specials cost 3 heat and the Super your whole cap, bought at the end of a round. Read just draws; Charge leaves the core.*
 - ***New names:*** *Pressure, Break, Guard.*
 
-**Status: playable.** The v20 page: https://claude.ai/artifact/9U6NPwg6kUEtYrceFVfqTN (`claude/app/playtest-app v20 guide.md`). Code: GitHub `Youngy34/card-game`, branch `v20-heat`. The numbers here are a first balance pass, against the sparring partner.
+**Status: playable.** The v20 page: https://claude.ai/artifact/9U6NPwg6kUEtYrceFVfqTN (`claude/app/playtest-app v20 guide.md`). Code: GitHub `Youngy34/card-game`, branch `v20-heat`. The numbers here are a first balance pass (revised the same evening), against the sparring partner.
 
 **Decisions (Mark, 9 November):**
 
@@ -121,7 +121,7 @@ The deck never reshuffles. When a player draws their last card, the round finish
 
 ---
 
-## The Fighters (v20, first pass)
+## The Fighters (v20)
 
 | Fighter | HP (first pass; v19) | Cap (v19) | Extra card (to reach 26) | Other |
 |---|---|---|---|---|
@@ -133,7 +133,7 @@ The deck never reshuffles. When a player draws their last card, the round finish
 
 Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card lists: `data/v20/`, and the Decks tab on the page.
 
-**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang knocking down instead of Dizzy fixed both (the first pass). Dropping the round's heat damage in the evening took about 3 HP a game out, so every HP came down again: 2 or 3 for most, 4 for Bastion and Atlas (with Dizzy, at 7 heat, Vex's Super was worth about 11 points of her win rate: 63% against the Benchmark with it, 52% without).
+**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang knocking down instead of Dizzy fixed both in the first pass (with Dizzy, at 7 heat, Vex's Super was worth about 11 points of her win rate: 63% against the Benchmark with it, 52% without). Dropping the round's heat damage in the evening took about 3 HP a game out, so every HP came down again: 2 or 3 for most, 4 for Bastion and Atlas.
 
 ## Sim Check (9 November, evening: the sparring partner on Hard against itself)
 
@@ -174,7 +174,7 @@ Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card li
 3. **Atlas–Warden times out 10%** (two slow fighters), and the Warden wins it 57%. 2 heat a round (up to the cap) would speed every game up.
 4. **The shop drains damage:** heat bought into specials isn't cashed. That's the intended tradeoff, but it's why HP had to fall.
 5. **Bigger hands:** about 6.8 cards at the clash (v18: 5.8), since bought specials join the hand. Hand size is the dial for hidden information; watch whether reads feel thinner.
-6. **Guard spam looks solved in the sim** (15%), but the partner still doesn't learn habits. Check at the table.
+6. **Guard spam looks solved in the sim** (17%), but the partner still doesn't learn habits. Check at the table.
 7. **The partner's shopping** looks one round ahead: it doesn't save up for the Super, and it still doesn't know about the time-out.
 8. **Bleed** ("extra grey each round until a Recover clears your pile") reads oddly under heat: your wound feeding their heat. It needs rewording before that fighter is built.
 
