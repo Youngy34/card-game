@@ -53,7 +53,7 @@ export function score16(X, W, rules, Y = null) {
   if (Y) { const lim = handLimitOf(X, Y, rules || {}); if (h + 1 > lim) h -= h + 1 - lim }
   let e = X.hp - W.alpha * X.pile + W.card * h + W.meter * X.meter + (X.inPlay != null ? (W.inPlay ?? 0.4) : 0)
   // greyCap (test): a pile that will reach the cap with this round's grey is cashed for certain
-  const cap = capOf(X, rules), end = X.pile + (rules?.greyPerRound || 0)
+  const cap = capOf(X, rules), end = rules?.roundHeatCaps && cap ? Math.min(X.pile + (rules?.greyPerRound || 0), Math.max(cap, X.pile)) : X.pile + (rules?.greyPerRound || 0)
   // (greyOverflow: the round's grey above the cap is lost as HP for certain; the pile stops at the cap)
   if (cap && rules.greyOverflow) { if (end > cap) e += W.alpha * (X.pile - cap) - (end - cap) }
   else if (cap && end >= cap) e += W.alpha * X.pile - end
