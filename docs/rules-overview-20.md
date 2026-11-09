@@ -132,7 +132,7 @@ The deck never reshuffles. When a player draws their last card, the round finish
 
 Specials (3 heat each) and Supers (the fighter's cap) as on v19's cards. Card lists: `data/v20/`, and the Decks tab on the page.
 
-**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang's Dizzy (worth about 11 points of Vex's win rate at 8 heat) fixed both.
+**Why the HP fell so far:** under v19, a cap was defence (how much grey you could soak). Under heat it's offence: a low cap reaches max sooner, after which every Pressure and the round's heat land as damage, and it makes the Super cheaper. With v19's values, Vex (cap 7) and Bastion (cap 6) won about 67% and Atlas (cap 12) 31%. The shop also takes heat that would have been cashed, so games ran longer (time-outs 24%). Lower HP all round, caps pulled towards 8–10, and Hundred Fang knocking down instead of Dizzy fixed both (with Dizzy, at 7 heat, Vex's Super was worth about 11 points of her win rate: 63% against the Benchmark with it, 52% without).
 
 ## Sim Check (9 November, the sparring partner on Hard against itself)
 
