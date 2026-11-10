@@ -6,7 +6,7 @@
 
 ## Names: Heat Is Now Charge (Mark, 10 November, afternoon)
 
-Heat was a placeholder. Mark chose **Charge**: simple to understand, but still cool. No rule changes; only the words do.
+Heat was a placeholder. Mark chose **Charge**: simple to understand, but still cool. No rule changes, only the words.
 
 | v20's words | Now | In a sentence |
 |---|---|---|
