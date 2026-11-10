@@ -197,7 +197,7 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
     // Rules v20: the pile on A is B's heat, so it stops at B's cap (and the other way round)
     const own = f => f.greyCap || rules.greyCap || 0
     A.oppCap = own(fb); B.oppCap = own(fa)
-    for (const X of [A, B]) { X.heatRules = true; X.heatCost = { special: rules.specialCost ?? 3, sup: own(X.f) } }
+    for (const X of [A, B]) { X.heatRules = true; const cap = own(X.f); X.heatCost = { special: rules.specialCost ?? 3, sup: cap, supPrice: rules.superPrice === 'half' ? Math.ceil(cap / 2) : rules.superPrice === 'free' ? 0 : cap } }   // superPrice (local test, 10 Nov): the Super still needs max heat, but costs half the cap, or nothing
   }
   const init = rules.initiative ? (rnd(R) < 0.5 ? 0 : 1) : null
   return { A, B, round: 1, rules, rng: R.s, phase: rules.merged ? 'clash' : 'neutral', result: null, pending: null, clash: null, neutral: null, init }
@@ -234,7 +234,7 @@ export function neutralModes16(X, i, rules) {
   if (c.orFetch) for (const j of new Set(X.discard.filter(d => X.f.cards[d.i].special).map(d => d.i))) out.push({ fetch: j })
   return out
 }
-export const tableCost = (X, j) => (X.heatCost ? (j === 'S' ? X.heatCost.sup : X.heatCost.special) : j === 'S' ? X.f.sup.meter : X.f.cards[j].meter)
+export const tableCost = (X, j) => (X.heatCost ? (j === 'S' ? (X.heatCost.supPrice ?? X.heatCost.sup) : (X.f.cards[j].heatPrice ?? X.heatCost.special)) : j === 'S' ? X.f.sup.meter : X.f.cards[j].meter)
 
 // acts: [actA, actB], each null (nothing), { kind: 'draw' } (the Breather), { kind: 'focus' }, { kind: 'neutral', i, opt }
 // or { kind: 'burn', cards: [i, ...] } (only with burnMax above 0)
@@ -609,7 +609,8 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     }
     ev.push({ kind: 'speeds', speeds: [sa, sb] })
   }
-  if (outcome === 'guards') { hit(A, B, ca, ev, 0, 'clash', G.rules); hit(B, A, cb, ev, 1, 'clash', G.rules) }
+  // guardsQuiet (rules v21, 10 Nov, Mark): two Guards do nothing; heat is yours, and nobody attacked
+  if (outcome === 'guards' && !G.rules.guardsQuiet) { hit(A, B, ca, ev, 0, 'clash', G.rules); hit(B, A, cb, ev, 1, 'clash', G.rules) }
   else if (winner >= 0) {
     const W = P[winner], L = P[1 - winner]
     hit(W, L, cards[winner], ev, winner, 'clash', G.rules)
@@ -624,6 +625,16 @@ export function startClash16(G, a, b, lite = false, opts = null) {
       applyStatus(L.next, wcd.onBlock)
       ev.push({ side: 1 - winner, kind: 'status', status: wcd.onBlock, from: wcd.name, block: true })
     }
+    // Rules v21 (10 Nov): a fighter's own Guard pays out if it beats a Pressure
+    if (outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P') {
+      for (let n = wcd.blockConfiscate || 0; n > 0; n--) owe(L, 1, ev, 1 - winner, wcd.name)
+      if (wcd.blockHeat) {
+        // the blocker's heat is the pile on the attacker; it stops at the blocker's cap (no damage from it)
+        const cap = capOf(L, G.rules), before = L.pile
+        L.pile = cap ? Math.max(before, Math.min(cap, before + (lc.build || 0))) : before + (lc.build || 0)
+        ev.push({ side: winner, kind: 'blockHeat', n: L.pile - before, name: wcd.name })
+      }
+    }
     if (outcome === 'triangle' && wcd.brace && wcd.t === 'R' && lc?.t === 'P') {
       if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name, spill: spill(L, G.rules) }) }
       else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
@@ -635,8 +646,10 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') {
     // Safe Pressures (6 Nov) can't be followed up
-    if (lc.safe && !wc.brace && !wc.noFollow) ev.push({ kind: 'safe', side: 1 - winner, name: lc.name })
-    return wc.brace || wc.noFollow || lc.safe ? finishClash(next) : ask(next, 'follow', winner)
+    const safe = lc.safe && !wc.throughSafe                         // rules v21: a Guard can follow up through Safe
+    if (safe && !wc.brace && !wc.noFollow) ev.push({ kind: 'safe', side: 1 - winner, name: lc.name })
+    if (wc.followCombo) next = { ...next, clash: { ...next.clash, followCombo: winner } }
+    return wc.brace || wc.noFollow || safe ? finishClash(next) : ask(next, 'follow', winner)
   }
   if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
@@ -688,7 +701,7 @@ export function decideClash16(G, choice, lite = false) {
   else clash.combo = [...clash.combo, { side, stage, name: c.name, t: c.t }]
   const next = { ...G, A, B, clash, pending: null, result: resultOf(A, B) }
   if (next.result !== null) return finishClash(next)
-  if (stage === 'follow' && P[side].fx.parry && c.starter) return ask(next, 'link', side)     // Parry: the punish can combo
+  if (stage === 'follow' && (P[side].fx.parry || G.clash.followCombo === side) && c.starter) return ask(next, 'link', side)     // Parry (and a followCombo Guard, rules v21): the punish can combo
   if (stage !== 'link') return finishClash(next)
   // Twin (8 Nov, Vex): a second copy of the same card can follow it as a second Linker (two Linkers at most)
   if (c.twin && clash.combo.filter(x => x.side === side && x.stage === 'link').length === 1 && P[side].hand.includes(choice) && canUse(P[side], c)) {
@@ -752,7 +765,7 @@ export function buyOptions20(G, side) {
   const X = side === 0 ? G.A : G.B, heat = heatOf(G, side)
   const out = [null]
   for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
-  if (X.superAt === 'table' && X.f.sup && heat >= tableCost(X, 'S') && tableCost(X, 'S') > 0) out.push('S')
+  if (X.superAt === 'table' && X.f.sup && X.heatCost?.sup > 0 && heat >= X.heatCost.sup) out.push('S')
   return out
 }
 // Skip players with nothing they can buy; stop at the next player who has a choice

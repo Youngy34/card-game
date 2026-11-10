@@ -66,6 +66,11 @@ export function Settings16() {
           <option value="stop">Stops at the cap: only your Pressures land in full (v20, 9 Nov)</option>
           <option value="damage">Lands on the opponent as damage (the first v20 page)</option>
         </select></label>` : null}
+      ${d.rules.heat ? html`<label class="field"><span>Two Guards</span>
+        <select id="s-guards" value=${d.rules.guardsQuiet ? 'quiet' : 'douse'} onChange=${e => rule({ guardsQuiet: e.target.value === 'quiet' })}>
+          <option value="quiet">Do nothing: nobody attacked (v21, 10 Nov)</option>
+          <option value="douse">Each douses the other's heat (v20)</option>
+        </select></label>` : null}
       ${v18 && d.rules.greyCap && !d.rules.heat ? html`<label class="field"><span>At the cap</span>
         <select id="s-overflow" value=${d.rules.greyOverflow ? 'overflow' : 'cash'} onChange=${e => rule({ greyOverflow: e.target.value === 'overflow' })}>
           <option value="overflow">Overflow: the pile stops at the cap, and grey beyond it is lost as HP at once (v19)</option>

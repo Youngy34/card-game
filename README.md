@@ -18,6 +18,7 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 |---|---|---|---|
 | `v11` | Yomi Playtest | The signed-off v11 roster, the Dummy, and Clarence (rules v12) | `node tools/build-artifact.mjs` |
 | `v20` | Yomi Playtest v20 (heat) | The five v20 fighters (`data/v20/`). v19's rules plus heat: the pile your Pressures build is yours, stops at your own cap and past it lands as straight damage; no meter, a shop at the end of the round (specials 3 heat, the Super your whole cap); Pressure, Break, Guard. Switches `heat` and `specialCost` on the v16 engine. See `docs/rules-overview-20.md` and `docs/playtest-app-v20-guide.md` | `node tools/build-artifact.mjs --edition v20` |
+| `v21` | Yomi Playtest v21 (nine Guards) | The five v21 fighters (`data/v21/`). v20 with nine Guards a deck (Recall, Read and the fighter's own Guard, three of each; the own Guard pays out only if it beats a Pressure), two Guards doing nothing (`guardsQuiet`), 28-card decks and three specials (one of each type) plus the Super. See `docs/rules-overview-21.md` | `node tools/build-artifact.mjs --edition v21` |
 | `v18` | Yomi Playtest v18 | The v18 Benchmark and the Warden (`data/v18/`). Rules v18 run on the v16 engine and screens with `merged`, `timeout`, `specialsReturn` and `knockdownLocks` on, and the new partner (`pooled`, `mySamples`). See `docs/rules-overview-18.md` and `docs/playtest-app-v18-guide.md` | `node tools/build-artifact.mjs --edition v18` |
 | `v17` | Yomi Playtest v17 | The v17 Benchmark and the Warden (`data/v17/`). Rules v17 run on the v16 engine and screens with four switches on: `initiative`, `tableCards`, `refillAtReveal` (off) and `speedTie: "initiative"`. See `docs/rules-overview-17.md` and `docs/playtest-app-v17-guide.md` | `node tools/build-artifact.mjs --edition v17` |
 | `v16` | Yomi Playtest v16 | The v16 Benchmark deck (`data/v16/`). Rules v16 (decks, the neutral phase, combos, statuses, meter) run on their own engine in `src/engine/v16/` and their own screens in `src/app/v16/` | `node tools/build-artifact.mjs --edition v16` |
@@ -25,6 +26,16 @@ Each published page is an **edition**: its own fighters, settings and log (`src/
 
 Locally, open `index.html?edition=v15` (or `?edition=v16`, `?edition=v17`, `?edition=v18`) for those editions. The v16 edition also carries the Warden (`data/v16/warden.json`, `docs/character-warden-v16.md`).
 
+
+### Rules v21 (nine Guards, three specials)
+
+`docs/rules-overview-21.md` (also in the Claude project). v20 plus: each fighter's own Guard ×3 with an effect that fires only when it beats a Pressure (`blockConfiscate`, `throughSafe`, `followCombo`, `blockHeat`, or `onBlock` as before), two Guards doing nothing (`guardsQuiet`), and a per-card heat price (`heatPrice`, unused by the fighters). The review's test switch `superPrice` (`half`, `free`) is also in the engine, off by default.
+
+```
+node tools/test21.mjs                                            # rule checks for v21
+node tools/sim18.mjs --edition v21 game benchmark warden -n 300  # a v21 matchup
+node tools/smoke/browser21.cjs dist/yomi-playtest-v21.html <vendor dir>
+```
 
 ### Rules v20 (heat)
 

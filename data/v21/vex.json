@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "vex21",
+  "name": "Vex",
+  "epithet": "Rushdown",
+  "concept": "Twin Fang: the fastest Pressures in the game, the most Starters and Linkers, and the lowest HP. Twin Fang can link into a second Twin Fang; Heel Drop and Hundred Fang end her Pressure combos; Undercut or Cross-Up into Pommel Strike is her Break line. Her Guard, Slip, punishes even Safe pokes. Specials: Flying Fang, Cross-Up and Afterimage (a Guard whose punish can start a combo). Super: Hundred Fang (Knockdown).",
+  "hp": 21,
+  "passive": null,
+  "cards": [
+    {
+      "name": "Quick Fang",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 19,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "safe": true
+    },
+    {
+      "name": "Fang Rush",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Twin Fang",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 3,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "linker"
+      ],
+      "twin": true
+    },
+    {
+      "name": "Crossing Slash",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 15,
+      "build": 3,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ]
+    },
+    {
+      "name": "Heel Drop",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Undercut",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 6,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ]
+    },
+    {
+      "name": "Pommel Strike",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "ender"
+      ]
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      },
+      "flavour": "Cover up, then bring back what you need."
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "read": true
+      },
+      "flavour": "Back off, watch, and reload."
+    },
+    {
+      "name": "Slip",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "throughSafe": true,
+      "flavour": "Even the safe pokes leave a gap for her."
+    },
+    {
+      "name": "Cross-Up",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 9,
+      "chip": 2,
+      "copies": 1,
+      "icons": [
+        "starter"
+      ],
+      "flavour": "Break the guard and keep going.",
+      "special": true
+    },
+    {
+      "name": "Flying Fang",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 18,
+      "build": 2,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "safe": true,
+      "flavour": "A thrown blade: fast, and nothing to punish.",
+      "special": true
+    },
+    {
+      "name": "Afterimage",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 1,
+      "special": true,
+      "followCombo": true,
+      "flavour": "They hit where she was. She is already behind them."
+    }
+  ],
+  "super": {
+    "name": "Hundred Fang",
+    "type": "pressure",
+    "kind": "strike",
+    "speed": 20,
+    "build": 4,
+    "chip": 2,
+    "icons": [
+      "ender"
+    ],
+    "onHit": "knockdown",
+    "flavour": "Once a game: a flurry that knocks them flat."
+  },
+  "notes": "v21 (10 November 2026, Mark): HP 21 (v20 20) after the first round-robin. nine Guards (Recall x3, Read x3 and the fighter's own Guard x3, which pays out only if it beats a Pressure), two Guards do nothing, a 28-card deck, and three specials on the table, one of each type (the Super is whichever type suits the fighter). Cut one Crossing Slash to make room. v20, 9 Nov (evening, Mark): the round's heat stops at the cap (no damage at max), so every HP is lower again to keep games the same length: HP 20 (first pass 22). v20 first balance pass (9 Nov): HP 22 (v19 32), heat cap 8 (v19 7). Under heat a low cap is offence (you reach max sooner, then every Pressure and the round's heat land as damage, and the Super is cheaper), so the v19 caps, set as defence, flipped the balance (Vex and Bastion about 67%, Atlas 31%); every HP is lower to bring time-outs down. Hundred Fang knocks down instead of Dizzy: with Dizzy, at 7 heat, her Super was worth about 11 points of win rate on its own (63% against the Benchmark with it, 52% without). v20 (9 November 2026, Mark): heat. Tokens are your fighter powering up: your heat (the grey your Pressures build) is yours, stops at your own cap of 7, and past it lands as straight damage; a Break that beats a Guard spends it all; a Guard that beats your Pressure douses it. No meter: specials cost 3 heat and the Super your whole cap, bought at the end of a round. The core is Recall x3 and Read x3 (Charge gone); one more card of the fighter's own to stay at 26: Crossing Slash x3 (another Pressure Linker with a Counter, for a rushdown). Otherwise as v19. v19 (8 November 2026, night): two combo lines (Mark): a combo continues only with cards of its Starter's type; grabs stay out of combos except the Warden's. Convert line: Undercut or Cross-Up (Starters) into Pommel Strike (Ender). Cross-Up used to lead into her Pressures; now it starts this line, so HP 32 (from 31): 42% against Bastion before, 50% after. v19 (8 November 2026, evening): the overflow grey cap (the pile stops at the cap, grey beyond it is lost as HP) and a Convert cashes only as the clash card, so no Convert is a Linker or Ender (Mark). Every HP 2 lower to bring time-outs back into the band. Pommel Strike loses Ender. Her own grey cap: 7. HP 31. v19 test (8 November 2026): Counter icons only on Pressures (Mark), played with the grey cap (9). Moved from the v18 file: every Convert loses Counter; Fang Rush, Heel Drop gain it. Rules v18 draft, 8 November 2026 (characters v18 draft.md): Pressure 13, Convert 6, Recover 7; HP 30. Pitched, added as written.",
+  "greyCap": 8
+}

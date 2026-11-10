@@ -20,7 +20,7 @@ export function Decks16({ selected, setSelected }) {
       <span class="label">Fighters</span>
       ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${entry?.id === r.id ? 'true' : 'false'} onClick=${() => setSelected(r.id)}>
         <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-        <span class="meta">${r.fighter.hp} HP${r.fighter.greyCap ? ` · ${TEXT16.heat ? 'heat' : 'grey'} cap ${r.fighter.greyCap}` : ""} · ${deckSize(r.fighter)} cards${r.status === 'variant' && r.fighter.variantOf ? ` · from ${r.fighter.variantOf}` : ''}</span>
+        <span class="meta">${r.fighter.hp} HP${r.fighter.greyCap ? ` · ${TEXT16.heat ? 'heat' : 'grey'} cap ${r.fighter.greyCap}` : ""} · ${(() => { const sp = (r.fighter.cards || []).filter(c => c.special).length; return `${deckSize(r.fighter) - sp} cards${sp ? ` + ${sp} specials` : ''}` })()}${r.status === 'variant' && r.fighter.variantOf ? ` · from ${r.fighter.variantOf}` : ''}</span>
       </button>`)}
       <p class="small muted" style=${{ marginTop: '8px' }}>Edits apply to new matches and Lab runs. Every logged game keeps a copy of the exact deck it used.</p>
     </nav>

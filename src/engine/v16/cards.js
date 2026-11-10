@@ -29,7 +29,7 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 // read Pressure, Break and Guard (kinds: Heavy and Grab; Block), and card text prices specials and the Super in heat.
 export const TEXT16 = { heat: null }
 export function useHeatWords(rules) {
-  TEXT16.heat = { special: rules.specialCost ?? 3 }
+  TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet }
   Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
   KINDS16.guardBreak.label = 'Heavy'
   KINDS16.guard.label = 'Block'
@@ -79,7 +79,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -111,6 +111,11 @@ export function cardLines16(c, { isSuper = false } = {}) {
   else if (t === 'R' && c.brace === 'stagger') text.push("If it beats a Pressure: no follow-up; instead, they're Staggered next round.")
   else if (t === 'R' && c.noFollow) text.push('No follow-up.')
   else if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
+  // Rules v21 (10 Nov): a fighter's own Guard pays out only if it beats a Pressure
+  if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
+  if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
+  if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
+  if (t === 'R' && c.blockHeat) text.push("If it beats a Pressure: gain heat equal to that Pressure's Build (up to your cap).")
   if (t === 'R' && c.onBlock) text.push(`If it beats a Pressure: they're ${c.onBlock === 'knockdown' ? 'knocked down' : STATUSES[c.onBlock]?.label} next round${c.parry || c.brace || c.noFollow ? '' : ' (you still follow up)'}.`)
   if (c.twin) text.push(twinLine(c.name))
   if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
@@ -217,6 +222,8 @@ export function validateCard16(c, { isSuper = false } = {}) {
     else if (c.onBlock === 'dizzy' && !isSuper) E('Dizzy only appears on Supers.')
     if (c.brace) E('A Brace already does something instead of the follow-up: no onBlock as well.')
   }
+  if (c.blockConfiscate !== undefined && (t !== 'R' || !isInt(c.blockConfiscate) || c.blockConfiscate < 1 || c.blockConfiscate > 3)) E('blockConfiscate is 1–3, on a Guard (Confiscate if it beats a Pressure).')
+  for (const k of ['throughSafe', 'followCombo', 'blockHeat']) if (c[k] !== undefined && (t !== 'R' || c[k] !== true || c.brace || c.noFollow)) E(`${k} is true, on a Guard that follows up.`)
   return { errors, warnings }
 }
 
@@ -276,6 +283,7 @@ function norm(c, isSuper) {
     confiscate: c.confiscate ?? 0, discardDownTo: c.discardDownTo ?? null, atClash: c.atClash ?? null, capHand: c.capHand ?? null, endsOn: c.endsOn ?? null,
     reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow, safe: !!c.safe,
     twin: !!c.twin, onBlock: c.onBlock ?? null,
+    blockConfiscate: c.blockConfiscate ?? 0, throughSafe: !!c.throughSafe, followCombo: !!c.followCombo, blockHeat: !!c.blockHeat,
     sup: isSuper, src: c,
   }
 }
