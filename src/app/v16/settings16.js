@@ -6,6 +6,7 @@ import { settings16 } from './fighters16.js'
 import { DEFAULT_W16 } from '../../engine/v16/ai.js'
 import { DEFAULT_RULES16 } from '../../engine/v16/engine.js'
 import { toast, NumField } from '../ui.js'
+import { hw, HN } from '../../engine/v16/cards.js'
 
 const WEIGHTS = [
   ['alpha', 'A grey token on you costs (HP)', 'Grey can be cleared, so a token counts for less than a point of HP.'],
@@ -48,9 +49,9 @@ export function Settings16() {
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${v18 ? null : num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
-        ${d.rules.heat ? num('specialCost', 1, 9, 'A special costs (heat)', 'Rules v20: bought at the end of a round, in initiative order; the Super costs your whole cap. 3 as written.') : null}
-        ${num('greyPerRound', 0, 3, d.rules.heat ? 'Heat each player gains each round' : 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
-        ${v18 ? num('greyCap', 0, 30, d.rules.heat ? 'Heat cap for a fighter that prints none' : 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
+        ${d.rules.heat ? num('specialCost', 1, 9, `A special costs (${HN()})`, 'Rules v20: bought at the end of a round, in initiative order; the Super costs your whole cap. 3 as written.') : null}
+        ${num('greyPerRound', 0, 3, d.rules.heat ? hw('Heat each player gains each round', 'Charge each player gains each round') : 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
+        ${v18 ? num('greyCap', 0, 30, d.rules.heat ? hw('Heat cap for a fighter that prints none', 'Charge cap for a fighter that prints none') : 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
         ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
         ${d.rules.heat ? null : num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${v18 ? null : num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
@@ -61,7 +62,7 @@ export function Settings16() {
           <option value="0">Reusable: meter is the only gate (as written)</option>
           <option value="1">Once per game</option>
         </select></label>`}
-      ${d.rules.heat ? html`<label class="field"><span>At max heat, the round's heat</span>
+      ${d.rules.heat ? html`<label class="field"><span>${hw("At max heat, the round's heat", "When Fully Charged, the round's Charge")}</span>
         <select id="s-roundheat" value=${d.rules.roundHeatCaps ? 'stop' : 'damage'} onChange=${e => rule({ roundHeatCaps: e.target.value === 'stop' })}>
           <option value="stop">Stops at the cap: only your Pressures land in full (v20, 9 Nov)</option>
           <option value="damage">Lands on the opponent as damage (the first v20 page)</option>
@@ -69,7 +70,7 @@ export function Settings16() {
       ${d.rules.heat ? html`<label class="field"><span>Two Guards</span>
         <select id="s-guards" value=${d.rules.guardsQuiet ? 'quiet' : 'douse'} onChange=${e => rule({ guardsQuiet: e.target.value === 'quiet' })}>
           <option value="quiet">Do nothing: nobody attacked (v21, 10 Nov)</option>
-          <option value="douse">Each douses the other's heat (v20)</option>
+          <option value="douse">${hw("Each douses the other's heat (v20)", "Each drains the other's Charge (v20)")}</option>
         </select></label>` : null}
       ${v18 && d.rules.greyCap && !d.rules.heat ? html`<label class="field"><span>At the cap</span>
         <select id="s-overflow" value=${d.rules.greyOverflow ? 'overflow' : 'cash'} onChange=${e => rule({ greyOverflow: e.target.value === 'overflow' })}>

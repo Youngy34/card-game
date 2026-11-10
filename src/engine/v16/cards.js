@@ -29,11 +29,17 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 // read Pressure, Break and Guard (kinds: Heavy and Grab; Block), and card text prices specials and the Super in heat.
 export const TEXT16 = { heat: null }
 export function useHeatWords(rules) {
-  TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet }
+  TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet, charge: rules.words === 'charge' }
   Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
   KINDS16.guardBreak.label = 'Heavy'
   KINDS16.guard.label = 'Block'
 }
+
+// The name of that power. It was heat on the v20 page and the first v21 page; since 10 Nov (Mark) it is Charge
+// (rules.words: 'charge'): you're Fully Charged at your cap, a Break discharges it, a Guard drains it, and Charge
+// built past the cap overloads as damage. hw(heat words, Charge words) picks the page's; HN() is the bare noun.
+export const hw = (heat, charge) => (TEXT16.heat?.charge ? charge : heat)
+export const HN = () => hw('heat', 'Charge')
 
 // Combo and follow-up icons, printed on attacks
 export const ICONS = {
@@ -115,7 +121,7 @@ export function cardLines16(c, { isSuper = false } = {}) {
   if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
   if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
   if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
-  if (t === 'R' && c.blockHeat) text.push("If it beats a Pressure: gain heat equal to that Pressure's Build (up to your cap).")
+  if (t === 'R' && c.blockHeat) text.push(`If it beats a Pressure: gain ${HN()} equal to that Pressure's Build (up to your cap).`)
   if (t === 'R' && c.onBlock) text.push(`If it beats a Pressure: they're ${c.onBlock === 'knockdown' ? 'knocked down' : STATUSES[c.onBlock]?.label} next round${c.parry || c.brace || c.noFollow ? '' : ' (you still follow up)'}.`)
   if (c.twin) text.push(twinLine(c.name))
   if (c.stays) text.push(c.prevent ? `Stays in play. The next time a hit would ${({ knockdown: 'knock you down', staggered: 'stagger you', dizzy: 'leave you Dizzy', lock: 'Lock you' })[c.prevent]}, it doesn't: discard this.` : 'Stays in play.')
@@ -130,8 +136,8 @@ export function cardLines16(c, { isSuper = false } = {}) {
   if (c.discardDownTo != null) text.push(`On hit: they discard down to ${c.discardDownTo} clash cards.`)
   if (c.onHit) text.push(typeof c.onHit === 'string' ? `On hit: ${STATUSES[c.onHit]?.label}.` : `On hit: ${statusText(c.onHit)} (no ${LABEL16[LOCKABLE[c.onHit.lock]]}s for them next round).`)
   if (TEXT16.heat) {
-    if (isSuper) cost.push('All your heat: buy it at max heat, at the end of a round. Once a game.')
-    if (c.special) cost.push(`Special: buy it from the table for ${TEXT16.heat.special} heat at the end of a round.`)
+    if (isSuper) cost.push(hw('All your heat: buy it at max heat, at the end of a round. Once a game.', 'All your Charge: buy it when Fully Charged, at the end of a round. Once a game.'))
+    if (c.special) cost.push(`Special: buy it from the table for ${TEXT16.heat.special} ${HN()} at the end of a round.`)
   } else {
     if (isSuper && c.meter) cost.push(`${c.meter} meter.`)
     if (c.special) cost.push(`Special: take it from the table for ${c.meter ?? 1} meter.`)

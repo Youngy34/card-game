@@ -1,4 +1,4 @@
-// Real-browser click-through (Playwright and Chromium) of the built v21 page (rules v21: heat, nine Guards, three specials), with Preact and htm
+// Real-browser click-through (Playwright and Chromium) of the built v21 page (rules v21: Charge, nine Guards, three specials), with Preact and htm
 // served from local source clones (the CDN isn't reachable from here). Plays whole games against the partner and
 // between two players on one device, answering every prompt, the end-of-round shop included.
 // usage: node tools/smoke/browser20.cjs <built page> <vendor dir> [screenshot dir]
@@ -47,7 +47,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   const btn = (page, name) => page.getByRole('button', { name, exact: true })
 
   async function playGame(page, { shots = false, maxSteps = 900, prefix = '' } = {}) {
-    const seen = { rounds: 0, buy: 0, bought: 0, boughtSuper: 0, follow: 0, link: 0, end: 0, discard: 0, confiscate: 0, pass: 0, heatLines: 0, greyLines: 0, maxNote: 0, maxFlag: 0, timeout: 0, ko: 0, superPlayed: 0 }
+    const seen = { rounds: 0, buy: 0, bought: 0, boughtSuper: 0, follow: 0, link: 0, end: 0, discard: 0, confiscate: 0, pass: 0, heatLines: 0, chargeLines: 0, greyLines: 0, maxNote: 0, maxFlag: 0, timeout: 0, ko: 0, superPlayed: 0 }
     let shotN = 0
     const shot = async name => { if (shots && SHOTS && shotN < 10) { shotN++; await page.screenshot({ path: `${SHOTS}${prefix}${name}.png`, fullPage: true }) } }
     for (let step = 0; step < maxSteps; step++) {
@@ -55,10 +55,11 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
       if (await page.locator('.overlay').count()) { seen.pass++; await page.locator('.overlay .btn').click(); continue }
       if (t.includes('time-out:') && await btn(page, 'Rematch').count()) { seen.timeout++; await shot('09-over'); return seen }
       if (t.includes('k.o.') || t.includes('round limit reached')) { seen.ko++; await shot('09-over'); return seen }
-      if (t.includes('max: your pressures land in full') || t.includes('max: more heat lands as damage')) seen.maxFlag++
-      if (t.includes("you're at max heat") || t.includes('is at max heat (')) seen.maxNote++
+      if (t.includes('fully charged: your pressures land in full') || t.includes('fully charged: more charge overloads as damage')) seen.maxFlag++
+      if (t.includes("you're fully charged") || t.includes('is fully charged (')) seen.maxNote++
+      if (/\bheat\b/.test(t)) seen.heatLines++
       const narr = (await page.locator('.narr16').allInnerTexts()).join(' ').toLowerCase()
-      if (narr.includes(' heat')) seen.heatLines++
+      if (narr.includes(' charge')) seen.chargeLines++
       if (/\bgrey\b/.test(narr)) seen.greyLines++
       if (narr.includes('plays their super')) seen.superPlayed++
       const rider = page.locator('.hand-wrap h3', { hasText: /: (read|recall)$/i })
@@ -71,7 +72,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
         if (nc && (step % 2 || !nb)) await cards.nth(step % nc).click(); else await bs.first().click()
         continue
       }
-      const shop = page.locator('.hand-wrap h3', { hasText: /^Spend heat/ })
+      const shop = page.locator('.hand-wrap h3', { hasText: /^Spend Charge/ })
       if (await shop.count()) {
         seen.buy++
         if (seen.buy === 1) await shot('06-shop')
@@ -82,7 +83,7 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
           const sup = await cards.last().getAttribute('aria-label')
           if (sup && sup.includes('Super')) seen.boughtSuper++
           seen.bought++; await cards.nth(nc - 1).click()
-        } else await page.locator('.hand-wrap .actions .btn', { hasText: /^Keep your heat/ }).click()
+        } else await page.locator('.hand-wrap .actions .btn', { hasText: /^Keep your Charge/ }).click()
         continue
       }
       if (await btn(page, 'Lock in').count()) {
@@ -134,10 +135,14 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(B.includes('rules v21'), 'header says rules v21')
   ok(B.includes('two guards do nothing'), 'the lede says two Guards do nothing')
   ok(B.includes('pressure beats a break, a break beats a guard, a guard beats a pressure'), 'the lede gives the triangle in the new names')
-  ok(B.includes(`${BM.hp} hp · heat cap ${BM.greyCap} · 28 cards + 3 specials`), `the picker shows the Benchmark's HP ${BM.hp} and heat cap ${BM.greyCap}`)
-  ok(B.includes(`${AT.hp} hp · heat cap ${AT.greyCap}`), 'Atlas shows his heat cap')
+  ok(B.includes(`${BM.hp} hp · charge cap ${BM.greyCap} · 28 cards + 3 specials`), `the picker shows the Benchmark's HP ${BM.hp} and Charge cap ${BM.greyCap}`)
+  ok(B.includes(`${AT.hp} hp · charge cap ${AT.greyCap}`), 'Atlas shows his Charge cap')
   ok(!B.includes('meter track'), 'no meter track in the rules line')
-  ok(B.includes('specials 3 heat, the super your whole cap'), 'the rules line prices the table in heat')
+  ok(B.includes('specials 3 charge, the super your whole cap'), 'the rules line prices the table in Charge')
+  ok(B.includes('rules v21: charge.') && B.includes('builds your charge; a break that beats a guard discharges all of it') && B.includes("drains the attacker's charge"), 'the lede says Charge, discharges and drains')
+  ok(B.includes("there you're fully charged") && B.includes('overloads as straight damage') && B.includes('only when fully charged'), 'the lede names Fully Charged and the overload')
+  const noHeat = (text, where) => ok(!/\bheat\b/.test(text), `${where}: the page never says heat`)
+  noHeat(B, 'Setup')
   if (SHOTS) await page.screenshot({ path: `${SHOTS}01-setup.png`, fullPage: true })
 
   // Decks: card faces in the new names
@@ -148,26 +153,31 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   ok(D.includes('guard · block'), 'Decks: the core reads Guard · Block')
   ok(D.includes('on reveal: draw a card.'), "Decks: Read just draws")
   ok(!D.includes('paying its meter'), 'Decks: no meter on Read')
-  ok(D.includes('buy it from the table for 3 heat'), 'Decks: specials cost 3 heat')
-  ok(D.includes('all your heat: buy it at max heat'), 'Decks: the Super costs all your heat')
-  ok(!D.includes('charge'), 'Decks: no Charge in the core')
-  ok(D.includes('heat cap'), 'Decks: the cap reads as a heat cap')
+  ok(D.includes('buy it from the table for 3 charge'), 'Decks: specials cost 3 Charge')
+  ok(D.includes('all your charge: buy it when fully charged'), 'Decks: the Super costs all your Charge')
+  ok(!/on reveal: gain \d+ meter/.test(D), 'Decks: no meter card (the old Charge) in the core')
+  ok(D.includes('full charge'), "Decks: the Super's band reads Full Charge")
+  ok(D.includes('charge cap'), 'Decks: the cap reads as a Charge cap')
+  noHeat(D, 'Decks (Benchmark)')
   ok(D.includes('28 cards + 3 specials'), 'Decks: 28 cards + 3 specials in the list')
   const deckOf = async name => { await page.locator('button.fpick', { hasText: name }).first().click(); await page.waitForTimeout(250); return body() }
-  const DW = await deckOf('The Warden'), DV = await deckOf('Vex'), DA = await deckOf('Atlas')
+  const DW = await deckOf('The Warden'), DV = await deckOf('Vex'), DA = await deckOf('Atlas'), DB = await deckOf('Bastion')
   ok(DW.includes('if it beats a pressure: confiscate'), "Decks: the Warden's Bind")
   ok(DV.includes('you follow up even if the pressure was safe'), "Decks: Vex's Slip")
   ok(DV.includes('your follow-up can start a combo'), "Decks: Vex's Afterimage")
-  ok(DA.includes("gain heat equal to that pressure's build"), "Decks: Atlas's Take the Hit")
+  ok(DA.includes("gain charge equal to that pressure's build"), "Decks: Atlas's Take the Hit")
+  ok(DB.includes('battering ram') && !DB.includes('shield charge'), "Decks: Bastion's Break special is Battering Ram")
+  for (const [n, t] of [['the Warden', DW], ['Vex', DV], ['Atlas', DA], ['Bastion', DB]]) noHeat(t, `Decks (${n})`)
   await deckOf('Benchmark')
   if (SHOTS) await page.screenshot({ path: `${SHOTS}02-decks.png`, fullPage: true })
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.waitForTimeout(200)
   const S = await body()
-  ok(S.includes('a special costs (heat)'), 'Settings: the special price in heat')
+  ok(S.includes('a special costs (charge)'), 'Settings: the special price in Charge')
+  noHeat(S, 'Settings')
   ok(!S.includes('meter track maximum'), 'Settings: no meter track')
   ok(S.includes('two guards') && S.includes('do nothing: nobody attacked'), 'Settings: two Guards do nothing, as written')
-  ok(S.includes("at max heat, the round's heat") && S.includes('stops at the cap: only your pressures land in full'), "Settings: the round's heat stops at the cap, as written")
+  ok(S.includes("when fully charged, the round's charge") && S.includes('stops at the cap: only your pressures land in full'), "Settings: the round's Charge stops at the cap, as written")
   await page.getByRole('button', { name: 'Play', exact: true }).click()
   await page.waitForTimeout(200)
 
@@ -175,20 +185,24 @@ const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewpo
   await btn(page, 'Start the match').click()
   await page.waitForTimeout(400)
   const H = await body()
-  ok(H.includes('heat') && H.includes(`0/${BM.greyCap}`), 'the HUD shows heat out of the cap')
+  ok(H.includes('charge') && H.includes(`0/${BM.greyCap}`), 'the HUD shows Charge out of the cap')
+  noHeat(H, 'the table')
+  ok(await page.locator('.pile.charge .battery').count() === 2 && await page.locator('.pile.charge .battery .cell').count() === 2 * BM.greyCap, `each HUD has a battery with a cell for each point of the cap (${await page.locator('.battery .cell').count()} cells)`)
+  ok(await page.locator('.battery .cell.on').count() === 0 && !(await page.locator('.pile.heat').count()), 'the batteries start empty, and there are no heat tokens')
   ok(!(await page.locator('.meter').count()), 'no meter track on the HUD')
-  ok(H.includes('rising strike · 3 heat'), 'the table prices a special in heat')
-  ok(H.includes(`overdrive · ${BM.greyCap} heat (max)`), 'the table prices the Super at the cap')
+  ok(H.includes('rising strike · 3 charge'), 'the table prices a special in Charge')
+  ok(H.includes(`overdrive · ${BM.greyCap} charge (full)`), 'the table prices the Super at the cap')
   const total = {}
   for (let g = 0; g < 3; g++) {
     const s = await playGame(page, { shots: g === 0, prefix: '' })
     sum(total, s)
-    if (g === 0) ok(/^draw · 1 heat each · spend heat · pass the initiative$/i.test(s.drawLabel || ''), `the end-of-round button names the shop (${s.drawLabel})`)
+    if (g === 0) ok(/^draw · 1 charge each · spend charge · pass the initiative$/i.test(s.drawLabel || ''), `the end-of-round button names the shop (${s.drawLabel})`)
     await btn(page, 'Rematch').click(); await page.waitForTimeout(300)
   }
   console.log('vs partner, 3 games:', JSON.stringify(total))
   ok(total.rounds > 20, 'rounds were played')
-  ok(total.heatLines > 0, 'the narration talks about heat')
+  ok(total.chargeLines > 0, 'the narration talks about Charge')
+  ok(total.heatLines === 0, `the table never says heat (${total.heatLines} steps did)`)
   ok(total.greyLines === 0, 'the narration never says grey')
   ok(total.buy > 0, 'the shop came up')
   ok(total.bought > 0, 'a card was bought')

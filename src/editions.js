@@ -62,9 +62,10 @@ export const EDITIONS = {
     defaultSides: ['benchmark20', 'benchmark20'],
   },
   // v21 (10 Nov, Mark): v20 with nine Guards (Recall, Read, the fighter's own, three of each), two Guards do nothing,
-  // 28-card decks, and three specials (one of each type) plus the Super on the table
+  // 28-card decks, and three specials (one of each type) plus the Super on the table. Since the afternoon of 10 Nov
+  // the page calls heat Charge (words: 'charge' in data/v21/settings.json); the v20 page keeps heat
   v21: {
-    title: 'Yomi Playtest v21', subtitle: 'rules v21: heat, nine Guards, three specials', out: 'yomi-playtest-v21.html', settings: 'v21/settings.json',
+    title: 'Yomi Playtest v21', subtitle: 'rules v21: Charge, nine Guards, three specials', out: 'yomi-playtest-v21.html', settings: 'v21/settings.json',
     fighters: [],
     reference: [['v21', 'benchmark']],
     drafts: [['v21', 'warden'], ['v21', 'vex'], ['v21', 'bastion'], ['v21', 'atlas']],

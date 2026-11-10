@@ -6,7 +6,7 @@ import { html, cx, useState, useEffect, useMemo } from '../lib.js'
 import { Card16 } from './card16.js'
 import { Confirm, StatusChip, copyText, toast, Seg } from '../ui.js'
 import { roster, saveFighter, removeFighter, getState, download } from '../store.js'
-import { validateFighter16, deckSize, T16, LABEL16, TEXT16 } from '../../engine/v16/cards.js'
+import { validateFighter16, deckSize, T16, LABEL16, TEXT16, hw, HN } from '../../engine/v16/cards.js'
 import { stableStringify } from '../../engine/fighters.js'
 
 const clone = v => JSON.parse(JSON.stringify(v))
@@ -20,7 +20,7 @@ export function Decks16({ selected, setSelected }) {
       <span class="label">Fighters</span>
       ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${entry?.id === r.id ? 'true' : 'false'} onClick=${() => setSelected(r.id)}>
         <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-        <span class="meta">${r.fighter.hp} HP${r.fighter.greyCap ? ` · ${TEXT16.heat ? 'heat' : 'grey'} cap ${r.fighter.greyCap}` : ""} · ${(() => { const sp = (r.fighter.cards || []).filter(c => c.special).length; return `${deckSize(r.fighter) - sp} cards${sp ? ` + ${sp} specials` : ''}` })()}${r.status === 'variant' && r.fighter.variantOf ? ` · from ${r.fighter.variantOf}` : ''}</span>
+        <span class="meta">${r.fighter.hp} HP${r.fighter.greyCap ? ` · ${TEXT16.heat ? HN() : 'grey'} cap ${r.fighter.greyCap}` : ""} · ${(() => { const sp = (r.fighter.cards || []).filter(c => c.special).length; return `${deckSize(r.fighter) - sp} cards${sp ? ` + ${sp} specials` : ''}` })()}${r.status === 'variant' && r.fighter.variantOf ? ` · from ${r.fighter.variantOf}` : ''}</span>
       </button>`)}
       <p class="small muted" style=${{ marginTop: '8px' }}>Edits apply to new matches and Lab runs. Every logged game keeps a copy of the exact deck it used.</p>
     </nav>
@@ -81,7 +81,7 @@ function DeckEditor({ entry, list, setSelected }) {
     <div class="stats">
       <div class="stat-tile"><span class="label">HP</span>
         <div class="row" style=${{ gap: '6px' }}><button class="btn small ghost" disabled=${readOnly} onClick=${() => set({ ...draft, hp: Math.max(1, draft.hp - 1) })}>−</button><b>${draft.hp}</b><button class="btn small ghost" disabled=${readOnly} onClick=${() => set({ ...draft, hp: Math.min(99, draft.hp + 1) })}>+</button></div></div>
-      ${draft.rules === 18 ? html`<div class="stat-tile" title=${TEXT16.heat ? "Its own heat cap: the most heat it can hold (past it, heat lands as straight damage) and its Super's price; — uses the rule's" : "Its own grey cap, used whenever the rule's cap is on (Settings); — uses the rule's"}><span class="label">${TEXT16.heat ? 'Heat cap' : 'Grey cap'}</span>
+      ${draft.rules === 18 ? html`<div class="stat-tile" title=${TEXT16.heat ? hw("Its own heat cap: the most heat it can hold (past it, heat lands as straight damage) and its Super's price; — uses the rule's", "Its own Charge cap: the most Charge it can hold (past it, Charge overloads as straight damage) and its Super's price; — uses the rule's") : "Its own grey cap, used whenever the rule's cap is on (Settings); — uses the rule's"}><span class="label">${TEXT16.heat ? hw('Heat cap', 'Charge cap') : 'Grey cap'}</span>
         <div class="row" style=${{ gap: '6px' }}><button class="btn small ghost" disabled=${readOnly || !draft.greyCap} onClick=${() => { const { greyCap, ...rest } = draft; set(greyCap > 2 ? { ...draft, greyCap: greyCap - 1 } : rest) }} aria-label="Lower the cap">−</button><b>${draft.greyCap || '—'}</b><button class="btn small ghost" disabled=${readOnly || (draft.greyCap || 0) >= 30} onClick=${() => set({ ...draft, greyCap: Math.max(3, (draft.greyCap || 8) + 1) })} aria-label="Raise the cap">+</button></div></div>` : null}
       <div class="stat-tile"><span class="label">Deck</span><b>${size}</b><span class="small muted">${mix.map(([t, n]) => `${n} ${LABEL16[t]}`).join(' · ')}</span></div>
       <div class="stat-tile"><span class="label">Counters</span><b>${counters}</b><span class="small muted">at least 6 in 24 recommended</span></div>

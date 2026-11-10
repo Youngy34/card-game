@@ -4,6 +4,8 @@
 //
 //   node tools/build-artifact.mjs                -> dist/yomi-playtest.html      (rules v11 and v12)
 //   node tools/build-artifact.mjs --edition v15  -> dist/yomi-playtest-v15.html  (rules v15)
+//   ... --document                               a whole HTML document (for publishing from a file)
+//   ... --title "Yomi Playtest v21 (Charge)"     the page's title, if not the edition's
 //
 // Editions (which fighters a page bundles) are in src/editions.js.
 //
@@ -78,16 +80,22 @@ const between = (a, b) => html.slice(html.indexOf(a) + a.length, html.indexOf(b)
 const css = fs.readFileSync(path.join(root, 'src/app/styles.css'), 'utf8')
 const head = between('<!--HEAD-->', '<!--/HEAD-->').replace(/<link rel="stylesheet" href="src\/app\/styles.css">\n?/, '')
 const body = between('<!--BODY-->', '<!--/BODY-->')
-const page = `<title>${E.title}</title>
+const ti = process.argv.indexOf('--title')
+const title = ti >= 0 ? process.argv[ti + 1] : E.title
+const top = `<title>${title}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 ${head.trim()}
 <style>
 ${css}
-</style>
-${body.trim()}
+</style>`
+const rest = `${body.trim()}
 <script>
-${js}</script>
-`
+${js}</script>`
+// --document: a whole HTML document (doctype, head, body), which publishing from a file needs; without it, the
+// fragment the earlier pages were published as
+const page = process.argv.includes('--document')
+  ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${top}\n</head>\n<body>\n${rest}\n</body>\n</html>\n`
+  : `${top}\n${rest}\n`
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true })
 fs.writeFileSync(path.join(root, `dist/${E.out}`), page)
 console.log(`dist/${E.out}: ${(page.length / 1024).toFixed(0)} KB, ${modOrder.length} modules`)

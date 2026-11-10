@@ -16,7 +16,7 @@ import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, di
 import { toFighter16, fighterHash16 } from './fighters16.js'
 import { clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, chooseConfiscate, chooseMode16, chooseRead18, sampleIndex, LEVELS16, BOTS16, chooseBuy20, botBuy20 } from '../../engine/v16/ai.js'
 import { roundRecord16, winRoute16, snap16, randomReveal18 } from '../../engine/v16/game.js'
-import { LABEL16, STATUSES } from '../../engine/v16/cards.js'
+import { LABEL16, STATUSES, hw, HN } from '../../engine/v16/cards.js'
 
 const HUMANS = { ai: [true, false], hotseat: [true, true], watch: [false, false] }
 export const WHO16 = { ai: ['You', 'Sparring partner'], hotseat: ['Player 1', 'Player 2'], watch: ['Partner 1', 'Partner 2'] }
@@ -319,7 +319,7 @@ export function nextRound16(m) {
   // greyCap (v19 test): say whose pile was cashed at the end of the round, or (overflow) whose full pile cost HP
   const capNote = [0, 1].map(k => {
     const X = P(m, k)
-    if (G.rules.heat && G.capSpill?.[k]) return `End of round ${m.G.round}: ${P(m, 1 - k).f.name} was at max heat, so the round's heat hit ${X.f.name} for ${G.capSpill[k]}.`
+    if (G.rules.heat && G.capSpill?.[k]) return hw(`End of round ${m.G.round}: ${P(m, 1 - k).f.name} was at max heat, so the round's heat hit ${X.f.name} for ${G.capSpill[k]}.`, `End of round ${m.G.round}: ${P(m, 1 - k).f.name} was Fully Charged, so the round's Charge hit ${X.f.name} for ${G.capSpill[k]}.`)
     if (G.capCash?.[k]) return `End of round ${m.G.round}: ${X.f.name}'s grey reached the cap of ${capOf(X, G.rules)} and was cashed for ${G.capCash[k]} damage.`
     if (G.capSpill?.[k]) return `End of round ${m.G.round}: ${X.f.name}'s pile was full, so the round's grey cost ${G.capSpill[k]} HP.`
     return null
@@ -357,9 +357,9 @@ export function chooseBuy(m, side, choice) {
 export function buyList(m, side) {
   const X = P(m, side), h = heatOf(m.G, side)
   return buyOptions20(m.G, side).map(o => {
-    if (o === null) return { opt: null, label: `Keep your heat (${h})` }
+    if (o === null) return { opt: null, label: `Keep your ${HN()} (${h})` }
     const c = o === 'S' ? X.f.sup : X.f.cards[o], cost = tableCost(X, o)
-    return { opt: o, card: c, sup: o === 'S', label: o === 'S' ? `Buy ${c.name}: all ${cost} heat` : `Buy ${c.name} for ${cost} heat (${h - cost} left)` }
+    return { opt: o, card: c, sup: o === 'S', label: o === 'S' ? `Buy ${c.name}: all ${cost} ${HN()}` : `Buy ${c.name} for ${cost} ${HN()} (${h - cost} left)` }
   })
 }
 
@@ -423,11 +423,11 @@ export function boardNotes16(m, side) {
   if (m.G.rules.heat) {
     // rules v20: your heat is the pile on them, up to your own cap; theirs is the pile on you
     const mine = Y.pile, theirs = X.pile, myCap = ownCap(X, m.G.rules), theirCap = ownCap(Y, m.G.rules)
-    if (m.boughtNote?.[1 - side]) notes.push({ tone: 'bad', text: `${name} bought ${m.boughtNote[1 - side].name} for ${m.boughtNote[1 - side].cost} heat at the end of last round${m.boughtNote[1 - side].sup ? ': their Super is in their hand' : ''}.` })
-    if (mine >= myCap) notes.push({ tone: 'good', text: `You're at max heat (${mine} of ${myCap}): ${m.G.rules.roundHeatCaps ? `every Pressure that lands now hits ${name} in full: its Build is straight damage.` : `heat you gain now lands on ${name} as damage, the round's 1 too.`} A Break that beats their Guard spends all ${mine}; a Guard that beats your Pressure douses it.` })
-    else if (mine + 3 >= myCap) notes.push({ tone: 'good', text: `Your heat is ${mine} of ${myCap}: one Pressure hit could take you to max.` })
-    if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is at max heat (${theirs} of ${theirCap}): ${m.G.rules.roundHeatCaps ? 'every Pressure of theirs that lands now hits you in full.' : 'heat they gain lands on you as damage.'} A Break of theirs that beats your Guard spends all ${theirs}; your Guard beating their Pressure douses it.` })
-    else if (theirs + 3 >= theirCap) notes.push({ tone: 'bad', text: `${name}'s heat is ${theirs} of ${theirCap}: one Pressure hit could take them to max.` })
+    if (m.boughtNote?.[1 - side]) notes.push({ tone: 'bad', text: `${name} bought ${m.boughtNote[1 - side].name} for ${m.boughtNote[1 - side].cost} ${HN()} at the end of last round${m.boughtNote[1 - side].sup ? ': their Super is in their hand' : ''}.` })
+    if (mine >= myCap) notes.push({ tone: 'good', text: `${hw("You're at max heat", "You're Fully Charged")} (${mine} of ${myCap}): ${m.G.rules.roundHeatCaps ? `every Pressure that lands now hits ${name} in full: its Build is straight damage.` : hw(`heat you gain now lands on ${name} as damage, the round's 1 too.`, `Charge you gain now overloads onto ${name} as damage, the round's 1 too.`)} A Break that beats their Guard ${hw('spends', 'discharges')} all ${mine}; a Guard that beats your Pressure ${hw('douses', 'drains')} it.` })
+    else if (mine + 3 >= myCap) notes.push({ tone: 'good', text: `Your ${HN()} is ${mine} of ${myCap}: one Pressure hit could ${hw('take you to max', 'leave you Fully Charged')}.` })
+    if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is ${hw('at max heat', 'Fully Charged')} (${theirs} of ${theirCap}): ${m.G.rules.roundHeatCaps ? 'every Pressure of theirs that lands now hits you in full.' : hw('heat they gain lands on you as damage.', 'Charge they gain overloads onto you as damage.')} A Break of theirs that beats your Guard ${hw('spends', 'discharges')} all ${theirs}; your Guard beating their Pressure ${hw('douses', 'drains')} it.` })
+    else if (theirs + 3 >= theirCap) notes.push({ tone: 'bad', text: `${name}'s ${HN()} is ${theirs} of ${theirCap}: one Pressure hit could ${hw('take them to max', 'leave them Fully Charged')}.` })
   } else {
   const gpr = m.G.rules.greyPerRound || 0, cX = capOf(X, m.G.rules), cY = capOf(Y, m.G.rules)
   if (cX && m.G.rules.greyOverflow) {
@@ -451,7 +451,7 @@ export function boardNotes16(m, side) {
   let bestC = null
   Y.f.cards.forEach((c, i) => { if (c.t === 'C' && unseen[i] && !Y.st.lock?.C) { const v = c.chip + (Y.fx.convertChip || 0) + (Y.fx.attackChip || 0); if (bestC === null || v > bestC.v) bestC = { v, c } } })
   if (superReady(Y, m.G.rules) && Y.f.sup.t === 'C' && !Y.st.lock?.C) { const v = Y.f.sup.chip + (Y.fx.convertChip || 0); if (!bestC || v > bestC.v) bestC = { v, c: Y.f.sup } }
-  if (bestC && X.pile + bestC.v >= X.hp) notes.push({ tone: 'bad', text: m.G.rules.heat ? `You're in lethal range if they hold ${bestC.c.name}: their ${X.pile} heat plus its ${bestC.v} chip is at least your ${X.hp} HP.` : `You're in lethal range if they hold ${bestC.c.name}: your ${X.pile} grey plus its ${bestC.v} chip is at least your ${X.hp} HP.` })
+  if (bestC && X.pile + bestC.v >= X.hp) notes.push({ tone: 'bad', text: m.G.rules.heat ? `You're in lethal range if they hold ${bestC.c.name}: their ${X.pile} ${HN()} plus its ${bestC.v} chip is at least your ${X.hp} HP.` : `You're in lethal range if they hold ${bestC.c.name}: your ${X.pile} grey plus its ${bestC.v} chip is at least your ${X.hp} HP.` })
   if (superReady(Y, m.G.rules) && !m.G.rules.tableCards) notes.push({ tone: 'bad', text: `${name} has ${Y.meter} meter: their Super, ${Y.f.sup.name}, is live.` })
   if (superReady(X, m.G.rules)) notes.push({ tone: 'good', text: m.G.rules.tableCards ? `Your Super, ${X.f.sup.name}, is live (it's in your hand row).` : `You have ${X.meter} meter: your Super, ${X.f.sup.name}, is live (it's in your hand row).` })
   if (m.G.rules.initiative && (m.G.init === 0 || m.G.init === 1)) notes.push({ tone: m.G.init === side ? 'good' : undefined, text: m.G.init === side ? 'You hold the initiative: you win speed ties this round, and choose first where there\'s an order.' : `${name} holds the initiative: they win speed ties this round.` })
@@ -494,7 +494,7 @@ export function boardNotes16(m, side) {
     else if (myBest < theirBest) notes.push({ text: `${label} duel: they could hold a faster one (${theirBest}) than your fastest (${myBest}).` })
     else notes.push({ text: `${label} duel: your fastest and theirs could both be ${myBest}: a tie ${m.G.rules.speedTie === 'lowhp' ? 'goes to the player on less HP' : m.G.rules.speedTie === 'initiative' && (m.G.init === 0 || m.G.init === 1) ? (m.G.init === side ? 'goes to you (you hold the initiative)' : `goes to ${name} (they hold the initiative)`) : 'cancels'}.` })
   }
-  if (Y.pile > 0) notes.push({ tone: 'good', text: m.G.rules.heat ? `A Break of yours that beats their Guard spends your ${Y.pile} heat as damage, plus its chip.` : `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
+  if (Y.pile > 0) notes.push({ tone: 'good', text: m.G.rules.heat ? `A Break of yours that beats their Guard ${hw('spends', 'discharges')} your ${Y.pile} ${HN()} as damage, plus its chip.` : `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
   return notes
 }
 

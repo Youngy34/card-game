@@ -30,7 +30,8 @@
     "specialCost": 3,
     "meterMax": 3,
     "roundHeatCaps": true,
-    "guardsQuiet": true
+    "guardsQuiet": true,
+    "words": "charge"
   },
   "ai": {
     "alpha": 0.6,

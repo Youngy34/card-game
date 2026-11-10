@@ -2,10 +2,11 @@
 // 28-card decks, two Guards doing nothing, three specials on the table (one of each type), and the own Guards'
 // effects, which fire only when the Guard beats a Pressure: Confiscate (Bind, Iron Grip), a follow-up through Safe
 // (Slip), a follow-up that can start a combo (Afterimage), heat from the blocked Pressure's Build (Take the Hit).
+// Since the afternoon of 10 Nov the page calls heat Charge (words: 'charge'); the engine's names keep "heat".
 //   node tools/test21.mjs
 
 import fs from 'fs'
-import { toFighter16, validateFighter16, cardLines16, useHeatWords } from '../src/engine/v16/cards.js'
+import { toFighter16, validateFighter16, cardLines16, useHeatWords, TEXT16, HN } from '../src/engine/v16/cards.js'
 import { newGame16, startClash16, decideClash16, heatOf, capOf } from '../src/engine/v16/engine.js'
 import { playGame18 } from '../src/engine/v16/game.js'
 import { DEFAULT_W16 } from '../src/engine/v16/ai.js'
@@ -104,8 +105,22 @@ const [JAB, LUNGE, SLASH, RECALL, BLOCK, READ] = ['Jab', 'Lunge', 'Slash', 'Reca
   const t = n => cardLines16(J[n].cards.find(c => c.name === OWN[n])).text.join(' ')
   ok(/Confiscate/.test(t('warden')), 'Bind says Confiscate')
   ok(/Safe/.test(t('vex')), 'Slip mentions Safe')
-  ok(/heat equal/.test(t('atlas')), 'Take the Hit says heat')
+  ok(/Charge equal/.test(t('atlas')), 'Take the Hit says Charge')
   ok(/combo/.test(cardLines16(J.vex.cards.find(c => c.name === 'Afterimage')).text.join(' ')), 'Afterimage says combo')
+}
+// 7b. The words (10 Nov, afternoon, Mark): the v21 page calls heat Charge; a page without the switch keeps heat
+{
+  ok(rules.words === 'charge' && TEXT16.heat.charge && HN() === 'Charge', 'v21 settings: the power is called Charge')
+  const sp = cardLines16(J.benchmark.cards.find(c => c.special)), su = cardLines16(J.benchmark.super, { isSuper: true })
+  ok(sp.cost.join(' ').includes('for 3 Charge'), `a special costs 3 Charge (${sp.cost})`)
+  ok(su.cost.join(' ').includes('All your Charge: buy it when Fully Charged'), `the Super is bought when Fully Charged (${su.cost})`)
+  const all = names.flatMap(n => [...J[n].cards, J[n].super].flatMap(c => { const l = cardLines16(c, { isSuper: c === J[n].super }); return [...l.text, ...l.cost] })).join(' ')
+  ok(!/\bheat\b/i.test(all), 'no card text says heat')
+  ok(J.bastion.cards.some(c => c.name === 'Battering Ram' && c.special && c.type === 'convert') && !J.bastion.cards.some(c => c.name === 'Shield Charge'), "Bastion's Break special is Battering Ram (was Shield Charge)")
+  ok(!names.some(n => [...J[n].cards, J[n].super].some(c => /charge/i.test(c.name))), 'no card is named Charge')
+  useHeatWords({ ...rules, words: undefined })
+  ok(HN() === 'heat' && cardLines16(J.benchmark.cards.find(c => c.special)).cost.join(' ').includes('for 3 heat'), 'without the switch (the v20 page), the words are heat')
+  useHeatWords(rules)
 }
 // 8. Whole games run in every matchup
 for (const a of names) for (const b of names) {

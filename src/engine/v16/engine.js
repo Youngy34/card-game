@@ -45,7 +45,7 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
   splitDecks: true, neutralHand: 3, greyPerRound: 1, confiscateFloor: 2,
   initiative: false, tableCards: false, refillAtReveal: false,
   merged: false, specialsReturn: false, timeout: false, knockdownLocks: false, knockdownSlow: false, greyCap: 0, greyOverflow: false, cashOnWin: false, comboSameType: false,
-  heat: false, specialCost: 3, roundHeatCaps: false }
+  heat: false, specialCost: 3, roundHeatCaps: false, words: 'heat' }   // words: what a heat page calls the power ('heat', or 'charge' since 10 Nov)
 // Rules v18 switches (rules-overview 18.md), off for v16 and v17:
 //   merged: one deck, one hand and one discard pile; no neutral step. A round is the clash and the
 //     end of the round. Neutral effects live on clash cards as riders that fire On reveal (when the
