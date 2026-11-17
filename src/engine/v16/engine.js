@@ -753,6 +753,8 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     const wc0 = cards[winner], lc0 = cards[1 - winner]
     let r = null
     if (wc0 && wc0.t !== 'R') r = wc0.hitTo
+    // guardTo (17 Nov, new test fighters: Step In, Sidestep): an own Guard's range line overrides the on-block range
+    else if (wc0?.t === 'R' && lc0?.t === 'P' && outcome === 'triangle' && wc0.guardTo) { r = wc0.guardTo; if (r !== G.range) ev.push({ side: winner, kind: 'guardTo', name: wc0.name, to: r }) }
     else if (wc0?.t === 'R' && lc0?.t === 'P' && outcome === 'triangle' && !wc0.holdGround) r = lc0.blockTo
     else if (wc0?.t === 'R' && lc0?.t === 'P' && outcome === 'triangle' && wc0.holdGround && lc0.blockTo && lc0.blockTo !== G.range) ev.push({ side: winner, kind: 'holdGround', name: wc0.name })
     if (r) next = setRange(next, r, ev)
@@ -776,6 +778,11 @@ const ICON_FOR = { follow: 'counter', link: 'linker', end: 'ender' }
 function ask(G, stage, side) {
   const X = side === 0 ? G.A : G.B
   let options = stage === 'follow' && X.fx.parry ? attackOptions(X, G.rules) : iconOptions(X, ICON_FOR[stage], G.rules)
+  // followAny (17 Nov, Catch): the Guard that won lets you follow up with any Pressure, not just a Counter
+  if (stage === 'follow') {
+    const gi = G.clash?.picks?.[side], gc = gi != null && gi !== 'S' ? X.f.cards[gi] : null
+    if (gc?.followAny) options = attackOptions(X, G.rules).filter(i => i !== 'S' && X.f.cards[i].t === 'P')
+  }
   // comboSameType (test): Linkers and Enders of the Starter's type only (the Starter: the clash card, or a Parry follow-up)
   if (G.rules.comboSameType && stage !== 'follow') {
     const lineT = G.clash.follow?.side === side ? G.clash.follow.t : G.clash.types[side]
@@ -921,6 +928,9 @@ export const ownCap = (X, rules) => X.heatCost?.sup ?? (X.f.greyCap || rules?.gr
 export function buyOptions20(G, side) {
   const X = side === 0 ? G.A : G.B, heat = heatOf(G, side)
   const out = [null]
+  // knockdownNoOption (17 Nov, Mark): knocked down this round, you can't take the end-of-round option (no move, no
+  // Overdrive); you're on the floor. Only the other player can change the range. It ends once your next clash is over.
+  if (G.rules.knockdownNoOption && X.next?.knockdown) return out
   for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
   if (X.superAt === 'table' && X.f.sup && X.heatCost?.sup > 0 && heat >= X.heatCost.sup) out.push('S')
   // chargeMove (13 Nov): instead of buying, spend that much Charge to move the fight (Close to Far, or Far to Close)

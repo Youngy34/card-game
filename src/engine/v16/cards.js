@@ -97,7 +97,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'reach', 'move', 'blockMove', 'revealSpeed', 'breakReturn', 'hitTo', 'blockTo', 'holdGround', 'blockCharge', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'reach', 'move', 'blockMove', 'revealSpeed', 'breakReturn', 'hitTo', 'blockTo', 'holdGround', 'blockCharge', 'guardTo', 'followAny', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -140,6 +140,8 @@ export function cardLines16(c, { isSuper = false } = {}) {
   if (t === 'R' && c.holdGround) text.push(`If it beats a Pressure, that Pressure doesn't move the fight.`)
   if (t === 'R' && c.blockCharge) text.push(`If it beats a Pressure, build ${c.blockCharge} Charge.`)
   if (t === 'R' && c.breakReturn) text.push('If a Break beats it, it goes back to your hand.')
+  if (t === 'R' && c.guardTo) text.push(`If it beats a Pressure, the fight ends at ${RANGE_NAME[c.guardTo]}.`)
+  if (t === 'R' && c.followAny) text.push('If it beats a Pressure, follow up with any Pressure, not just a Counter.')
   if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
   if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
   if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
@@ -260,6 +262,8 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.blockTo !== undefined && (t !== 'P' || !['close', 'far'].includes(c.blockTo))) E('blockTo is "close" or "far", on a Pressure (only Pressures can be Guarded).')
   if (c.holdGround !== undefined && (t !== 'R' || c.holdGround !== true)) E('holdGround is true, on a Guard.')
   if (c.blockCharge !== undefined && (t !== 'R' || !isInt(c.blockCharge) || c.blockCharge < 1 || c.blockCharge > 3)) E('blockCharge is 1–3, on a Guard.')
+  if (c.guardTo !== undefined && (t !== 'R' || !['close', 'far'].includes(c.guardTo))) E('guardTo is "close" or "far", on a Guard.')
+  if (c.followAny !== undefined && (t !== 'R' || c.followAny !== true)) E('followAny is true, on a Guard.')
   return { errors, warnings }
 }
 
@@ -324,7 +328,7 @@ function norm(c, isSuper) {
     blockConfiscate: c.blockConfiscate ?? 0, throughSafe: !!c.throughSafe, followCombo: !!c.followCombo, blockHeat: !!c.blockHeat,
     reach: c.reach ?? null, move: c.move ?? null, blockMove: c.blockMove ?? null,         // range test (12 Nov): 'close' | 'far' | 'both'; 'push' | 'pull'
     revealSpeed: c.revealSpeed ?? 0, breakReturn: !!c.breakReturn,                         // v23 (16 Nov): Sidestep, Breakfall
-    hitTo: c.hitTo ?? null, blockTo: c.blockTo ?? null, holdGround: !!c.holdGround, blockCharge: c.blockCharge ?? 0,     // range endings (16 Nov)
+    hitTo: c.hitTo ?? null, blockTo: c.blockTo ?? null, holdGround: !!c.holdGround, blockCharge: c.blockCharge ?? 0, guardTo: c.guardTo ?? null, followAny: !!c.followAny,     // 17 Nov: Step In / Sidestep, Catch     // range endings (16 Nov)
     sup: isSuper, src: c,
   }
 }
