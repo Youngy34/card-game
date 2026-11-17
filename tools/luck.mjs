@@ -93,6 +93,7 @@ const stateOf = (G, k) => {
 }
 // Hard, as aiClash plays it (same draws on the rng), noting the decision gap
 const bucket = (v, cap) => (v <= 0 ? '0' : v >= cap ? 'full' : v <= 2 ? '1-2' : '3+')
+const TILT = []
 function hardPicker(gaps, mix) {
   return (G, k, rng) => {
     const m = clashMix16(G, k, W, rng, 'hard')
@@ -107,6 +108,10 @@ function hardPicker(gaps, mix) {
         m.options.forEach((o, i) => { const t = o === null ? null : card16(X, o)?.t; if (t) e[t] += m.x[i] })
         const seen = new Set(m.options.map(o => (o === null ? null : card16(X, o)?.t)))
         for (const t of ['P', 'C', 'R']) if (seen.has(t)) e.held[t]++
+        // tilt (17 Nov): Hard's type mix at this decision, and the types it could play
+        const tm = { P: 0, C: 0, R: 0 }
+        m.options.forEach((o, i) => { const t = o === null ? null : card16(X, o)?.t; if (t) tm[t] += m.x[i] })
+        TILT.push({ mix: tm, held: [...seen].filter(Boolean), gap: best - mean, side: k })
       }
     }
     return m.options[sampleIndex(m.x, rng)]
@@ -297,6 +302,17 @@ function run(a, b, kind, sd = seed) {
     } else if (kind === 'kb0') { Ws = [dropKeys(W), W]
     } else if (kind === 'kb1') { Ws = [W, dropKeys(W)]
     } else if (kind === 'deep1') { buyers = [null, deepBuy]
+    } else if (/^(rclash|rtypeb|rcardb|rbuy|rcombo)[01]$/.test(kind)) {
+      // skill split (17 Nov): side s makes one kind of decision at random, everything else as Hard
+      const s = +kind.at(-1), how = kind.slice(0, -1)
+      if (how === 'rclash') pickers[s] = (G, k, r) => botClash(G, k, 'random', r)
+      else if (how === 'rtypeb') pickers[s] = splitPicker('rtype')
+      else if (how === 'rcardb') pickers[s] = splitPicker('rcard')
+      else if (how === 'rbuy') buyers[s] = (G, k, r) => { const o = buyOptions20(G, k); return o[Math.floor(r() * o.length)] }
+      else if (how === 'rcombo') combos[s] = randomCombo
+    } else if (/^lvl:(easy|medium)[01]$/.test(kind)) {
+      // skill ladder (17 Nov): side s plays at a looser level (quantal: picks weaker cards when the choice is close)
+      const s = +kind.at(-1); levels = s ? ['hard', kind.slice(4, -1)] : [kind.slice(4, -1), 'hard']
     } else if (kind === 'random0') { levels = ['random', 'hard']
     } else if (kind === 'random1') { levels = ['hard', 'random']
     } else if (kind === 'fitted') { Ws = [{ ...W, fit: FIT }, W]
@@ -566,6 +582,23 @@ if (mode === 'game') {
     console.log(`${rounds} rounds; no winner: two Guards ${pct(noWinner.guards / rounds)}, other ${pct(noWinner.other / rounds)}`)
     for (const [k, v] of Object.entries(out.rows).sort()) console.log(`${k.padEnd(22)} ${pct(v.share).padStart(6)} of rounds · damage ${v.dmg.toFixed(2)} · Charge ${v.charge.toFixed(2)} · knockdown ${pct(v.kd)} · extra hits ${v.extra.toFixed(2)} · hand swing ${v.swing.toFixed(2)} · in Overdrive ${pct(v.od)}`)
   }
+} else if (mode === 'tilt') {
+  // How much each round tilts Hard's best type mix (17 Nov, depth): the spread of its mix across decisions
+  // node tools/luck.mjs --edition v23tf tilt brawler zoner -n 300 --json
+  const r = run(args[1], args[2] || args[1], 'hard', seed)
+  const T = TILT.filter(d => d.held.length >= 2)
+  const mean = { P: 0, C: 0, R: 0 }
+  for (const d of T) for (const t of ['P', 'C', 'R']) mean[t] += d.mix[t] / T.length
+  const tv = d => 0.5 * ['P', 'C', 'R'].reduce((a, t) => a + Math.abs(d.mix[t] - mean[t]), 0)
+  const top = d => Math.max(d.mix.P, d.mix.C, d.mix.R)
+  const zero = d => d.held.filter(t => d.mix[t] < 0.05).length > 0
+  const allThree = T.filter(d => d.held.length === 3)
+  const out = { n, decisions: T.length, mean, tvMean: T.reduce((a, d) => a + tv(d), 0) / T.length,
+    topMean: T.reduce((a, d) => a + top(d), 0) / T.length, top60: T.filter(d => top(d) >= 0.6).length / T.length,
+    heldTypeNearZero: T.filter(zero).length / T.length, allThreeHeld: allThree.length / T.length,
+    gapMean: T.reduce((a, d) => a + d.gap, 0) / T.length,
+    hist: [0, 0.1, 0.2, 0.3, 0.4].map(lo => T.filter(d => tv(d) >= lo && tv(d) < lo + 0.1).length / T.length) }
+  if (json) console.log(JSON.stringify(out)); else console.log(JSON.stringify(out, null, 1))
 } else if (mode === 'learner') {
   const L = luck(run(args[1], args[2] || args[1], 'learner').games)
   if (json) console.log(JSON.stringify({ n, ...L })); else console.log(`the Learner (side 0) beats Hard ${pct(L.win)} · median ${L.median}`)
