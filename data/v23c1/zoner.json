@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "zoner23b",
+  "name": "Zoner",
+  "epithet": "Far range",
+  "prefers": "far",
+  "hp": 18,
+  "greyCap": 5,
+  "passive": null,
+  "concept": "v23c1 (16 Nov): v23b zoner with Counters only on the Enders (Uppercut, Low Shot).",
+  "cards": [
+    {
+      "name": "Poke",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "safe": true
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [],
+      "reach": "both",
+      "safe": true
+    },
+    {
+      "name": "Arc Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "linker"
+      ],
+      "reach": "far"
+    },
+    {
+      "name": "Low Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 1,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reach": "both",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Fade Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [],
+      "reach": "both",
+      "hitTo": "far",
+      "blockTo": "far"
+    },
+    {
+      "name": "Dive Kick",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 1,
+      "chip": 3,
+      "copies": 1,
+      "icons": [],
+      "reach": "far",
+      "hitTo": "far",
+      "blockTo": "close",
+      "notes": "range endings (16 Nov): a jump-in; resets to Far on hit, stuck at Close if Guarded"
+    },
+    {
+      "name": "Charged Blast",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 2,
+      "icons": [
+        "starter"
+      ],
+      "reach": "both",
+      "build": 1
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "build": 3
+    },
+    {
+      "name": "Hop Kick",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 4,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "build": 2,
+      "hitTo": "far"
+    },
+    {
+      "name": "Barrage",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 15,
+      "build": 3,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "reach": "both",
+      "notes": "signature (v22 special)"
+    },
+    {
+      "name": "Harpoon",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 5,
+      "chip": 5,
+      "copies": 2,
+      "icons": [],
+      "reach": "far",
+      "notes": "range endings (16 Nov): spear range, reels them in",
+      "build": 2,
+      "hitTo": "close"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "notes": "v23: draws a card on reveal (the rule); nothing else"
+    },
+    {
+      "name": "Evade",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "blockCharge": 1
+    },
+    {
+      "name": "Sidestep",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "revealSpeed": 2
+    }
+  ],
+  "super": null
+}

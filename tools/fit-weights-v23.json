@@ -1,0 +1,21 @@
+{
+ "hp": 0.1648,
+ "charge": 0.0567,
+ "full": -0.1234,
+ "nP": 0.12,
+ "nC": 0.1875,
+ "nR": 0.1209,
+ "spec": 0,
+ "counter": 0.0035,
+ "starter": 0.0389,
+ "combo": 0.1083,
+ "superReady": 0,
+ "knockdown": -0.178,
+ "staggered": 0,
+ "deck": 0.0458,
+ "init": 0.0191,
+ "home": 0.1837,
+ "dead": -0.0108,
+ "movers": -0.0802,
+ "sideFit": 0
+}

@@ -3,6 +3,7 @@
 
 import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20, reachOk } from './engine.js'
 import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18, chooseBuy20, botBuy20, stanceMix16 } from './ai.js'
+import { homeward } from './cards.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -36,7 +37,7 @@ function damageBy(ev) {
   const out = { clash: [0, 0], follow: [0, 0], link: [0, 0], end: [0, 0] }
   for (const e of ev) {
     if (e.kind !== 'hit') continue
-    const d = (e.chip || 0) + (e.cash || 0) + (e.spill || 0)
+    const d = (e.chip || 0) + (e.cash || 0) + (e.spill || 0) + (e.od || 0)
     const target = e.t === 'R' && !e.chip ? null : 1 - e.side
     if (target === null || !d) continue
     out[e.how][target] += d
@@ -173,13 +174,15 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
       else if (levels[k] === 'random') opts[k] = randomReveal18(G, k, picks[k], rng)     // the random bot's rider choices are random too
     }
     const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init, rangeAt = G.range, sidesAt = [G.A.side, G.B.side]
+    const odAt = [!!G.A.od, !!G.B.od]                     // v23: in Overdrive this round
     // escape check (14 Nov): what each player held at the clash to get the fight to their own range
     const escAt = G.rules.range && G.rules.rangeMode === 'cards' ? [G.A, G.B].map((X, k) => {
       const pref = X.f.prefers, Y = k ? G.A : G.B, cs = X.hand.map(i => card16(X, i)).filter(Boolean)
       const live = c => reachOk(c, G.range)
-      return { mv: cs.filter(c => c.move && live(c) && (c.move === 'push' ? 'far' : 'close') === pref).length,
-        gd: cs.filter(c => c.t === 'R' && c.blockMove && (c.blockMove === 'push' ? 'far' : 'close') === pref).length,
-        mvNames: cs.filter(c => c.move && live(c) && (c.move === 'push' ? 'far' : 'close') === pref).map(c => c.name),
+      const hw = c => live(c) && (G.rules.rangeEnds ? homeward(c, pref) : c.move && (c.move === 'push' ? 'far' : 'close') === pref)
+      return { mv: cs.filter(hw).length,
+        gd: cs.filter(c => c.t === 'R' && (c.blockMove ? (c.blockMove === 'push' ? 'far' : 'close') === pref : G.rules.rangeEnds && (c.holdGround || c.blockCharge))).length,
+        mvNames: cs.filter(hw).map(c => c.name),
         ch: (Y.pile || 0) >= (G.rules.chargeMove || 99), att: cs.filter(c => c.t !== 'R' && live(c)).length }
     }) : null
     G = runClash16(G, picks[0], picks[1], (g, p) => (combos[p.side] ? combos[p.side](g, p, rng) : aiCombo(g, p, Ws[p.side])), false, opts)
@@ -193,6 +196,9 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     if (G.rules.range && G.rules.rangeMode === 'cards') { rec.rangeAt = rangeAt; rec.esc = escAt }
     if (G.rules.superLive) rec.supers = [0, 1].map(k => G.clash.events.some(e => e.kind === 'play' && e.side === k && e.sup))
     rec.init = initHeld
+    if (G.rules.overdrive) { rec.od = odAt; rec.odDmg = [0, 1].map(k => G.clash.events.filter(e => e.kind === 'hit' && e.side === k).reduce((t, e) => t + (e.od || 0), 0)) }
+    if (G.rules.guardDraw) rec.guardDraws = [0, 1].map(k => G.clash.events.filter(e => e.kind === 'reveal' && e.what === 'guardDraw' && e.side === k).reduce((t, e) => t + e.n, 0))
+    rec.breakfall = [0, 1].map(k => G.clash.events.some(e => e.kind === 'breakfall' && e.side === k))
     rec.confiscated = post.paid
     rec.confPre = [0, 0]
     rec.reveals = G.clash.events.filter(e => e.kind === 'reveal' || e.kind === 'brace')
@@ -215,7 +221,9 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     if (G.capSpill?.some(n => n > 0)) rec.capSpill = G.capSpill
   }
   const capKO = G.result !== null && !G.timedOut && !!(rounds.at(-1)?.capCash || rounds.at(-1)?.capSpill) && (G.A.hp <= 0 || G.B.hp <= 0)
-  return { result: G.result, rounds, timedOut: !!G.timedOut, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)] }
+  // Charge bookkeeping (16 Nov): by pile holder (the pile on A is B's Charge): how much came in, how much the cap threw away
+  const chargeBook = [G.A, G.B].map(X => ({ in: X.pileIn || 0, lost: X.capLost || 0, end: X.pile || 0 }))
+  return { result: G.result, rounds, timedOut: !!G.timedOut, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)], chargeBook }
 }
 
 // The random bot's choice for its clash card's Read or Recall rider: any legal option, at random

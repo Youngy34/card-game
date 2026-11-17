@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "brawler23b",
+  "name": "Brawler",
+  "epithet": "Close range",
+  "prefers": "close",
+  "hp": 18,
+  "greyCap": 6,
+  "passive": null,
+  "concept": "v23c1 (16 Nov): v23b brawler with Counters only on the Enders (Uppercut, Low Shot).",
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "close",
+      "safe": true
+    },
+    {
+      "name": "Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 2,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "linker"
+      ],
+      "reach": "close"
+    },
+    {
+      "name": "Uppercut",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 1,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reach": "close",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Dash Punch",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter"
+      ],
+      "reach": "both",
+      "hitTo": "close",
+      "blockTo": "close"
+    },
+    {
+      "name": "Haymaker",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 11,
+      "build": 1,
+      "chip": 5,
+      "copies": 2,
+      "icons": [],
+      "reach": "both",
+      "hitTo": "far"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 2,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "build": 3
+    },
+    {
+      "name": "Suplex",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "build": 3,
+      "hitTo": "far",
+      "notes": "range endings (16 Nov): throws them away"
+    },
+    {
+      "name": "Body Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "close",
+      "build": 1
+    },
+    {
+      "name": "Leaping Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "build": 2,
+      "hitTo": "close"
+    },
+    {
+      "name": "Rush Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 1,
+      "chip": 1,
+      "copies": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "notes": "signature (v22 special)",
+      "hitTo": "close",
+      "blockTo": "close"
+    },
+    {
+      "name": "Piledriver",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 6,
+      "chip": 4,
+      "copies": 1,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "notes": "signature (v22 special)",
+      "build": 2
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "notes": "v23: draws a card on reveal (the rule); nothing else"
+    },
+    {
+      "name": "Stand Firm",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "holdGround": true
+    },
+    {
+      "name": "Breakfall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "breakReturn": true
+    }
+  ],
+  "super": null
+}

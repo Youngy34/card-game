@@ -287,6 +287,13 @@ function run(a, b, kind, sd = seed) {
       const s = +kind.at(-1), mv = kind[4] === 'm'
       const noTable = (G, k, r) => { const X = k === 0 ? G.A : G.B, Y = { ...X, table: [], superAt: X.superAt === 'table' ? 'gone' : X.superAt }; return chooseBuy20(k === 0 ? { ...G, A: Y } : { ...G, B: Y }, k, W, r) }
       buyers[s] = (G, k, r) => { const o = buyOptions20(G, k); if (o.includes('S')) return 'S'; return mv ? noTable(G, k, r) : null }
+    } else if (/^(odg|nod|nex|nsp|onlyod)[01]$/.test(kind)) {
+      // v23 (16 Nov): one side Overdrives whenever it can ('odg'), never Overdrives ('nod'), never exchanges ('nex'),
+      // never spends Charge ('nsp': no Overdrive, no moving), or spends only on Overdrive ('onlyod': no moving)
+      const s = +kind.at(-1), how = kind.slice(0, -1)
+      const parts = o => (o === null ? [] : String(o).split('|')), has = (o, p) => parts(o).some(x => x === p || (p === 'X' && x.startsWith('X:')))
+      const keep = { nod: o => !has(o, 'O'), nex: o => !has(o, 'X'), nsp: o => !has(o, 'O') && !has(o, 'M'), onlyod: o => !has(o, 'M') }[how]
+      buyers[s] = how === 'odg' ? (G, k, r) => (buyOptions20(G, k).includes('O') ? 'O' : chooseBuy20(G, k, Ws[k], r)) : (G, k, r) => chooseBuy20(G, k, Ws[k], r, 'hard', keep)
     } else if (kind === 'kb0') { Ws = [dropKeys(W), W]
     } else if (kind === 'kb1') { Ws = [W, dropKeys(W)]
     } else if (kind === 'deep1') { buyers = [null, deepBuy]
@@ -309,7 +316,7 @@ function run(a, b, kind, sd = seed) {
 
 // ---- reading the games ----------------------------------------------------------------------
 function luck(games) {
-  let wins = 0, decided = 0, decisive = 0, topShare = 0, timeouts = 0
+  let wins = 0, decided = 0, decisive = 0, topShare = 0, timeouts = 0, bigDmg = 0
   const acts = [{ buy: 0, pair: 0, three: 0, flip: 0 }, { buy: 0, pair: 0, three: 0, flip: 0 }]
   let farRounds = 0, nRounds = 0, whiffs = [0, 0], wall = [0, 0]
   for (const g of games) for (const r of g.rounds) {
@@ -328,11 +335,11 @@ function luck(games) {
     const total = loss.reduce((a, v) => a + Math.max(0, v), 0)
     if (total <= 0) continue
     const top = Math.max(...loss) / total
-    decided++; topShare += top; if (top >= 0.4) decisive++
+    decided++; topShare += top; bigDmg += Math.max(...loss); if (top >= 0.4) decisive++
   }
   rounds.sort((x, y) => x - y)
   return { win: wins / games.length, median: rounds[Math.floor(rounds.length / 2)], timeouts: timeouts / games.length,
-    decisive: decisive / Math.max(1, decided), topShare: topShare / Math.max(1, decided),
+    decisive: decisive / Math.max(1, decided), topShare: topShare / Math.max(1, decided), bigDmg: bigDmg / Math.max(1, decided),
     acts: acts.map(a => Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v / games.length]))),
     far: farRounds / Math.max(1, nRounds), whiffs: whiffs.map(v => v / games.length), wall: wall.map(v => v / Math.max(1, nRounds)) }
 }
@@ -417,8 +424,46 @@ function rangeStats(games, prefs, caps) {
       backWithMover: fr(back.mv), backWithGuardOnly: fr(back.gdOnly), backWithChargeOnly: fr(back.chOnly), backWithNothing: fr(back.none), nN: back.none[1], gN: back.gdOnly[1], cN: back.chOnly[1],
       longSpellNothingShare: fr(spellNone.long), shortSpellNothingShare: fr(spellNone.short), longSpellsEverHeldEscape: fr(spellEver.long), shortSpellsEverHeldEscape: fr(spellEver.short) },
     awaySpellMean: spells.length ? spells.reduce((a, v) => a + v, 0) / spells.length : null, awaySpell5plus: spells.length ? spells.filter(v => v >= 5).length / spells.length : null }
+  // v23 (16 Nov): Overdrive, the exchange, Guards drawing
+  const G0 = gs => Math.max(1, gs.length)
+  const v23 = [0, 1].map(() => ({ odRounds: 0, odBuys: 0, odStay: 0, odDmg: 0, odStreaks: [], exch: 0, loops: 0, exAway: 0, exMover: 0, guardDraws: 0, breakfall: 0, moves: 0, handClash: 0, n: 0, cIn: 0, cLost: 0, cEnd: 0, odSpent: 0 }))
+  let odBig = 0, bigN = 0
+  for (const g of games) {
+    const R = g.rounds
+    for (const k of [0, 1]) {
+      const V = v23[k]; let run = 0
+      R.forEach((r, i) => {
+        V.n++; V.handClash += r.handAtClash?.[k] || 0
+        if (r.od?.[k]) { V.odRounds++; run++ } else if (run) { V.odStreaks.push(run); run = 0 }
+        V.odDmg += r.odDmg?.[k] || 0; V.guardDraws += r.guardDraws?.[k] || 0; if (r.breakfall?.[k]) V.breakfall++
+        const b = r.bought?.[k]
+        if (b?.od) { V.odBuys++; V.odSpent += b.cost || 0; if (b.staying) V.odStay++ }
+        if (b?.move) V.moves++
+        if (b?.exchange) {
+          V.exch++
+          if ((r.played?.[k] || []).includes(b.take)) V.loops++                      // took back a card it played this round
+          if (prefs?.[k] && r.range && r.range !== prefs[k]) V.exAway++
+        }
+      })
+      if (run) V.odStreaks.push(run)
+      const cb = g.chargeBook?.[1 - k]                    // player k's Charge is the pile on the other player
+      if (cb) { V.cIn += cb.in; V.cLost += cb.lost; V.cEnd += cb.end }
+    }
+    // the biggest round of a decided game: was the winner in Overdrive?
+    if (g.result !== 0.5 && R.length) {
+      const loser = g.result === 1 ? 1 : 0, w = 1 - loser
+      const hp = R.map(r => r.before[loser].hp).concat([g.final[loser].hp]), loss = hp.slice(1).map((v, i) => hp[i] - v)
+      const top = loss.indexOf(Math.max(...loss)); bigN++; if (R[top]?.od?.[w]) odBig++
+    }
+  }
+  const v23out = v23.map(V => ({ odRoundsPerGame: V.odRounds / G0(games), odBuysPerGame: V.odBuys / G0(games), odStayShare: V.odBuys ? V.odStay / V.odBuys : null, odStreakMean: V.odStreaks.length ? V.odStreaks.reduce((a, v) => a + v, 0) / V.odStreaks.length : null,
+    odDmgPerGame: V.odDmg / G0(games), exchPerGame: V.exch / G0(games), loopShare: V.exch ? V.loops / V.exch : null, exchAwayShare: V.exch ? V.exAway / V.exch : null,
+    guardDrawsPerGame: V.guardDraws / G0(games), breakfallPerGame: V.breakfall / G0(games), movesPerGame: V.moves / G0(games), handAtClash: V.handClash / Math.max(1, V.n),
+    // Charge bookkeeping (16 Nov): built, spent on moving (moves x the cost), on Overdrive, lost at the cap, left at the end
+    chargeBuiltPerGame: V.cIn / G0(games), chargeMoveSpentPerGame: V.moves * (rules.chargeMove || 0) / G0(games), chargeODSpentPerGame: V.odSpent / G0(games),
+    chargeLostPerGame: V.cLost / G0(games), chargeLeftPerGame: V.cEnd / G0(games) }))
   const G = games.length
-  return { snow, charge, leaderWins: ledWins / Math.max(1, led), guardShare: guards.map((v, k) => v / Math.max(1, cards[k])), fullShare: full.map(v => v / Math.max(1, n)), changes: changes / G, roundsPerChange: n / Math.max(1, changes), home: home.map(v => v / n), awaySide: away.map(v => v / n), flips: flips.map(v => v / G), buys: buys.map(v => v / G), moves: moves.map(v => v / G), supers: supers.map(v => v / G) }
+  return { v23: v23out, odInBiggestRound: bigN ? odBig / bigN : null, snow, charge, leaderWins: ledWins / Math.max(1, led), guardShare: guards.map((v, k) => v / Math.max(1, cards[k])), fullShare: full.map(v => v / Math.max(1, n)), changes: changes / G, roundsPerChange: n / Math.max(1, changes), home: home.map(v => v / n), awaySide: away.map(v => v / n), flips: flips.map(v => v / G), buys: buys.map(v => v / G), moves: moves.map(v => v / G), supers: supers.map(v => v / G) }
 }
 const pct = x => (100 * x).toFixed(1) + '%'
 const avg = a => (a?.length ? a.reduce((s, v) => s + v, 0) / a.length : 0)
@@ -486,7 +531,7 @@ if (mode === 'game') {
   const kinds = (opt('--kinds', null) || args[3] || 'hard').split(','), out = []
   for (const kind of kinds) {
     const r = run(args[1], args[2] || args[1], kind), L = luck(r.games), S = rangeStats(r.games, r.prefs, r.caps)
-    out.push({ kind, matchup: r.names, n, win: L.win, median: L.median, timeouts: L.timeouts, decisive: L.decisive, ...S })
+    out.push({ kind, matchup: r.names, n, win: L.win, median: L.median, timeouts: L.timeouts, decisive: L.decisive, topShare: L.topShare, bigDmg: L.bigDmg, ...S })
     if (!json) console.log(`${kind.padEnd(12)} ${r.names.join(' v ')}: side 0 ${pct(L.win)} · median ${L.median} · time-outs ${pct(L.timeouts)} · range changes ${S.changes.toFixed(1)} a game (every ${S.roundsPerChange.toFixed(1)} rounds) · at own range ${S.home.map(pct).join(' / ')} · away side ${S.awaySide.map(pct).join(' / ')} · flips ${S.flips.map(v => v.toFixed(1)).join(' / ')} · buys ${S.buys.map(v => v.toFixed(1)).join(' / ')}`)
   }
   if (json) console.log(JSON.stringify(out))

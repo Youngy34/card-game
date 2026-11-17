@@ -395,7 +395,11 @@ function attackOptions(X, rules) {
 const bent = (X, c) => (c.t === 'C' && !!X.fx.armor) || (c.t === 'P' && !!X.fx.mixup)
 
 // Sides (13 Nov): on the away side, cards that move the fight are 2 faster
-export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0) + (X.side === 'away' && c.move ? 2 : 0)
+// v23 (16 Nov): Sidestep's speedUp (set on reveal, for the next round) makes your Pressures faster
+export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0) + (X.side === 'away' && c.move ? 2 : 0) + (c.t === 'P' && X.st.speedUp ? X.st.speedUp : 0)
+// v23 (16 Nov): Overdrive. While in Overdrive (X.od, bought at the end of the round before), an attack of yours that
+// lands builds no Charge; its Charge is dealt as extra Damage instead (odBonus 'charge', the default), or a flat bonus.
+const odBonus = (rules, build) => (typeof rules.odBonus === 'number' ? rules.odBonus : build)
 
 // Who wins a same-type duel at equal speed: 0, 1, or -1 (cancel)
 export function tieWinner16(A, B, rules, init = null) {
@@ -451,7 +455,7 @@ function spill(X, rules) {
   if (!cap || X.pile <= cap) return 0
   const n = X.pile - cap
   X.pile = cap
-  if (rules.overflowLost) return 0     // overflowLost (14 Nov test): Charge past the cap is simply lost, no damage
+  if (rules.overflowLost) { X.capLost = (X.capLost || 0) + n; return 0 }     // overflowLost (14 Nov test): Charge past the cap is simply lost, no damage (counted, 16 Nov)
   X.hp -= n
   return n
 }
@@ -465,14 +469,16 @@ function hit(X, Y, c, ev, side, how, rules = {}) {
     e.build = (rules.flatBuild ?? c.build) + (X.fx.pressureBuild || 0)       // flatBuild (14 Nov test): every attack builds the same
     e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0) + homeChip(X, rules)
     // lateGrey (under test): grey from this clash lands when the clash ends, so an Ender cashes only what was already there
-    if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else { Y.pile += e.build; const n = spill(Y, rules); if (n) e.spill = n }
+    if (rules.overdrive && X.od) { e.od = odBonus(rules, e.build); Y.hp -= e.od }
+    else if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else { Y.pile += e.build; Y.pileIn = (Y.pileIn || 0) + e.build; const n = spill(Y, rules); if (n) e.spill = n }
     Y.hp -= e.chip
   } else if (c.t === 'C' && rules.breakBuilds) {
     // breakBuilds (13 Nov, Mark's test): a Break no longer discharges your Charge; like a Pressure it builds that much
     // (and overloads past your cap), plus its chip
     e.build = rules.flatBuild ?? (c.build || rules.breakBuilds); e.cash = 0     // a Break's own Build (14 Nov), else the rule's
     e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0) + homeChip(X, rules)
-    Y.pile += e.build; const n = spill(Y, rules); if (n) e.spill = n
+    if (rules.overdrive && X.od) { e.od = odBonus(rules, e.build); Y.hp -= e.od }
+    else { Y.pile += e.build; Y.pileIn = (Y.pileIn || 0) + e.build; const n = spill(Y, rules); if (n) e.spill = n }
     Y.hp -= e.chip
   } else if (c.t === 'C') {
     // cashOnWin (test): a Convert played after the clash (follow-up, Linker, Ender) doesn't cash
@@ -532,6 +538,15 @@ function revealRiders(G, P, cards, opts, lite, ev) {
     const c = cards[k], X = P[k], Y = P[1 - k]
     if (!c) continue
     if (c.parry) X.fx.parry = 1
+    // v23 (16 Nov): every revealed Guard draws its player a card, win or lose (lite: counted, not drawn)
+    if (G.rules.guardDraw && G.rules.guardDraw !== 'unbeaten' && c.t === 'R') {
+      let n = 0
+      if (lite) { if (X.deck.length > (X.pendingDraw || 0)) { X.pendingDraw = (X.pendingDraw || 0) + 1; n = 1 } }
+      else n = drawCards(X, 1, R)
+      ev.push({ side: k, kind: 'reveal', what: 'guardDraw', n, name: c.name })
+    }
+    // v23: Sidestep: on reveal, your Pressures are faster next round
+    if (c.revealSpeed) { X.next.speedUp = (X.next.speedUp || 0) + c.revealSpeed; ev.push({ side: k, kind: 'reveal', what: 'speedUp', n: c.revealSpeed, name: c.name }) }
     const rv = c.reveal
     if (!rv) continue
     if (rv.meter) {
@@ -612,7 +627,7 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   const voided = played.map((c, k) => !!c && (locked(P[k], c.t) || whiff[k]))
   voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: whiff[k] ? 'whiff' : 'voided', name: played[k].name, t: played[k].t }) })
   const cards = played.map((c, k) => (voided[k] ? null : c))
-  const rng = G.rules.merged ? revealRiders(G, P, cards, opts, lite, ev) : G.rng
+  let rng = G.rules.merged ? revealRiders(G, P, cards, opts, lite, ev) : G.rng
   const [ca, cb] = cards
   let winner = -1, outcome
   if (!ca && !cb) outcome = 'none'
@@ -651,6 +666,11 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     hit(W, L, cards[winner], ev, winner, 'clash', G.rules)
     const lc = cards[1 - winner]
     if (lc && lc.onLossSelf) { L.pile += lc.onLossSelf; ev.push({ side: 1 - winner, kind: 'onLoss', n: lc.onLossSelf, spill: spill(L, G.rules) }) }
+    // v23 (16 Nov): Breakfall: a Guard with breakReturn that a Break beats goes back to its owner's hand
+    if (outcome === 'triangle' && lc?.breakReturn && lc.t === 'R' && cards[winner].t === 'C') {
+      const i = picks[1 - winner], u = L.used.lastIndexOf(i)
+      if (u >= 0) { L.used.splice(u, 1); L.hand.push(i); L.known = [...(L.known || []), i]; ev.push({ side: 1 - winner, kind: 'breakfall', name: lc.name }) }
+    }
     // Rules v18: a Brace that beats a Pressure gives no follow-up; instead the Pressure's Build
     // goes onto its owner's pile (reflect), or they're Staggered next round (stagger)
     const wcd = cards[winner]
@@ -669,6 +689,13 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     // Rules v21 (10 Nov): a fighter's own Guard pays out if it beats a Pressure
     if (outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P') {
       for (let n = wcd.blockConfiscate || 0; n > 0; n--) owe(L, 1, ev, 1 - winner, wcd.name)
+      if (wcd.blockCharge) {
+        // Evade (16 Nov): the blocker builds that much Charge (the pile on the attacker), up to the blocker's cap
+        const cap = capOf(L, G.rules), before = L.pile
+        L.pile = cap ? Math.max(before, Math.min(cap, before + wcd.blockCharge)) : before + wcd.blockCharge
+        L.pileIn = (L.pileIn || 0) + wcd.blockCharge; L.capLost = (L.capLost || 0) + Math.max(0, before + wcd.blockCharge - L.pile)
+        ev.push({ side: winner, kind: 'blockCharge', n: L.pile - before, name: wcd.name })
+      }
       if (wcd.blockHeat) {
         // the blocker's heat is the pile on the attacker; it stops at the blocker's cap (no damage from it)
         const cap = capOf(L, G.rules), before = L.pile
@@ -680,6 +707,15 @@ export function startClash16(G, a, b, lite = false, opts = null) {
       if (wcd.brace === 'reflect') { const n = lc.build || 0; L.pile += n; ev.push({ side: winner, kind: 'brace', reflect: n, name: wcd.name, spill: spill(L, G.rules) }) }
       else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
     }
+  }
+  // v23 dial (guardDraw 'unbeaten'): a Guard draws only if it isn't beaten (a Break that beats it takes the draw away)
+  if (G.rules.guardDraw === 'unbeaten') for (const k of initOrder(G)) {
+    if (cards[k]?.t !== 'R' || winner === 1 - k) continue
+    if (G.rules.guardStandoff && outcome === 'guards') continue     // standoff (16 Nov test): two Guards, nobody draws
+    const X = P[k]; let n = 0
+    if (lite) { if (X.deck.length > (X.pendingDraw || 0)) { X.pendingDraw = (X.pendingDraw || 0) + 1; n = 1 } }
+    else { const R = { s: rng }; n = drawCards(X, 1, R); rng = R.s }
+    ev.push({ side: k, kind: 'reveal', what: 'guardDraw', n, name: cards[k].name, late: true })
   }
   // Stance (luck plan test, 12 Nov): G.stance = [type, type], set face up before the clash. A winning clash card that
   // matches its player's stance gains them stanceBonus Charge (up to the cap, never overloading); one that doesn't
@@ -710,6 +746,17 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   }
   const clash = { picks, types: cards.map(c => c?.t ?? null), names: played.map(c => c?.name ?? null), voided, outcome, winner, events: ev, follow: null, combo: [] }
   let next = { ...G, A, B, rng, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
+  // Range endings (16 Nov, Mark): a winning attack ends the fight at its on-hit range; a Guarded Pressure at its
+  // on-block range (unless the Guard holds its ground); an attack beaten by another attack does nothing. It applies
+  // now, so follow-ups and combo cards are played at the new range.
+  if (G.rules.range && G.rules.rangeEnds && winner >= 0) {
+    const wc0 = cards[winner], lc0 = cards[1 - winner]
+    let r = null
+    if (wc0 && wc0.t !== 'R') r = wc0.hitTo
+    else if (wc0?.t === 'R' && lc0?.t === 'P' && outcome === 'triangle' && !wc0.holdGround) r = lc0.blockTo
+    else if (wc0?.t === 'R' && lc0?.t === 'P' && outcome === 'triangle' && wc0.holdGround && lc0.blockTo && lc0.blockTo !== G.range) ev.push({ side: winner, kind: 'holdGround', name: wc0.name })
+    if (r) next = setRange(next, r, ev)
+  }
   if (next.result !== null || winner < 0 || feint) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') {
@@ -744,11 +791,18 @@ function ask(G, stage, side) {
 }
 
 const toRange = m => (m === 'push' ? 'far' : 'close')
+function setRange(G, r, ev) {
+  if (!r || r === G.range) return G
+  ev.push({ kind: 'moved', to: r, ends: true })
+  return { ...G, range: r, A: { ...G.A, at: r }, B: { ...G.B, at: r }, clash: { ...G.clash, moved: r } }
+}
 function finishClash(G) {
   // Range by cards (13 Nov, Mark): only cards that move change the range, and they move it whether they win or lose.
   // Two clash cards moving opposite ways cancel. On the away side, a Guard that beats a Pressure moves the fight to
   // your range. Then the winner's follow-up and combo cards, in order.
-  if (G.rules.range && G.rules.rangeMode === 'cards' && G.clash) {
+  if (G.rules.range && G.rules.rangeEnds) {
+    // range endings: already applied as each card resolved
+  } else if (G.rules.range && G.rules.rangeMode === 'cards' && G.clash) {
     const P = [G.A, G.B], { picks, voided = [], winner: w } = G.clash
     const cd = k => (picks[k] == null || voided[k] ? null : card16(P[k], picks[k]))
     const mv = [cd(0)?.move || null, cd(1)?.move || null]
@@ -799,7 +853,8 @@ export function decideClash16(G, choice, lite = false) {
   const clash = { ...G.clash, events: ev }
   if (stage === 'follow') clash.follow = { side, name: c.name, t: c.t }
   else clash.combo = [...clash.combo, { side, stage, name: c.name, t: c.t }]
-  const next = { ...G, A, B, clash, pending: null, result: resultOf(A, B) }
+  let next = { ...G, A, B, clash, pending: null, result: resultOf(A, B) }
+  if (G.rules.range && G.rules.rangeEnds && c.t !== 'R' && c.hitTo) next = setRange(next, c.hitTo, ev)
   if (next.result !== null) return finishClash(next)
   if (stage === 'follow' && (P[side].fx.parry || G.clash.followCombo === side) && c.starter) return ask(next, 'link', side)     // Parry (and a followCombo Guard, rules v21): the punish can combo
   if (stage !== 'link') return finishClash(next)
@@ -871,6 +926,16 @@ export function buyOptions20(G, side) {
   // chargeMove (13 Nov): instead of buying, spend that much Charge to move the fight (Close to Far, or Far to Close)
   if (G.rules.chargeMove && G.rules.range && G.rules.rangeMode === 'cards' && heat >= G.rules.chargeMove) out.push('M')
   if (G.rules.stance2 || G.rules.sides) out.push('F')                  // stance test / sides: flip your fighter card instead of buying
+  // v23 (16 Nov): Overdrive for G.rules.overdrive Charge (going in, or staying in), and the exchange: put a card from
+  // your hand into your discard pile and take a different card from it ('X:<give>:<take>')
+  if (G.rules.overdrive && heat >= G.rules.overdrive) out.push('O')
+  if (G.rules.exchange && X.discard.length && X.hand.length) {
+    const inPile = [...new Set(X.discard.map(d => d.i))], ex = []
+    for (const g of new Set(X.hand)) for (const t of inPile) if (t !== g) ex.push(`X:${g}:${t}`)
+    // exchangeFree (test): the exchange comes on top of the one end-of-round option ('<option>|X:<give>:<take>')
+    if (G.rules.exchangeFree) { const base = out.filter(o => o !== null); out.push(...ex); for (const b of base) for (const x of ex) out.push(`${b}|${x}`) }
+    else out.push(...ex)
+  }
   // Pair trade (v22 test, luck plan): instead of buying, discard a pair of identical cards to search the deck for 1,
   // or three of a kind for 2. Options are 'T:<card>:<2|3>'. The searched cards are picked by tradeTargets.
   if (G.rules.trade && X.deck.length) {
@@ -907,6 +972,32 @@ export function applyBuy20(G, side, choice) {
 }
 function applyBuy20raw(G, side, choice) {
   if (choice === null || choice === undefined) return G
+  if (typeof choice === 'string' && choice.includes('|')) {
+    // exchangeFree: an option and an exchange together
+    const [first, second] = choice.split('|'), opt = /^\d+$/.test(first) ? +first : first
+    const g1 = applyBuy20raw(G, side, opt), b1 = g1.bought?.[side]
+    const g2 = applyBuy20raw(g1, side, second), b2 = g2.bought?.[side]
+    const bought = (g2.bought || [null, null]).slice(); bought[side] = { ...b1, exchange: true, give: b2.give, take: b2.take, takeI: b2.takeI }
+    return { ...g2, bought }
+  }
+  if (choice === 'O') {
+    const X = { ...(side === 0 ? G.A : G.B), odNext: true }, Y = { ...(side === 0 ? G.B : G.A) }
+    Y.pile -= G.rules.overdrive
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'overdrive', cost: G.rules.overdrive, sup: false, od: true, staying: !!X.od }
+    return side === 0 ? { ...G, A: X, B: Y, bought } : { ...G, A: Y, B: X, bought }
+  }
+  if (typeof choice === 'string' && choice.startsWith('X:')) {
+    const [, gs, ts] = choice.split(':'), g = +gs, t = +ts
+    const X = cloneP(side === 0 ? G.A : G.B)
+    takeFromHand(X, g); X.discard.push({ i: g, burned: false, exchanged: true })
+    const at = X.discard.findIndex(d => d.i === t)
+    if (at < 0) throw new Error("that card isn't in the discard pile")
+    X.discard.splice(at, 1); X.hand.push(t)
+    X.known = [...(X.known || []), t]                                   // taken from the face-up pile: they know it's there
+    const bought = (G.bought || [null, null]).slice()
+    bought[side] = { name: 'exchange', cost: 0, sup: false, exchange: true, give: X.f.cards[g].name, take: X.f.cards[t].name, takeI: t }
+    return side === 0 ? { ...G, A: X, bought } : { ...G, B: X, bought }
+  }
   if (choice === 'M') {
     const Y = { ...(side === 0 ? G.B : G.A) }; Y.pile -= G.rules.chargeMove
     const r = G.range === 'far' ? 'close' : 'far'
@@ -981,6 +1072,8 @@ export function finishRound16(G) {
   const P = [cloneP(G.A, true), cloneP(G.B, true)]
   for (const X of P) {
     X.st = X.next; X.next = {}
+    // v23: Overdrive bought this round is on for the next; anyone who didn't buy it flips back
+    if (G.rules.overdrive) { X.od = !!X.odNext; X.odNext = false }
     // Rules v18: Knockdown is Lock Pressure next round
     if (G.rules.knockdownLocks && X.st.knockdown) X.st = { ...X.st, lock: { ...(X.st.lock || {}), P: true } }
   }
@@ -992,7 +1085,9 @@ export function finishRound16(G) {
   let timedOut = false
   if (result === null && G.rules.timeout && (!P[0].deck.length || !P[1].deck.length)) {
     timedOut = true
-    result = P[0].hp > P[1].hp ? 1 : P[0].hp < P[1].hp ? 0 : 0.5
+    // v23 (timeoutShare): the higher share of starting HP left wins
+    const s = G.rules.timeoutShare ? P.map(X => X.hp / X.f.hp) : [P[0].hp, P[1].hp]
+    result = s[0] > s[1] ? 1 : s[0] < s[1] ? 0 : 0.5
   }
   const init = G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init ?? null
   return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? (G.rules.merged ? 'clash' : 'neutral') : 'over', result, ...(timedOut ? { timedOut } : {}), neutral: null, clash: null, pending: null, discardDown: null }

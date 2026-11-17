@@ -13,6 +13,7 @@
 
 import { maximin, bayesMaximin, bayesGame } from '../lp.js'
 import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf, buyOptions20, applyBuy20, reachOk } from './engine.js'
+import { homeward } from './cards.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -75,7 +76,10 @@ export function features16(G, side) {
   const X = side === 0 ? G.A : G.B, Y = side === 0 ? G.B : G.A, rules = G.rules || {}
   const charge = Y.pile || 0, cap = capOf(Y, rules) || 99
   const cards = X.hand.map(i => X.f.cards[i])
-  const n = t => cards.filter(c => c.t === t && !c.special).length
+  // v23 (16 Nov): a card counted but not yet drawn (lite lookahead: Guards draw on reveal) is valued as the deck's
+  // average card, so the partner sees what a Guard's draw is worth
+  const pd = X.pendingDraw && X.deck.length ? X.pendingDraw / X.deck.length : 0
+  const n = t => cards.filter(c => c.t === t && !c.special).length + (pd ? pd * X.deck.filter(i => X.f.cards[i].t === t).length : 0)
   return {
     hp: X.hp, charge, full: charge >= cap ? 1 : 0, nP: n('P'), nC: n('C'), nR: n('R'),
     spec: cards.filter(c => c.special).length,
@@ -93,7 +97,7 @@ function rangeFeatures(G, X, cards) {
   return {
     home: pref && r === pref ? 1 : 0,
     dead: cards.filter(c => c.t !== 'R' && !reachOk(c, r)).length,
-    movers: cards.filter(c => c.move).length,
+    movers: cards.filter(c => (rules.rangeEnds ? homeward(c, pref) : c.move)).length,     // range endings: cards that can take the fight to your range
     sideFit: rules.sides && pref ? ((X.side === 'away') === (r !== pref) ? 1 : 0) : 0,
   }
 }
@@ -444,8 +448,28 @@ export function chooseRead18(G, side, picks, opts, W) {
 // Rules v20: at the end of the round, the partner may spend heat on a special or (at max heat) its Super.
 // It tries each option (nothing included) and scores the next round's clash it would lead to, against the
 // same dealt hands, with this round's statuses moved on. Easy and Medium soften the choice.
-export function chooseBuy20(G, side, W, rng, level = 'hard') {
-  const opts = buyOptions20(G, side)
+// v23 (16 Nov): the exchange can offer dozens of swaps. The partner weighs only a short list: give up one of the two
+// cards it can best spare, for one of the three most useful cards in its discard pile (by simple card sense: what
+// reaches now, a type the hand lacks, combo and Counter icons, a mover when away from its range).
+export function exchangeShortlist(G, side, opts, nGive = 2, nTake = 3) {
+  const X = side === 0 ? G.A : G.B, r = G.range, away = !!(G.rules.range && X.f.prefers && r !== X.f.prefers)
+  const xOf = o => (typeof o === 'string' && o.includes('X:') ? o.slice(o.indexOf('X:')) : null)
+  const ex = [...new Set(opts.map(xOf).filter(Boolean))]
+  if (!ex.length) return opts
+  const types = {}; for (const i of X.hand) { const t = X.f.cards[i].t; types[t] = (types[t] || 0) + 1 }
+  const copies = {}; for (const i of X.hand) copies[i] = (copies[i] || 0) + 1
+  const live = c => c.t === 'R' || !G.rules.range || reachOk(c, r)
+  const worth = c => (c.starter ? 0.4 : 0) + (c.linker || c.ender ? 0.25 : 0) + (c.counter ? 0.3 : 0) + ((c.build || 0) + (c.chip || 0)) / 8 + ((G.rules.rangeEnds ? homeward(c, X.f.prefers) : c.move) && away ? 1 : 0)
+  const keep = i => { const c = X.f.cards[i]; return (live(c) ? 1 : -1) + worth(c) + (c.t === 'R' ? 0.8 : 0) - 0.4 * (copies[i] - 1) - 0.2 * ((types[c.t] || 0) - 2) }
+  const want = i => { const c = X.f.cards[i]; return (live(c) ? 1 : -0.5) + worth(c) + (types[c.t] ? 0 : 1.2) + (c.t === 'R' ? 0.5 : 0) - 0.3 * (copies[i] || 0) }
+  const gives = [...new Set(ex.map(o => +o.split(':')[1]))].sort((a, b) => keep(a) - keep(b)).slice(0, nGive)
+  const takes = [...new Set(ex.map(o => +o.split(':')[2]))].sort((a, b) => want(b) - want(a)).slice(0, nTake)
+  const keepEx = new Set(gives.flatMap(g => takes.filter(t => t !== g).map(t => `X:${g}:${t}`)))
+  return opts.filter(o => !xOf(o) || keepEx.has(xOf(o)))
+}
+export function chooseBuy20(G, side, W, rng, level = 'hard', keep = null) {
+  let opts = exchangeShortlist(G, side, buyOptions20(G, side))
+  if (keep) opts = opts.filter(keep)                     // testing: a partner barred from some options
   if (opts.length < 2) return null
   const op = side === 0 ? G.B : G.A
   const deal = dealer(op, rng)
@@ -454,7 +478,7 @@ export function chooseBuy20(G, side, W, rng, level = 'hard') {
   const values = opts.map(o => {
     let g = applyBuy20(G, side, o)
     // look at the position the next clash starts from: statuses move on (discards and the shuffle aside)
-    const on = X => ({ ...X, st: X.next, next: {}, fx: {} })
+    const on = X => ({ ...X, st: X.next, next: {}, fx: {}, ...(G.rules.overdrive ? { od: !!X.odNext, odNext: false } : {}) })
     g = { ...g, A: on(g.A), B: on(g.B), phase: 'clash', round: G.round + 1, init: G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init }
     return clashMix16(g, side, Wq, rng, 'hard', hands).value
   })
@@ -468,7 +492,13 @@ export function chooseBuy20(G, side, W, rng, level = 'hard') {
 export function botBuy20(G, side, bot, rng) {
   const opts = buyOptions20(G, side)
   if (opts.length < 2) return null
-  if (bot === 'random') return opts[Math.floor(rng() * opts.length)]
+  if (bot === 'random') {
+    // v23: pick a kind of option at random (nothing, a purchase, move, Overdrive, the exchange), then one of that kind,
+    // so the exchange's many swaps don't crowd out everything else
+    const kindOf = o => (o === null ? 'none' : typeof o === 'string' && o.includes('X:') ? String(o).split('X:')[0] + 'X' : typeof o === 'string' && o.startsWith('T:') ? 'T' : String(o))
+    const kinds = [...new Set(opts.map(kindOf))], k = kinds[Math.floor(rng() * kinds.length)], of = opts.filter(o => kindOf(o) === k)
+    return of[Math.floor(rng() * of.length)]
+  }
   return opts.find(o => o !== null && o !== 'S') ?? opts.find(o => o === 'S') ?? null
 }
 

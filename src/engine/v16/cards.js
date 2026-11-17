@@ -60,6 +60,9 @@ export const REACH16 = {
   both: { label: 'Close or Far', line: 'Reach: Close or Far. It can be played at either range.' },
 }
 export const moveTo = m => (m === 'push' ? 'far' : 'close')
+// Range endings (16 Nov, Mark): an attack shows where the fight ends if it lands (hitTo) and, for a Pressure, if it's
+// Guarded (blockTo); 'close' | 'far', or none (stays). A card that can take the fight to a given range:
+export const homeward = (c, pref) => !!c && !!pref && ((c.move && moveTo(c.move) === pref) || (c.t !== 'R' && (c.hitTo === pref || c.blockTo === pref)))
 // Twin (rules v18, 8 Nov, Vex): a Linker that a second copy of itself can follow in a combo
 export const twinLine = name => `Twin: in a combo, a second ${name} can follow this one.`
 
@@ -94,7 +97,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'reach', 'move', 'blockMove', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'reach', 'move', 'blockMove', 'revealSpeed', 'breakReturn', 'hitTo', 'blockTo', 'holdGround', 'blockCharge', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -130,6 +133,10 @@ export function cardLines16(c, { isSuper = false } = {}) {
   // Range (v22): movers move the fight whether they win or lose; a Guard with blockMove moves it if it beats a Pressure
   if (c.move) text.push(`Moves the fight to ${RANGE_NAME[moveTo(c.move)]}, win or lose. If the other clash card moves it the other way, neither moves.`)
   if (t === 'R' && c.blockMove) text.push(`If it beats a Pressure: the fight moves to ${RANGE_NAME[moveTo(c.blockMove)]}.`)
+  if (c.hitTo && c.blockTo === c.hitTo) text.push(`Hit or blocked: the fight ends at ${RANGE_NAME[c.hitTo]}.`)
+  else { if (c.hitTo) text.push(`On hit: the fight ends at ${RANGE_NAME[c.hitTo]}.`); if (c.blockTo) text.push(`If it's Guarded: the fight ends at ${RANGE_NAME[c.blockTo]}.`) }
+  if (t === 'R' && c.holdGround) text.push(`If it beats a Pressure, that Pressure doesn't move the fight.`)
+  if (t === 'R' && c.blockCharge) text.push(`If it beats a Pressure, build ${c.blockCharge} Charge.`)
   if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
   if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
   if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
@@ -246,6 +253,10 @@ export function validateCard16(c, { isSuper = false } = {}) {
   if (c.reach !== undefined && t === 'R') W('Guards reach anywhere: reach on a Guard does nothing.')
   if (c.move !== undefined && !['push', 'pull'].includes(c.move)) E('move is "push" (to Far) or "pull" (to Close).')
   if (c.blockMove !== undefined && (t !== 'R' || !['push', 'pull'].includes(c.blockMove))) E('blockMove is "push" or "pull", on a Guard.')
+  if (c.hitTo !== undefined && (t === 'R' || !['close', 'far'].includes(c.hitTo))) E('hitTo is "close" or "far", on an attack.')
+  if (c.blockTo !== undefined && (t !== 'P' || !['close', 'far'].includes(c.blockTo))) E('blockTo is "close" or "far", on a Pressure (only Pressures can be Guarded).')
+  if (c.holdGround !== undefined && (t !== 'R' || c.holdGround !== true)) E('holdGround is true, on a Guard.')
+  if (c.blockCharge !== undefined && (t !== 'R' || !isInt(c.blockCharge) || c.blockCharge < 1 || c.blockCharge > 3)) E('blockCharge is 1–3, on a Guard.')
   return { errors, warnings }
 }
 
@@ -307,6 +318,8 @@ function norm(c, isSuper) {
     twin: !!c.twin, onBlock: c.onBlock ?? null,
     blockConfiscate: c.blockConfiscate ?? 0, throughSafe: !!c.throughSafe, followCombo: !!c.followCombo, blockHeat: !!c.blockHeat,
     reach: c.reach ?? null, move: c.move ?? null, blockMove: c.blockMove ?? null,         // range test (12 Nov): 'close' | 'far' | 'both'; 'push' | 'pull'
+    revealSpeed: c.revealSpeed ?? 0, breakReturn: !!c.breakReturn,                         // v23 (16 Nov): Sidestep, Breakfall
+    hitTo: c.hitTo ?? null, blockTo: c.blockTo ?? null, holdGround: !!c.holdGround, blockCharge: c.blockCharge ?? 0,     // range endings (16 Nov)
     sup: isSuper, src: c,
   }
 }

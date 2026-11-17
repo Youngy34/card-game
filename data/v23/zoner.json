@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "zoner23",
+  "name": "Zoner",
+  "epithet": "Far range",
+  "prefers": "far",
+  "hp": 13,
+  "greyCap": 8,
+  "passive": null,
+  "concept": "v23 test fighter (16 Nov): v22 Zoner, specials as 1-copy signature moves, Block/Backstep/Sidestep Guards, no Super.",
+  "cards": [
+    {
+      "name": "Poke",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "safe": true
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 3,
+      "chip": 2,
+      "copies": 3,
+      "icons": [],
+      "reach": "far",
+      "safe": true
+    },
+    {
+      "name": "Arc Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 3,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "reach": "far"
+    },
+    {
+      "name": "Low Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reach": "far",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Fade Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 2,
+      "chip": 1,
+      "copies": 2,
+      "icons": [],
+      "reach": "both",
+      "move": "push"
+    },
+    {
+      "name": "Charged Blast",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "far",
+      "build": 2
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "build": 4
+    },
+    {
+      "name": "Hop Kick",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 4,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "move": "push",
+      "build": 3
+    },
+    {
+      "name": "Barrage",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 15,
+      "build": 4,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "reach": "far",
+      "notes": "signature (v22 special)"
+    },
+    {
+      "name": "Lance",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 5,
+      "chip": 4,
+      "copies": 1,
+      "icons": [],
+      "reach": "far",
+      "notes": "signature (v22 special)"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "notes": "v23: draws a card on reveal (the rule); nothing else"
+    },
+    {
+      "name": "Backstep",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "blockMove": "push"
+    },
+    {
+      "name": "Sidestep",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "revealSpeed": 2
+    }
+  ],
+  "super": null
+}
