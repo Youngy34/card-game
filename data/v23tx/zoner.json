@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "zoner-t",
+  "name": "Zoner",
+  "epithet": "Far range",
+  "prefers": "far",
+  "hp": 18,
+  "greyCap": 6,
+  "passive": null,
+  "concept": "New test fighters (17 Nov): built to the target values. Strong at Far; 15 of 21 attacks live at Close, 6 of them Breaks. (v23tx: EX Overdrive, HP 18)",
+  "cards": [
+    {
+      "name": "Poke",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "safe": true
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 2,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "counter"
+      ],
+      "reach": "both"
+    },
+    {
+      "name": "Arc Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 2,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "reach": "far",
+      "notes": "a lob"
+    },
+    {
+      "name": "Fade Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "hitTo": "far",
+      "blockTo": "far"
+    },
+    {
+      "name": "Charged Blast",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "build": 1,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "both"
+    },
+    {
+      "name": "Harpoon",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 5,
+      "build": 2,
+      "chip": 4,
+      "copies": 3,
+      "icons": [],
+      "reach": "far",
+      "hitTo": "close",
+      "notes": "spear range; reels them in"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "notes": "draws"
+    },
+    {
+      "name": "Evade",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "blockCharge": 1
+    },
+    {
+      "name": "Sidestep",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "guardTo": "far"
+    }
+  ],
+  "super": null
+}

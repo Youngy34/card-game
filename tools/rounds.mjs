@@ -23,7 +23,7 @@ const fa = load(a), fb = load(b), prefs = [fa.prefers, fb.prefers]
 
 const rng = mulberry(seed * 7919 + 13)
 const rows = { normal: [], od: [] }, bigNormal = [], bigOD = [], bigAny = []
-const home = [0, 0], moves = [0, 0], ods = [0, 0], kdBlocked = [0, 0]
+const home = [0, 0], moves = [0, 0], ods = [0, 0], kdBlocked = [0, 0], odClash = { n: 0, won: 0, lost: 0, speed: 0 }
 let rounds = 0, wins = 0, decided = 0
 for (let i = 0; i < n; i++) {
   const g = playGame18(fa, fb, { rules, W, seed: seed * 100003 + i, rng })
@@ -33,6 +33,7 @@ for (let i = 0; i < n; i++) {
     rounds++
     for (const k of [0, 1]) if (r.rangeAt === prefs[k]) home[k]++
     for (const k of [0, 1]) { if (r.bought?.[k]?.move) moves[k]++; if (r.bought?.[k]?.od) ods[k]++ }
+    for (const k of [0, 1]) if (r.od?.[k]) { odClash.n++; if (r.winner === k) odClash.won++; if (r.winner === 1 - k) odClash.lost++; if (r.outcome === 'speed' || r.outcome === 'tie') odClash.speed++ }
     const w = r.winner
     if (w == null || w < 0) continue
     const l = 1 - w, dmg = r.before[l].hp - r.after[l].hp
@@ -46,7 +47,7 @@ const share = (a, f) => a.filter(f).length / Math.max(1, a.length)
 const hist = a => { const h = {}; for (const v of a) h[v] = (h[v] || 0) + 1; return h }
 const out = {
   edition, matchup: [fa.name, fb.name], n, side0Wins: wins / Math.max(1, decided),
-  homeShare: home.map(v => v / rounds), movesPerGame: moves.map(v => v / n), odPerGame: ods.map(v => v / n),
+  homeShare: home.map(v => v / rounds), odClash: { rounds: odClash.n, wonShare: odClash.won / Math.max(1, odClash.n), lostShare: odClash.lost / Math.max(1, odClash.n), speedShare: odClash.speed / Math.max(1, odClash.n) }, movesPerGame: moves.map(v => v / n), odPerGame: ods.map(v => v / n),
   roundDamage: {
     normal: { rounds: rows.normal.length, mean: avg(rows.normal), max: Math.max(0, ...rows.normal), over6: share(rows.normal, v => v > 6), hist: hist(rows.normal) },
     od: { rounds: rows.od.length, mean: avg(rows.od), max: Math.max(0, ...rows.od), over6: share(rows.od, v => v > 6), atLeast9: share(rows.od, v => v >= 9), hist: hist(rows.od) },

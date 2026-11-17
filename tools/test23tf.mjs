@@ -94,5 +94,26 @@ const base = (handA, handB, range, init = 0) => {
   ok(n === 30 && kd > 20 && guardTo > 20, `30 games with knockdowns (${kd}) and Guard range lines (${guardTo})`)
   ok(bad === 0, `no knocked-down player took the end-of-round option (${bad})`)
 }
+// 7. EX Overdrive (overdriveSpeed, editions v23tx / v23tx16): in Overdrive you win every speed clash
+{
+  const SX = read('../data/v23tx/settings.json').rules
+  ok(SX.overdriveSpeed && SX.knockdownNoOption, 'v23tx: EX Overdrive and the new knockdown')
+  ok(read('../data/v23tx16/brawler.json').hp === 16 && read('../data/v23tx16/zoner.json').hp === 16, 'v23tx16: HP 16')
+  const bx = (handA, handB, range, odA, odB, init = 1) => {
+    const G = newGame16(BR, ZO, SX, 5)
+    return { ...G, init, range, A: { ...G.A, at: range, hand: handA, od: odA }, B: { ...G.B, at: range, hand: handB, od: odB } }
+  }
+  // Hook (13) against Shot (12): the Brawler is faster; with the Zoner in Overdrive, the Zoner wins
+  const g0 = startClash16(bx([b('Hook')], [z('Shot')], 'close', false, false), b('Hook'), z('Shot'))
+  ok(g0.clash.winner === 0, 'no Overdrive: the faster Hook wins')
+  const g1 = startClash16(bx([b('Hook')], [z('Shot')], 'close', false, true), b('Hook'), z('Shot'))
+  ok(g1.clash.winner === 1 && g1.clash.events.some(e => e.kind === 'odFast'), 'the Zoner in Overdrive wins the speed clash')
+  const g2 = startClash16(bx([b('Hook')], [z('Shot')], 'close', true, true), b('Hook'), z('Shot'))
+  ok(g2.clash.winner === 0, 'both in Overdrive: speeds as usual')
+  const g3 = startClash16(bx([b('Hook')], [z('Block')], 'close', false, true), b('Hook'), z('Block'))
+  ok(g3.clash.winner === 1, 'Overdrive changes nothing across types: Guard beats Pressure')
+  const g4 = startClash16(bx([b('Hook')], [z('Shot')], 'close', false, false), b('Hook'), z('Shot'))
+  ok(startClash16({ ...bx([b('Hook')], [z('Shot')], 'close', false, true), rules: rules }, b('Hook'), z('Shot')).clash.winner === 0, 'without the rule (v23tf), Overdrive doesn\'t win speed clashes')
+}
 console.log(`${passes}/${passes + fails} pass`)
 process.exit(fails ? 1 : 0)

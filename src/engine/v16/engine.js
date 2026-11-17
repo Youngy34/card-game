@@ -650,7 +650,10 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     const sa = speedOf(A, ca), sb = speedOf(B, cb)
     // Rules v18 (6 Nov): a knocked-down player loses every speed clash (ties included); both down, compare as usual
     const ka = !!(G.rules.knockdownSlow && A.st.knockdown), kb = !!(G.rules.knockdownSlow && B.st.knockdown)
+    // overdriveSpeed (17 Nov, EX Overdrive, Mark): a player in Overdrive wins every speed clash (both in it: as usual)
+    const oa = !!(G.rules.overdriveSpeed && A.od), ob = !!(G.rules.overdriveSpeed && B.od)
     if (ka !== kb) { winner = ka ? 1 : 0; outcome = 'speed'; ev.push({ kind: 'downSlow', side: ka ? 0 : 1 }) }
+    else if (oa !== ob) { winner = oa ? 0 : 1; outcome = 'speed'; ev.push({ kind: 'odFast', side: oa ? 0 : 1 }) }
     else if (sa !== sb) { winner = sa > sb ? 0 : 1; outcome = 'speed' }
     else {
       const tw = tieWinner16(G.A, G.B, G.rules, G.init)

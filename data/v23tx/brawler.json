@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "brawler-t",
+  "name": "Brawler",
+  "epithet": "Close range",
+  "prefers": "close",
+  "hp": 18,
+  "greyCap": 6,
+  "passive": null,
+  "concept": "New test fighters (17 Nov): built to the target values. Strong at Close; 12 of 21 attacks live at Far, 6 of them Breaks. (v23tx: EX Overdrive, HP 18)",
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "close",
+      "safe": true
+    },
+    {
+      "name": "Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 1,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "reach": "close"
+    },
+    {
+      "name": "Dash Punch",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 1,
+      "chip": 1,
+      "copies": 3,
+      "icons": [
+        "counter"
+      ],
+      "reach": "both",
+      "hitTo": "close",
+      "blockTo": "close"
+    },
+    {
+      "name": "Haymaker",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 11,
+      "build": 2,
+      "chip": 4,
+      "copies": 3,
+      "icons": [],
+      "reach": "both",
+      "hitTo": "far",
+      "notes": "knocks them back"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "build": 2,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Body Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 4,
+      "build": 1,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "both"
+    },
+    {
+      "name": "Leaping Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "build": 2,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "hitTo": "close"
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "notes": "draws"
+    },
+    {
+      "name": "Step In",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "guardTo": "close"
+    },
+    {
+      "name": "Catch",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "followAny": true
+    }
+  ],
+  "super": null
+}
