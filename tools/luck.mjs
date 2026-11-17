@@ -535,6 +535,37 @@ if (mode === 'game') {
     if (!json) console.log(`${kind.padEnd(12)} ${r.names.join(' v ')}: side 0 ${pct(L.win)} · median ${L.median} · time-outs ${pct(L.timeouts)} · range changes ${S.changes.toFixed(1)} a game (every ${S.roundsPerChange.toFixed(1)} rounds) · at own range ${S.home.map(pct).join(' / ')} · away side ${S.awaySide.map(pct).join(' / ')} · flips ${S.flips.map(v => v.toFixed(1)).join(' / ')} · buys ${S.buys.map(v => v.toFixed(1)).join(' / ')}`)
   }
   if (json) console.log(JSON.stringify(out))
+} else if (mode === 'clashvalue') {
+  // What winning a clash is worth (17 Nov, price list): Hard v Hard, every round with a winner, split by the
+  // winning card's type and the winner's fighter. Measured over the clash and everything it set off (follow-ups,
+  // combos), before the end of the round: damage dealt, Charge built (the winner's Charge sits on the loser's pile),
+  // knockdowns, cards played, the hand swing (winner's hand change minus loser's), and where the fight ended.
+  // node tools/luck.mjs --edition v23e clashvalue brawler zoner -n 300 --json
+  const r = run(args[1], args[2] || args[1], 'hard'), names = r.names, prefs = r.prefs
+  const T = {}, add = (key, o) => { const t = T[key] || (T[key] = { n: 0, dmg: 0, charge: 0, kd: 0, extra: 0, swing: 0, od: 0 }); t.n++; for (const k in o) t[k] += o[k] }
+  let rounds = 0, noWinner = { guards: 0, other: 0 }
+  for (const g of r.games) for (const rec of g.rounds) {
+    rounds++
+    const w = rec.winner
+    if (w == null || w < 0) { if (rec.outcome === 'guards') noWinner.guards++; else noWinner.other++; continue }
+    const l = 1 - w, t = rec.types[w]
+    const dmg = rec.before[l].hp - rec.after[l].hp
+    const charge = Math.max(0, rec.after[l].pile - rec.before[l].pile)
+    const kd = (rec.statuses[l] || []).includes('Knockdown') ? 1 : 0
+    const extra = (rec.follow && rec.follow.side === w ? 1 : 0) + (rec.combo || []).filter(x => x.side === w).length
+    const swing = (rec.after[w].hand - rec.before[w].hand) - (rec.after[l].hand - rec.before[l].hand)
+    const startHome = rec.rangeAt === prefs[w]
+    const od = rec.od?.[w] ? 1 : 0
+    const o = { dmg, charge, kd, extra, swing, od }
+    add(`${names[w]} ${t}`, o); add(`all ${t}`, o); add('all', o)
+    add(`${names[w]} ${t} ${startHome ? 'home' : 'away'}`, o)
+  }
+  const out = { n, rounds, noWinner, rows: Object.fromEntries(Object.entries(T).map(([k, t]) => [k, { n: t.n, share: t.n / rounds, dmg: t.dmg / t.n, charge: t.charge / t.n, kd: t.kd / t.n, extra: t.extra / t.n, swing: t.swing / t.n, od: t.od / t.n }])) }
+  if (json) console.log(JSON.stringify(out))
+  else {
+    console.log(`${rounds} rounds; no winner: two Guards ${pct(noWinner.guards / rounds)}, other ${pct(noWinner.other / rounds)}`)
+    for (const [k, v] of Object.entries(out.rows).sort()) console.log(`${k.padEnd(22)} ${pct(v.share).padStart(6)} of rounds · damage ${v.dmg.toFixed(2)} · Charge ${v.charge.toFixed(2)} · knockdown ${pct(v.kd)} · extra hits ${v.extra.toFixed(2)} · hand swing ${v.swing.toFixed(2)} · in Overdrive ${pct(v.od)}`)
+  }
 } else if (mode === 'learner') {
   const L = luck(run(args[1], args[2] || args[1], 'learner').games)
   if (json) console.log(JSON.stringify({ n, ...L })); else console.log(`the Learner (side 0) beats Hard ${pct(L.win)} · median ${L.median}`)
