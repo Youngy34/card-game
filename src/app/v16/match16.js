@@ -327,7 +327,7 @@ export function nextRound16(m) {
   m = { ...m, capNote }
   if (capNote && m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), ...(G.capCash?.some(n => n) ? { capCash: G.capCash } : {}), ...(G.capSpill?.some(n => n) ? { capSpill: G.capSpill } : {}) }] }
   // In initiative order: a person discards before a later partner chooses (both choices are public)
-  m = { ...m, G, last: null, boughtNote: null }
+  m = { ...m, G, last: null, boughtNote: null, zoneNote: null, zoneSeen: (G.zoneHit || []).length }
   if (G.phase === 'buy') return nextBuy(m)
   return nextDiscard(m)
 }
@@ -345,6 +345,14 @@ function nextBuy(m) {
   // what was bought goes on the round's log entry (the table's log shows it)
   if (G.bought?.some(Boolean) && m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), bought: G.bought }] }
   m = { ...m, boughtNote: G.bought?.some(Boolean) ? G.bought : null }
+  // Zone (17 Nov): a move to Close with Charge at the end of the round sets a zone off
+  const hits = (G.zoneHit || []).slice(m.zoneSeen || 0)
+  if (hits.length) {
+    const zoneNote = hits.map(h => { const O = P(m, h.side), V = P(m, 1 - h.side), d = O.discard.filter(x => x.zone).at(-1)
+      return `End of round ${G.round}: the fight moved to Close, so ${O.f.name}'s zone went off: ${d ? O.f.cards[d.i].name : 'its Pressure'} hit ${V.f.name} for ${h.dmg}.` }).join(' ')
+    m = { ...m, zoneNote, zoneSeen: (G.zoneHit || []).length }
+    if (m.history?.length) m = { ...m, history: [...m.history.slice(0, -1), { ...m.history.at(-1), zoneHits: hits }] }
+  }
   if (G.phase === 'draw') return nextDiscard(m)
   return afterDraw(m)
 }
@@ -362,10 +370,26 @@ export function buyList(m, side) {
     if (o === 'M') { const to = m.G.range === 'far' ? 'close' : 'far', cost = m.G.rules.chargeMove; return { opt: 'M', move: to, label: `Move the fight to ${RANGE_NAME[to]} for ${cost} ${HN()} (${h - cost} left)` } }
     // v23: Overdrive (next round your hits add their Charge as Damage) and the exchange (a card from hand for one in the discard pile)
     if (o === 'O') { const cost = m.G.rules.overdrive; return { opt: 'O', od: true, label: `${X.od ? 'Stay in Overdrive' : 'Overdrive'} for ${cost} ${HN()} (${h - cost} left)` } }
+    // 17 Nov: charge up (discard an attack, gain its Charge, up to your cap) and Zone (set a Pressure face down at Far)
+    if (typeof o === 'string' && o.startsWith('U:')) { const i = +o.slice(2), c = X.f.cards[i], gain = Math.max(0, Math.min(c.build || 0, heatCap16(X, m.G) - h)); return { opt: o, chargeUp: true, i, card: c, gain, label: gain ? `Discard ${c.name}: +${gain} ${HN()}` : `Discard ${c.name}: +0 (your battery is full)` } }
+    if (typeof o === 'string' && o.startsWith('Z:')) { const i = +o.slice(2), c = X.f.cards[i]; return { opt: o, zone: true, i, card: c, label: `Set ${c.name} as your zone: ${c.chip || 0} Damage${X.zone != null ? ` (replaces ${X.f.cards[X.zone].name})` : ''}` } }
     if (typeof o === 'string' && o.startsWith('X:')) { const [, g, t] = o.split(':').map(Number); return { opt: o, exchange: true, give: g, take: t, giveCard: X.f.cards[g], takeCard: X.f.cards[t], label: `Swap ${X.f.cards[g].name} for ${X.f.cards[t].name}` } }
     const c = o === 'S' ? X.f.sup : X.f.cards[o], cost = tableCost(X, o)
     return { opt: o, card: c, sup: o === 'S', label: o === 'S' ? `Buy ${c.name}: all ${cost} ${HN()}` : `Buy ${c.name} for ${cost} ${HN()} (${h - cost} left)` }
   })
+}
+
+const heatCap16 = (X, G) => ownCap(X, G.rules) || 99
+
+// What a player did at the end of the round, in words. The zone's card stays hidden unless the viewer owns it.
+export function boughtLine16(b, name, own = false) {
+  if (!b) return ''
+  if (b.move) return `${name} moved the fight to ${RANGE_NAME[b.move]} (${b.cost} ${HN()})`
+  if (b.od) return `${name} ${b.staying ? 'stayed in' : 'went into'} Overdrive (${b.cost} ${HN()})`
+  if (b.chargeUp) return `${name} charged up: discarded ${b.card} for +${b.gain} ${HN()}`
+  if (b.zone) return `${name} set a zone${own ? ` (${b.card})` : ': a Pressure face down'}`
+  if (b.exchange) return `${name} swapped ${b.give} for ${b.take}`
+  return `${name} ${b.name} (${b.cost} ${HN()})`
 }
 
 function nextDiscard(m) {
@@ -430,7 +454,21 @@ export function boardNotes16(m, side) {
     // rules v20: your heat is the pile on them, up to your own cap; theirs is the pile on you
     const mine = Y.pile, theirs = X.pile, myCap = ownCap(X, m.G.rules), theirCap = ownCap(Y, m.G.rules)
     const bn = m.boughtNote?.[1 - side]
-    if (bn) notes.push({ tone: 'bad', text: bn.move ? `${name} spent ${bn.cost} ${HN()} at the end of last round to move the fight to ${RANGE_NAME[bn.move]}.` : `${name} bought ${bn.name} for ${bn.cost} ${HN()} at the end of last round${bn.sup ? ': their Super is in their hand' : ''}.` })
+    if (m.zoneNote) notes.push({ tone: 'bad', text: m.zoneNote })
+    if (bn && m.G.rules.overdrive) { if (!bn.od && !bn.zone) notes.push({ tone: 'bad', text: `At the end of last round, ${boughtLine16(bn, name)}.` }) }
+    else if (bn) notes.push({ tone: 'bad', text: bn.move ? `${name} spent ${bn.cost} ${HN()} at the end of last round to move the fight to ${RANGE_NAME[bn.move]}.` : `${name} bought ${bn.name} for ${bn.cost} ${HN()} at the end of last round${bn.sup ? ': their Super is in their hand' : ''}.` })
+    // 17 Nov: EX Overdrive, Zone and Clinch
+    if (m.G.rules.overdrive) {
+      const odLine = m.G.rules.overdriveSpeed ? ' and wins every speed clash (unless knocked down)' : ''
+      if (X.od) notes.push({ tone: 'good', text: `You're in Overdrive (fighter card sideways): each of your attacks that lands deals its Charge as extra Damage instead of building it${odLine ? `, and you win every speed clash (unless you're knocked down)` : ''}.` })
+      if (Y.od) notes.push({ tone: 'bad', text: `${name} is in Overdrive: each of their attacks that lands deals its Charge as extra Damage${odLine ? `, and they win every speed clash (unless they're knocked down)` : ''}.` })
+    }
+    const zoneEnds = Z => `until the end of round ${Z.zoneRound + 1}`
+    if (X.zone != null) notes.push({ tone: 'good', text: `Your zone (${X.f.cards[X.zone].name}, ${X.f.cards[X.zone].chip || 0} Damage) is set ${zoneEnds(X)}: any move to Close sets it off.` })
+    if (Y.zone != null) { const ch = Y.f.cards.filter(c => c.t === 'P').map(c => c.chip || 0), lo = Math.min(...ch), hi = Math.max(...ch)
+      notes.push({ tone: 'bad', text: `${name}'s zone is set ${zoneEnds(Y)} (a Pressure face down): if the fight moves to Close before then, by an attack's ending, a Guard's line or a move with ${HN()}, it hits you for ${lo === hi ? lo : `${lo}–${hi}`}.` }) }
+    if (m.G.range === 'close' && Y.f.ability === 'clinch') notes.push({ tone: 'bad', text: `Clinch: at Close, if ${name}'s Guard beats your Pressure, you're knocked down (Safe doesn't stop it).` })
+    if (m.G.range === 'close' && X.f.ability === 'clinch') notes.push({ tone: 'good', text: 'Clinch: at Close, if your Guard beats their Pressure, they\'re knocked down (Safe doesn\'t stop it).' })
     // v22: where the fight is, and what reaches
     if (m.G.rules.range && m.G.rules.rangeMode === 'cards' && m.G.range) {
       const r = m.G.range, live = X.hand.filter(i => X.f.cards[i].t !== 'R' && reachOk(X.f.cards[i], r)).length, att = X.hand.filter(i => X.f.cards[i].t !== 'R').length
@@ -472,7 +510,11 @@ export function boardNotes16(m, side) {
   if (m.G.rules.initiative && (m.G.init === 0 || m.G.init === 1)) notes.push({ tone: m.G.init === side ? 'good' : undefined, text: m.G.init === side ? 'You hold the initiative: you win speed ties this round, and choose first where there\'s an order.' : `${name} holds the initiative: they win speed ties this round.` })
   if (m.G.rules.timeout) {
     const mine = X.deck.length, theirs = Y.deck.length
-    if (Math.min(mine, theirs) <= 4) notes.push({ tone: X.hp > Y.hp ? 'good' : X.hp < Y.hp ? 'bad' : undefined, text: `Time-out: ${mine} card${mine === 1 ? '' : 's'} left in your deck, ${theirs} in theirs. When a deck runs out the game ends and the higher HP wins: you're ${X.hp > Y.hp ? `${X.hp - Y.hp} ahead` : X.hp < Y.hp ? `${Y.hp - X.hp} behind` : 'level'}.` })
+    const pen = m.G.rules.timeoutPenalty || 0
+    if (pen && Math.min(mine, theirs) <= 6) {
+      const first = mine < theirs ? 'Your deck is the smaller one, so as things stand you\'d take it.' : mine > theirs ? `${name}'s deck is the smaller one, so as things stand they'd take it.` : 'The decks are level: run out together and nobody does.'
+      notes.push({ tone: mine < theirs ? 'bad' : mine > theirs ? 'good' : undefined, text: `Time-out: ${mine} card${mine === 1 ? '' : 's'} left in your deck, ${theirs} in theirs (each Guard that draws takes one more). When a deck runs out the game ends: whoever's deck ran out first loses ${pen} HP, then the higher share of HP wins. ${first} You're ${X.hp > Y.hp ? `${X.hp - Y.hp} HP ahead` : X.hp < Y.hp ? `${Y.hp - X.hp} HP behind` : 'level on HP'}.` })
+    } else if (Math.min(mine, theirs) <= 4) notes.push({ tone: X.hp > Y.hp ? 'good' : X.hp < Y.hp ? 'bad' : undefined, text: `Time-out: ${mine} card${mine === 1 ? '' : 's'} left in your deck, ${theirs} in theirs. When a deck runs out the game ends and the higher HP wins: you're ${X.hp > Y.hp ? `${X.hp - Y.hp} ahead` : X.hp < Y.hp ? `${Y.hp - X.hp} behind` : 'level'}.` })
   }
   const known = (Y.known || []).filter(i => Y.hand.includes(i))
   if (known.length) notes.push({ tone: 'bad', text: `${name} brought back ${[...new Set(known.map(i => Y.f.cards[i].name))].join(' and ')} with Recall: it's in their hand.` })
@@ -502,6 +544,8 @@ export function boardNotes16(m, side) {
     const label0 = LABEL16[t]
     const downX = m.G.rules.knockdownSlow && X.st.knockdown, downY = m.G.rules.knockdownSlow && Y.st.knockdown
     if (downX !== downY) { notes.push({ tone: downX ? 'bad' : 'good', text: downX ? `${label0} duel: you're knocked down, so you lose it whatever the speeds.` : `${label0} duel: they're knocked down, so you win it whatever the speeds.` }); continue }
+    const odX = m.G.rules.overdriveSpeed && !!X.od, odY = m.G.rules.overdriveSpeed && !!Y.od
+    if (odX !== odY) { notes.push({ tone: odX ? 'good' : 'bad', text: odX ? `${label0} duel: you're in Overdrive, so you win it whatever the speeds.` : `${label0} duel: they're in Overdrive, so they win it whatever the speeds.` }); continue }
     const myBest = Math.max(...mine.map(c => speedOf(X, c)))
     const theirBest = Math.max(...theirs.map(c => speedOf(Y, c)))
     const label = LABEL16[t]
@@ -517,7 +561,7 @@ export function boardNotes16(m, side) {
 export function gameRecord16(m) {
   const last = m.history[m.history.length - 1]
   return {
-    id: m.id, v: 3, rules: m.G.rules.heat ? 20 : m.G.rules.merged ? 18 : 16, ...(m.timedOut ? { timedOut: true } : {}),
+    id: m.id, v: 3, rules: m.G.rules.heat ? 20 : m.G.rules.merged ? 18 : 16, ...(m.timedOut ? { timedOut: true } : {}), ...(m.G.deckPenalty ? { deckPenalty: m.G.deckPenalty } : {}),
     startedAt: m.startedAt, finishedAt: Date.now(),
     mode: m.mode, humans: m.humans, levels: m.levels,
     fighters: m.json.map((j, k) => ({ id: j.id, name: j.name, hash: fighterHash16(j), status: m.statuses[k], json: j })),

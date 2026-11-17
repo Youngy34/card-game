@@ -93,6 +93,18 @@ export const EDITIONS = {
     labels: {},
     defaultSides: ['brawler23b', 'zoner23b'],
   },
+  // v23, 17 Nov (Mark): the rules as written in claude/rules v23 complete.md. The new test fighters with their
+  // abilities (Clinch, Zone), the knockdown (no end-of-round option, then lose every speed clash), EX Overdrive (turn
+  // your fighter card sideways; win every speed clash), charge up, no exchange, and the time-out penalty (whoever's
+  // deck runs out first loses 3 HP). Edition data/v23tp2 (second refit).
+  v23tp: {
+    title: 'Guardbreakers Playtest v23 (17 Nov)', subtitle: 'rules v23 as of 17 Nov: abilities, EX Overdrive, charge up, the time-out penalty', out: 'guardbreakers-playtest-v23-17nov.html', settings: 'v23tp2/settings.json',
+    fighters: [],
+    reference: [],
+    drafts: [['v23tp2', 'brawler'], ['v23tp2', 'zoner']],
+    labels: {},
+    defaultSides: ['brawler-t', 'zoner-t'],
+  },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
     fighters: [],

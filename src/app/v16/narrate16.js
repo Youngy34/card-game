@@ -35,7 +35,8 @@ export function outcomeTitle16(c, names) {
     case 'tie': return { title: `${c.names[c.winner]} wins the tie`, sub: `Same speed: the tie goes to ${names[c.winner]}.` }
     case 'speed': {
       const sp = c.events.find(e => e.kind === 'speeds')?.speeds || []
-      const down = c.events.find(e => e.kind === 'downSlow')
+      const down = c.events.find(e => e.kind === 'downSlow'), od = c.events.find(e => e.kind === 'odFast')
+      if (od && !down) return { title: `${c.names[c.winner]} wins the speed clash`, sub: `${names[od.side]} is in Overdrive, so they win every speed clash (speed ${sp[c.winner]} against ${sp[1 - c.winner]}).` }
       if (down) return { title: `${c.names[c.winner]} wins the speed clash`, sub: `${names[down.side]} is knocked down, so they lose every speed clash this round (speed ${sp[c.winner]} against ${sp[1 - c.winner]}).` }
       return { title: `${c.names[c.winner]} is faster`, sub: `Two ${LABEL16[c.types[0]]}s: speed ${sp[c.winner]} beats ${sp[1 - c.winner]}.` }
     }
@@ -65,6 +66,10 @@ export function narrate16(ev, names) {
       if (e.t === 'P') out.push(`${how[e.how]}${e.name} puts ${e.build} grey on ${them}${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? ` ${them}'s pile is full: ${e.spill} of it is lost as HP.` : ''}`)
       else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} ${e.cash ? `cashes ${them}'s ${e.cash} grey` : 'cashes an empty pile'} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
       else if (e.t === 'R') out.push(`${who}'s ${e.name} clears ${e.cleared ? `${e.cleared} grey` : 'an empty pile'}${e.chip ? ` and chips ${e.chip}` : ''}.`)
+    } else if (e.kind === 'status' && e.status === 'knockdown' && TEXT16.heat?.kdNow) {
+      // 17 Nov: knocked down, you take no end-of-round option this round, then lose every speed clash in your next clash
+      const after = 'no end-of-round option this round, and they lose every speed clash in their next clash'
+      out.push(e.clinch ? `Clinch: ${them}'s Guard catches the strike at Close and drags ${who} down. ${who} is knocked down: ${after}.` : `${e.from} knocks ${who} down: ${after}.`)
     } else if (e.kind === 'status') out.push(e.block ? `${them}'s ${e.from} turns the blow aside: ${names[e.side]} is ${e.status === 'knockdown' ? 'knocked down' : status(e.status)} next round.` : `${names[e.side]} is hit with ${status(e.status)} (from ${e.from}) for next round.`)
     else if (e.kind === 'blockHeat') out.push(e.n ? `${who}'s ${e.name} takes the hit and turns it into ${e.n} ${HN()}.` : `${who}'s ${e.name} takes the hit, but ${who} is already ${hw('at max heat', 'Fully Charged')}.`)
     else if (e.kind === 'safe') out.push(`${who}'s ${e.name} is Safe: no follow-up.`)
@@ -79,6 +84,8 @@ export function narrate16(ev, names) {
     else if (e.kind === 'holdGround') out.push(`${who}'s ${e.name} holds its ground: the fight doesn't move.`)
     else if (e.kind === 'blockCharge') out.push(e.n ? `${who}'s ${e.name} slips the hit: ${who} builds ${e.n} ${HN()}.` : `${who}'s ${e.name} slips the hit (${who}'s battery is full).`)
     else if (e.kind === 'breakfall') out.push(`${who}'s ${e.name} breaks the fall: it goes back to ${who}'s hand.`)
+    else if (e.kind === 'guardTo') out.push(`${who}'s ${e.name} takes the fight to ${e.to === 'far' ? 'Far' : 'Close'}: a Guard's own range line wins over the Pressure's.`)
+    else if (e.kind === 'zoneHit') out.push(`${who}'s zone goes off as the fight moves to Close: ${e.name} hits ${them} for ${e.dmg}.`)
     else if (e.kind === 'reveal' && e.what === 'guardDraw') out.push(`${who}'s ${e.name}: ${e.n ? 'draws a card' : 'no card left to draw'}.`)
   }
   return out

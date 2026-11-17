@@ -64,6 +64,22 @@ export function Settings16() {
           <option value="unbeaten">Draw a card when revealed, unless a Break beats them; two Guards both draw (v23)</option>
           <option value="off">Never draw (v22)</option>
         </select></label>
+      ${d.rules.overdrive ? html`<label class="field"><span>In Overdrive</span>
+        <select id="s-odspeed" value=${d.rules.overdriveSpeed ? 'on' : 'off'} onChange=${e => rule({ overdriveSpeed: e.target.value === 'on' })}>
+          <option value="on">You also win every speed clash (EX, 17 Nov)</option>
+          <option value="off">Only the extra Damage</option>
+        </select></label>
+      <label class="field"><span>Charge up</span>
+        <select id="s-chargeup" value=${d.rules.chargeUp ? 'on' : 'off'} onChange=${e => rule({ chargeUp: e.target.value === 'on' })}>
+          <option value="on">On: discard an attack for its Charge (17 Nov)</option>
+          <option value="off">Off</option>
+        </select></label>
+      <label class="field"><span>Knocked down</span>
+        <select id="s-kdnow" value=${d.rules.knockdownNoOption ? 'on' : 'off'} onChange=${e => rule({ knockdownNoOption: e.target.value === 'on' })}>
+          <option value="on">No end-of-round option that round, then lose every speed clash (17 Nov)</option>
+          <option value="off">Only lose every speed clash next round</option>
+        </select></label>` : null}
+      ${d.rules.overdrive && d.rules.timeout ? num('timeoutPenalty', 0, 6, 'Time-out: whoever runs out first loses (HP)', 'When a deck runs out the game ends; if only one deck is empty, its owner loses this much HP before HP is compared. 3 as written (17 Nov); 0 is off.') : null}
       <label class="field"><span>The exchange</span>
         <select id="s-exchange" value=${d.rules.exchange ? 'on' : 'off'} onChange=${e => rule({ exchange: e.target.value === 'on' })}>
           <option value="on">On: an end-of-round option, a card from hand for a different one from the discard pile (v23)</option>

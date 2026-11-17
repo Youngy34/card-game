@@ -8,7 +8,7 @@ import { roster, saveGame, newId } from '../store.js'
 import { settings16 } from './fighters16.js'
 import * as M from './match16.js'
 import { card16, neutralOptions16, statusList, superReady, handLimitOf, tableCost, capOf, heatOf, ownCap as heatCap, reachOk } from '../../engine/v16/engine.js'
-import { ICONS, LABEL16, STATUSES, CONFISCATE_LINE, hw, HN, RANGE_NAME } from '../../engine/v16/cards.js'
+import { ICONS, LABEL16, STATUSES, CONFISCATE_LINE, hw, HN, RANGE_NAME, ABILITY_TEXT16, ABILITY_NAME16 } from '../../engine/v16/cards.js'
 import { deckSize } from '../../engine/v16/cards.js'
 import { narrate16, outcomeTitle16, neutralLine16 } from './narrate16.js'
 
@@ -18,6 +18,8 @@ const SHORT = { ai: ['you', 'partner'], hotseat: ['player 1', 'player 2'], watch
 // v22 (14 Nov): Charge is a meter built by landing attacks
 // v23 (16 Nov): the rules as a short lede
 const v23Lede = R => `Rules v23. Each fighter plays one shuffled deck of 30, gone through once, with hands hidden. Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. Every attack has three numbers: Speed, Charge and Damage. A winning attack builds its Charge and deals its Damage; a Guard that beats a Pressure stops it and can follow up with a Counter (unless it's Safe). A Guard draws you a card, unless a Break beats it. Your Charge stops at your own cap (more is lost). Range: the fight is at Close or Far (it starts at ${R.rangeStart === 'close' ? 'Close' : 'Far'}); each attack reaches Close, Far or both, and shows where it leaves the fight: on hit, and on block if it's Guarded. Follow-ups and combos play at the new range. At the end of each round each player may do one thing, the initiative holder first: move the fight (${R.chargeMove} Charge), Overdrive (${R.overdrive} Charge: next round your hits deal their Charge as extra Damage instead of building it), or the exchange (a card from your hand for a different one from your discard pile, both shown). When a deck runs out the game times out: the higher share of starting HP wins.`
+// v23 as of 17 Nov (Mark): abilities, the knockdown, EX Overdrive, charge up, no exchange, the time-out penalty
+const v23bLede = R => `Rules v23 (17 November). Each fighter plays one shuffled deck of 30, gone through once, with hands hidden. Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. Every attack has three numbers: Speed, Charge and Damage. A winning attack builds its Charge and deals its Damage; a Guard that beats a Pressure stops it and can follow up with a Counter (unless it's Safe). A Guard draws you a card, unless a Break beats it. Your Charge stops at your own cap (more is lost). Range: the fight is at Close or Far (it starts at ${R.rangeStart === 'close' ? 'Close' : 'Far'}); each attack reaches Close, Far or both, and shows where it leaves the fight: on hit, and on block if it's Guarded. A Guard with its own range line (Step In, Sidestep) wins over the Pressure's. Each fighter card has an ability. At the end of each round each player may do one thing, the initiative holder first: move the fight (${R.chargeMove} Charge), Overdrive (${R.overdrive} Charge: turn your fighter card sideways; next round your hits deal their Charge as extra Damage instead of building it${R.overdriveSpeed ? ', and you win every speed clash' : ''})${R.chargeUp ? ', charge up (discard an attack from your hand and gain its Charge)' : ''}${R.exchange ? ', the exchange (a card from your hand for a different one from your discard pile)' : ''}, or your fighter's own option (the Zoner's Zone).${R.knockdownNoOption ? ' Knocked down, you get no end-of-round option that round, and you lose every speed clash in your next clash.' : ''} When a deck runs out the game ends: ${R.timeoutPenalty ? `whoever's deck ran out first loses ${R.timeoutPenalty} HP, then ` : ''}the higher share of starting HP wins.`
 const meterLede = R => `Rules v22: range and Charge. Each fighter plays one shuffled deck of 28 (nine Guards: Recall, Read and their own), gone through once, with hands hidden; three specials and a Super wait on the table. Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. Every attack has three numbers: Speed, Charge and Damage. Landing an attack is the only way to build Charge: a winning attack builds its Charge${R.flatBuild ? ` (${R.flatBuild} for every attack)` : ''} and deals its Damage, Pressure and Break alike. A Guard that beats a Pressure stops it and punishes, but doesn't touch Charge; two Guards do nothing. Your Charge stops at your own cap: there you're Fully Charged, and Charge your attacks build past it overloads as straight damage. At the end of each round you may spend it: ${R.specialCost ?? 3} on a special${R.chargeMove ? `, ${R.chargeMove} to move the fight` : ''}, or all of it on your Super (only when Fully Charged). Range: the initiative token shows Close or Far (the fight starts at ${R.rangeStart === 'close' ? 'Close' : 'Far'}). Each attack reaches Close, Far or both, and can only be played while the fight is in its reach; Guards reach anywhere. Cards that move the fight move it whether they win or lose (two moving opposite ways cancel). The initiative token wins speed ties and goes first wherever there's an order. When a player draws their last card the game times out: the higher HP wins.`
 export function Setup16({ onStart, prefs, setPrefs }) {
   const list = roster().filter(r => r.rules >= 16)
@@ -36,7 +38,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
   return html`<div class="setup">
     <div class="stack">
       <h1>Fight night</h1>
-      <p class="lede">${s.rules.overdrive ? v23Lede(s.rules) : s.rules.breakBuilds ? meterLede(s.rules) : s.rules.heat ? (s.rules.guardsQuiet ? (s.rules.range ? 'Rules v22: range and ' : 'Rules v21: ') + HN() + '. Each fighter plays one shuffled deck of 28 (nine Guards: Recall, Read and their own), gone through once, with hands hidden; three specials and a Super wait on the table.' : 'Rules v20: heat. Each fighter plays one shuffled deck of 26, gone through once, with hands hidden.') + ' Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. A winning Pressure builds your ' + HN() + '; a Break that beats a Guard ' + hw('spends', 'discharges') + ' all of it as damage; a Guard that beats a Pressure ' + hw('douses', 'drains') + ' the attacker\'s ' + HN() + ' and punishes' + (s.rules.guardsQuiet ? '; two Guards do nothing' : '') + hw('. Your heat stops at your own cap: past it, every point your Pressures build lands as straight damage. At the end of each round you may spend heat at the table: a special for ', '. Your Charge stops at your own cap: there you\'re Fully Charged, and every point your Pressures build past it overloads as straight damage. At the end of each round you may spend Charge at the table: a special for ') + (s.rules.specialCost ?? 3) + ', your Super for all of it (only ' + hw('at max', 'when Fully Charged') + '). The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' + (s.rules.range ? ' Range: the initiative token shows Close or Far (the fight starts at ' + (s.rules.rangeStart === 'close' ? 'Close' : 'Far') + '). Each attack reaches Close, Far or both, and can only be played while the fight is in its reach; Guards reach anywhere. Cards that move the fight move it whether they win or lose (two moving opposite ways cancel), and at the end of a round you can pay ' + (s.rules.chargeMove ?? 3) + ' ' + HN() + ' to move it instead of buying.' : '') : s.rules.merged ? 'Rules v18: each fighter plays one shuffled deck (24 to 26 cards), gone through once, with hands hidden. Each round, both play a clash card together; riders on the cards (Charge, Read, Recall) fire on reveal, win or lose. Specials and the Super wait face up on the table until a Read takes them for meter; a special goes back to the table once used, the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter${s.rules.merged ? ', unless it\'s Safe. Knocked down, you lose every speed clash next round' : ''}.</p>
+      <p class="lede">${s.rules.overdrive ? (s.rules.chargeUp || s.rules.knockdownNoOption ? v23bLede(s.rules) : v23Lede(s.rules)) : s.rules.breakBuilds ? meterLede(s.rules) : s.rules.heat ? (s.rules.guardsQuiet ? (s.rules.range ? 'Rules v22: range and ' : 'Rules v21: ') + HN() + '. Each fighter plays one shuffled deck of 28 (nine Guards: Recall, Read and their own), gone through once, with hands hidden; three specials and a Super wait on the table.' : 'Rules v20: heat. Each fighter plays one shuffled deck of 26, gone through once, with hands hidden.') + ' Each round, both play a card together: a Pressure beats a Break, a Break beats a Guard, a Guard beats a Pressure. A winning Pressure builds your ' + HN() + '; a Break that beats a Guard ' + hw('spends', 'discharges') + ' all of it as damage; a Guard that beats a Pressure ' + hw('douses', 'drains') + ' the attacker\'s ' + HN() + ' and punishes' + (s.rules.guardsQuiet ? '; two Guards do nothing' : '') + hw('. Your heat stops at your own cap: past it, every point your Pressures build lands as straight damage. At the end of each round you may spend heat at the table: a special for ', '. Your Charge stops at your own cap: there you\'re Fully Charged, and every point your Pressures build past it overloads as straight damage. At the end of each round you may spend Charge at the table: a special for ') + (s.rules.specialCost ?? 3) + ', your Super for all of it (only ' + hw('at max', 'when Fully Charged') + '). The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' + (s.rules.range ? ' Range: the initiative token shows Close or Far (the fight starts at ' + (s.rules.rangeStart === 'close' ? 'Close' : 'Far') + '). Each attack reaches Close, Far or both, and can only be played while the fight is in its reach; Guards reach anywhere. Cards that move the fight move it whether they win or lose (two moving opposite ways cancel), and at the end of a round you can pay ' + (s.rules.chargeMove ?? 3) + ' ' + HN() + ' to move it instead of buying.' : '') : s.rules.merged ? 'Rules v18: each fighter plays one shuffled deck (24 to 26 cards), gone through once, with hands hidden. Each round, both play a clash card together; riders on the cards (Charge, Read, Recall) fire on reveal, win or lose. Specials and the Super wait face up on the table until a Read takes them for meter; a special goes back to the table once used, the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order. When a player draws their last card the game times out: the higher HP wins.' : s.rules.tableCards ? 'Rules v17: each fighter plays a shuffled deck, with hands hidden. Each round: both play a neutral card together, then both a clash card, then a draw. Specials and the Super wait face up on the table until Read takes them for meter; the Super is used once. The initiative token wins speed ties and goes first wherever there\'s an order, and it passes every round.' : 'Rules v16: each fighter plays a shuffled deck, and hands are hidden. Each round has a neutral step (play a neutral card), the clash, and a draw.'} Win a read with a Starter and you combo; Guard a Pressure and you punish with a Counter${s.rules.merged ? ', unless it\'s Safe. Knocked down, you lose every speed clash next round' : ''}.</p>
     </div>
     <div class="stack">
       <span class="label">Mode</span>
@@ -50,7 +52,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
     ${prefs.mode === 'ai' ? html`<div class="stack">
       <span class="label">Difficulty</span>
       <${Seg} value=${difficulty} options=${levels.map(([k, l]) => [k, l.label])} onChange=${d => setPrefs({ ...prefs, difficulty: d })} label="Difficulty" />
-      <p class="small muted">${M.LEVELS16[difficulty].about} ${(s.rules.heat ? { easy: 'In the Benchmark mirror, Hard beats it about 73 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 55 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out. In the shop it looks one round ahead.' } : s.rules.merged ? { easy: 'In the Benchmark mirror, Hard beats it about 65 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 59 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out.' } : { easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' })[difficulty]}</p>
+      <p class="small muted">${M.LEVELS16[difficulty].about} ${(s.rules.chargeUp ? { easy: 'Brawler v Zoner: Hard beats it about 80 games in 100.', medium: 'Brawler v Zoner: Hard beats it about 65 games in 100.', hard: "It doesn't learn your habits. It looks one round ahead, and it sees the time-out coming only through what it has learned (HP, and whose deck is the smaller)." } : s.rules.heat ? { easy: 'In the Benchmark mirror, Hard beats it about 73 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 55 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out. In the shop it looks one round ahead.' } : s.rules.merged ? { easy: 'In the Benchmark mirror, Hard beats it about 65 games in 100.', medium: 'In the Benchmark mirror, Hard beats it about 59 games in 100.', hard: 'It doesn\'t learn your habits, and it doesn\'t know about the time-out.' } : { easy: 'In the Benchmark mirror, Hard beats it about 7 games in 10.', medium: 'In the Benchmark mirror, Hard beats it about 53 games in 100.', hard: 'It doesn\'t learn your habits yet (the Reader isn\'t on v16).' })[difficulty]}</p>
     </div>` : null}
     <div class="pickers">
       ${[0, 1].map(k => html`<div class="stack">
@@ -58,7 +60,7 @@ export function Setup16({ onStart, prefs, setPrefs }) {
         <div class="fighters" role="group" aria-label=${`${M.WHO16[prefs.mode][k]}'s fighter`}>
           ${list.map(r => html`<button class="fpick" type="button" aria-pressed=${sides[k] === r.id ? 'true' : 'false'} onClick=${() => pick(k, r.id)}>
             <strong>${r.fighter.name}</strong><${StatusChip} status=${r.status} />
-            <span class="meta">${r.fighter.hp} HP${ownCap(r.fighter, s.rules)} · ${r.fighter.rules === 18 ? oneDeckSize(r.fighter) : splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
+            <span class="meta">${r.fighter.hp} HP${ownCap(r.fighter, s.rules)}${r.fighter.ability ? ` · ${ABILITY_NAME16[r.fighter.ability] || r.fighter.ability}` : ''} · ${r.fighter.rules === 18 ? oneDeckSize(r.fighter) : splitSize(r.fighter)}${r.fighter.super ? ` · Super: ${r.fighter.super.name}` : ''}</span>
           </button>`)}
         </div>
       </div>`)}
@@ -102,9 +104,9 @@ export function Table16({ m, setM, prefs, onEnd }) {
 
   return html`<div class="table">
     <div class="board">
-      <${Hud16} X=${X[top]} who=${who[top]} m=${m} />
+      <${Hud16} X=${X[top]} who=${who[top]} m=${m} own=${me === top || (m.mode === 'watch' && prefs.showHands)} />
       <${Stage16} m=${m} names=${names} prefs=${prefs} />
-      <${Hud16} X=${X[bottom]} who=${who[bottom]} m=${m} />
+      <${Hud16} X=${X[bottom]} who=${who[bottom]} m=${m} own=${me === bottom || (m.mode === 'watch' && prefs.showHands)} />
       <section class="hand-wrap" aria-label="Your move">
         ${myTurn ? html`<${Action16} m=${m} setM=${setM} side=${m.turn} prefs=${prefs} names=${names} who=${who} />` : null}
         ${!myTurn && m.phase === 'reveal' ? html`<div class="actions">
@@ -134,32 +136,39 @@ export function Table16({ m, setM, prefs, onEnd }) {
       <div class="overlay-box">
         <span class="label">Round ${m.G.round}</span>
         <h2>Pass the device to ${who[m.turn]}</h2>
-        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option', rider: 'Their rider\'s choice', buy: 'Their purchase' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
+        <p class="lede">${{ neutral: 'Their neutral action', clash: 'Their clash card', stage: 'Their follow-up or combo', discard: 'Their discard', confiscate: 'What they lose to Confiscate', option: 'Their neutral card\'s option', rider: 'Their rider\'s choice', buy: m.G.rules.overdrive ? 'Their end-of-round option' : 'Their purchase' }[m.phase] || 'Their choice'} is private: hands are hidden.</p>
         <button class="btn" onClick=${() => setM(M.continueAfterPass(m))}>I'm ${who[m.turn]}</button>
       </div>
     </div>` : null}
   </div>`
 }
 
-function Hud16({ X, who, m }) {
+function Hud16({ X, who, m, own = false }) {
   const top = X.discard.length ? X.discard[X.discard.length - 1] : null
   const Y = X === m.G.A ? m.G.B : m.G.A
   const cap = Y.inPlay != null && Y.f.cards[Y.inPlay].capHand ? handLimitOf(X, Y, m.G.rules) : null
-  const now = statusList(X.st), next = m.phase === 'reveal' || m.phase === 'over' ? statusList(X.next) : []
+  const R = m.G.rules
+  // 17 Nov: knocked down, the knockdown starts at once (no end-of-round option this round)
+  const kdNow = R.knockdownNoOption && X.next?.knockdown && ['reveal', 'buy', 'discard', 'over'].includes(m.phase)
+  const now = statusList(X.st), next = m.phase === 'reveal' || m.phase === 'over' ? statusList(X.next).filter(l => !(kdNow && l === 'Knockdown')) : []
   const sup = X.f.sup
   return html`<section class="hud" aria-label=${`${X.f.name}'s side`}>
     <div class="hud-head">
+      ${R.overdrive ? html`<span class=${cx('fcard', X.od && 'od')} role="img" aria-label=${X.od ? 'Fighter card turned sideways: in Overdrive' : 'Fighter card upright'} title=${X.od ? 'Fighter card turned sideways: in Overdrive this round' : 'Fighter card: turned sideways while in Overdrive'}></span>` : null}
       <span class="hud-name">${X.f.name}</span>
       <span class="hud-who">${who}</span>
       <span class="hud-flags">
         ${m.G.rules.initiative && m.G.init === (X === m.G.A ? 0 : 1) ? html`<span class="flag sup ready" title="Wins speed ties this round; goes first wherever there's an order">Initiative</span>` : null}
-        ${X.od ? html`<span class="flag sup ready" title="In Overdrive this round: every attack of theirs that lands deals its Charge as extra Damage, and builds none">Overdrive</span>` : null}
+        ${X.od ? html`<span class="flag sup ready" title=${`In Overdrive this round: every attack of theirs that lands deals its Charge as extra Damage, and builds none${R.overdriveSpeed ? '; they win every speed clash (unless knocked down)' : ''}`}>Overdrive</span>` : null}
+        ${kdNow ? html`<span class="flag status" title="Knocked down: no end-of-round option this round; loses every speed clash in the next clash">Knocked down</span>` : null}
+        ${X.zone != null ? html`<span class="flag sup" title=${`A Pressure face down until the end of round ${X.zoneRound + 1}: any move to Close sets it off for its Damage`}>${own ? `Zone: ${X.f.cards[X.zone].name} (${X.f.cards[X.zone].chip || 0})` : 'Zone set'}</span>` : null}
         ${X.f.prefers && m.G.range ? html`<span class=${cx('flag', m.G.range === X.f.prefers ? 'sup ready' : 'status next')} title=${`${X.f.name} wants the fight at ${RANGE_NAME[X.f.prefers]}`}>Wants ${RANGE_NAME[X.f.prefers]}</span>` : null}
         ${now.map(s => html`<span class="flag status" title="This round">${s}</span>`)}
         ${next.map(s => html`<span class="flag status next" title="Next round">Next: ${s}</span>`)}
         ${sup && !m.G.rules.tableCards ? html`<span class=${cx('flag sup', superReady(X, m.G.rules) && 'ready', m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses && 'spent')} title=${`${sup.name}: ${sup.meter} meter`}>${sup.name} ${superReady(X, m.G.rules) ? 'ready' : m.G.rules.superUses > 0 && X.supersUsed >= m.G.rules.superUses ? 'used' : `${Math.min(X.meter, sup.meter)}/${sup.meter}`}</span>` : null}
       </span>
     </div>
+    ${X.f.ability && ABILITY_TEXT16[X.f.ability] ? html`<div class="hud-row small ability-line" title="The fighter card's ability: always on"><span class="muted">${ABILITY_TEXT16[X.f.ability]}</span></div>` : null}
     <${LifeBar} X=${X} />
     <div class="hud-row">
       ${m.G.rules.heat ? (() => { const h = Y.pile, c = heatCap(X, m.G.rules); const ch = hw(false, true); return html`<div class=${cx('pile', ch ? 'charge' : 'heat')} title=${ch && m.G.rules.overdrive ? `Charge: built only by landing attacks (each builds the Charge on its card). It stops at your own cap of ${c}; more is lost. At the end of a round you may spend it: ${m.G.rules.chargeMove} to move the fight, or ${m.G.rules.overdrive} for Overdrive (next round your hits deal their Charge as extra Damage).` : ch && m.G.rules.breakBuilds ? `Charge: built only by landing attacks (each builds the Charge on its card${m.G.rules.flatBuild ? `: ${m.G.rules.flatBuild} for every attack` : ''}). Guards don't touch it. It stops at your own cap of ${c}: there you're Fully Charged, and Charge your attacks build past it overloads as straight damage. At the end of a round you may spend it: ${m.G.rules.specialCost ?? 3} on a special${m.G.rules.chargeMove ? `, ${m.G.rules.chargeMove} to move the fight` : ''}, or all ${c} on your Super.` : ch ? `Charge: built by your winning Pressures (and ${m.G.rules.greyPerRound ?? 1} each round), discharged by a Break that beats a Guard, drained when a Guard beats your Pressure. It stops at your own cap of ${c}: there you're Fully Charged, and Charge ${m.G.rules.roundHeatCaps ? 'your Pressures build' : 'you gain'} past it overloads as straight damage${m.G.rules.roundHeatCaps ? " (the round's Charge just stops at the cap)" : ''}. At the end of a round you may spend ${m.G.rules.specialCost ?? 3} on a special, or all ${c} on your Super.` : `Heat: built by your winning Pressures (and ${m.G.rules.greyPerRound ?? 1} each round), spent by a Break that beats a Guard, doused when a Guard beats your Pressure. It stops at your own cap of ${c}: past it, heat ${m.G.rules.roundHeatCaps ? 'your Pressures build' : 'you gain'} lands as straight damage${m.G.rules.roundHeatCaps ? " (the round's heat just stops at the cap)" : ''}. At the end of a round you may spend ${m.G.rules.specialCost ?? 3} on a special, or all ${c} on your Super.`}><span class="label">${hw('Heat', 'Charge')}</span><span class="pile-n">${h}/${c}</span>${ch ? html`<${Battery} n=${h} cap=${c} />` : html`<${Tokens} n=${h} />`}${h >= c ? html`<span class="flag sup ready">${m.G.rules.overflowLost ? 'Full: more Charge is lost' : m.G.rules.roundHeatCaps ? (m.G.rules.breakBuilds ? 'Fully Charged: your attacks land in full' : hw('Max: your Pressures land in full', 'Fully Charged: your Pressures land in full')) : hw('Max: more heat lands as damage', 'Fully Charged: more Charge overloads as damage')}</span>` : null}</div>` })()
@@ -169,7 +178,7 @@ function Hud16({ X, who, m }) {
     <div class="hud-row small">
       <span class="count"><b>${X.hand.length}</b> in hand</span>
       ${cap !== null ? html`<span class="flag status" title=${`${Y.f.cards[Y.inPlay].name}: discard down to ${cap} in the draw step`}>Hand limit ${cap}</span>` : null}
-      <span class=${cx('count', m.G.rules.timeout && X.deck.length <= 3 && 'flag status')} title=${m.G.rules.timeout ? 'No reshuffle: when a deck runs out, the game times out and the higher HP wins' : ''}><b>${X.deck.length}</b> in deck${m.G.rules.timeout && X.deck.length <= 3 ? ' · time-out near' : ''}</span>
+      <span class=${cx('count', m.G.rules.timeout && X.deck.length <= 3 && 'flag status')} title=${m.G.rules.timeout ? (R.timeoutPenalty ? `No reshuffle: when a deck runs out the game ends; whoever's deck ran out first loses ${R.timeoutPenalty} HP, then the higher share of HP wins` : 'No reshuffle: when a deck runs out, the game times out and the higher HP wins') : ''}><b>${X.deck.length}</b> in deck${m.G.rules.timeout && X.deck.length <= 3 ? ' · time-out near' : ''}</span>
       <span class="count"><b>${X.discard.length}</b> discarded${top ? html`<span class="muted"> · top: ${top.burned ? 'a burned card' : X.f.cards[top.i].name}</span>` : null}</span>
       ${X.reshuffles ? html`<span class="count muted">reshuffled ${X.reshuffles}×</span>` : null}
     </div>
@@ -197,7 +206,7 @@ function Stage16({ m, names, prefs }) {
     ${m.phase === 'over' ? html`<div class="outcome">
       <span class="ko">${m.timedOut ? 'Time' : res === 0.5 ? 'Draw' : 'K.O.'}</span>
       <b>${m.timedOut ? (res === 0.5 ? 'Time-out: level on HP, a draw' : `Time-out: ${names[res === 1 ? 0 : 1]} wins on ${G.rules.timeoutShare ? 'share of HP' : 'HP'}`) : res === 0.5 ? 'Round limit reached' : `${names[res === 1 ? 0 : 1]} wins`}</b>
-      <span>Round ${G.round}.${m.timedOut ? ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.` : ''}${m.capNote ? ` ${m.capNote}` : ''}</span>
+      <span>Round ${G.round}.${m.timedOut ? timeoutLine(G, names) : ''}${m.capNote ? ` ${m.capNote}` : ''}${m.zoneNote ? ` ${m.zoneNote}` : ''}</span>
     </div>` : null}
     <span class="label">Round ${G.round} · ${{ neutral: 'Neutral phase', clash: 'Clash', stage: 'Clash', reveal: 'Result', discard: 'Draw phase', over: 'Result', confiscate: m.confNext === 'clash' ? 'Before the clash' : 'Clash', option: 'Neutral reveal', rider: 'Reveal', buy: 'End of round' }[m.phase]}</span>
     ${G.range ? html`<div class="range-token" data-r=${G.range} title=${G.rules.rangeEnds ? "The initiative token's face: Close or Far. An attack can only be played if it reaches the current range; Guards reach anywhere. A winning attack leaves the fight at its on-hit range; a Guarded Pressure at its on-block range; follow-ups play at the new range. At the end of a round you can also pay Charge to move it." : "The initiative token's face: Close or Far. An attack can only be played if it reaches the current range; Guards reach anywhere. Cards that move the fight move it win or lose; at the end of a round you can also pay Charge to move it."}>${RANGE_NAME[G.range]}<span class="small">${shown && (m.last?.clash?.moved || m.last?.clash?.events?.some(e => e.kind === 'moved')) ? 'the fight just moved' : 'range'}</span></div>` : null}
@@ -210,7 +219,7 @@ function Stage16({ m, names, prefs }) {
     : !clash ? html`<div class="clash-cards">
       ${[1, 0].map((k, n) => html`${n ? html`<span class="vs">VS</span>` : null}<div class="card card-back" style=${{ opacity: (m.phase === 'clash' && m.picks[k] !== undefined) ? 1 : 0.35 }}><span>${m.phase === 'clash' && m.picks[k] !== undefined ? 'YOMI' : '?'}</span></div>`)}
     </div>
-    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? (m.G.rules.merged ? 'Both clash cards reveal together; their riders fire win or lose.' : 'Both clash cards reveal together.') : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : m.phase === 'buy' ? (m.G.rules.overdrive ? 'End of the round: one option each (move the fight, Overdrive or the exchange), the initiative holder first.' : `End of the round: each player may spend ${HN()} at the table, the initiative holder first.`) : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
+    <p class="small muted">${m.phase === 'neutral' ? 'Both neutral actions reveal together, then both clash cards.' : m.phase === 'clash' ? (m.G.rules.merged ? 'Both clash cards reveal together; their riders fire win or lose.' : 'Both clash cards reveal together.') : m.phase === 'discard' ? 'Drawing: over the hand limit, so a discard first.' : m.phase === 'confiscate' ? 'Confiscate: a discard before the clash cards are chosen.' : m.phase === 'option' ? 'Neutral cards revealed: options are chosen in initiative order.' : m.phase === 'buy' ? (m.G.rules.overdrive ? `End of the round: one option each (${optionWords(m.G.rules)}), the initiative holder first.` : `End of the round: each player may spend ${HN()} at the table, the initiative holder first.`) : ''}</p>` : html`<${ClashView} m=${m} clash=${clash} names=${names} prefs=${prefs} />`}
   </section>`
 }
 
@@ -244,11 +253,21 @@ function ClashView({ m, clash, names, prefs }) {
     </div>` : null}`
 }
 
+// The time-out, in words: who ran out first and paid the penalty, the HP after it, and what it changed
+function timeoutLine(G, names) {
+  const p = G.deckPenalty, R = G.rules
+  if (!R.timeoutPenalty) return ` A deck ran out: ${G.A.hp} HP to ${G.B.hp}.`
+  if (!p) return ` Both decks ran out together, so nobody loses the ${R.timeoutPenalty} HP: ${G.A.hp} HP to ${G.B.hp}.`
+  const was = p.pre === 0.5 ? 'it would have been a draw' : `${names[p.pre === 1 ? 0 : 1]} would have won`
+  return ` ${names[p.side]}'s deck ran out first: −${p.hp} HP. Then ${G.A.hp} HP to ${G.B.hp}${p.pre !== G.result ? ` (without the penalty, ${was})` : ''}.`
+}
+
 // A deck's size, as clash and neutral cards
 const oneDeckSize = f => { const sp = (f.cards || []).filter(c => c.special).length; return `${deckSize(f) - sp} cards${sp ? ` + ${sp} specials` : ''}` }
 const splitSize = f => { const all = deckSize(f), n = (f.cards || []).filter(c => c.type === 'neutral').reduce((t, c) => t + (c.copies || 0), 0), sp = (f.cards || []).filter(c => c.special).length; return `${all - n - sp} clash + ${n} neutral cards${sp ? ` + ${sp} specials` : ''}` }
 
 const P16 = (m, a) => (a.side === 1 ? m.G.B : m.G.A).f.cards[a.i] || { name: '?' }
+const optionWords = R => ['move the fight', 'Overdrive', R.chargeUp ? 'charge up' : null, R.exchange ? 'the exchange' : null, 'a fighter\'s own option'].filter(Boolean).join(', ')
 export const tieRule = R => (R.speedTie === 'initiative' ? 'go to the initiative holder' : R.speedTie === 'lowhp' ? 'go to the player on less HP' : 'cancel')
 
 // The draw step's grey, in words ('' when off)
@@ -400,19 +419,29 @@ function Action16({ m, setM, side, prefs, names, who }) {
       ${list.some(o => o.card) ? html`<div class="hand">${list.filter(o => o.card).map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} isSuper=${!!o.sup} onClick=${() => setM(M.chooseRider(m, side, o.opt))} /><span class="small">${o.label}</span></div>`)}</div>` : null}`
   }
   if (m.phase === 'buy' && m.G.rules.overdrive) {
-    // v23: one option a round: keep, move the fight, Overdrive, or the exchange (give a card from hand, take one from the discard pile)
-    const list = M.buyList(m, side), ex = list.filter(o => o.exchange)
+    // v23: one option a round: pass, move the fight, Overdrive, charge up, the fighter's own option (Zone), or (16 Nov) the exchange
+    const R = m.G.rules
+    const list = M.buyList(m, side), ex = list.filter(o => o.exchange), ups = list.filter(o => o.chargeUp), zones = list.filter(o => o.zone)
     const gives = [...new Set(ex.map(o => o.give))], takes = xg === null ? [] : ex.filter(o => o.give === xg)
     const Y = side === 0 ? m.G.B : m.G.A
     const pickOpt = o => { setXg(null); setM(M.chooseBuy(m, side, o)) }
+    const bn = m.G.bought?.[1 - side]
+    const parts = [`Overdrive (turn your fighter card sideways): next round your attacks that land deal their Charge as extra Damage instead of building it${R.overdriveSpeed ? ', and you win every speed clash' : ''}; choose it again to stay in.`,
+      R.chargeUp ? 'Charge up: discard an attack, gain its Charge.' : null,
+      zones.length ? `Zone: set a Pressure face down; if the fight moves to Close by the end of next round, it hits them for its Damage. ${Y.f.name} sees that a zone is set, not which card.` : null,
+      R.exchange ? 'The exchange is free: put a card from your hand into your discard pile and take a different one back.' : null]
     return html`<div class="spread"><h3>End of round ${m.G.round}: one option</h3>
         <div class="actions"><button class="btn ghost" onClick=${() => pickOpt(null)}>${list[0].label}</button>
           ${list.filter(o => o.move || o.od).map(o => html`<button class="btn" onClick=${() => pickOpt(o.opt)}>${o.label}</button>`)}</div></div>
-      <p class="small">You have ${heatOf(m.G, side)} ${HN()} (your cap is ${heatCap(X, m.G.rules)}). ${m.G.init === side ? 'You hold the initiative, so you choose first.' : 'Your opponent chose first (they hold the initiative).'} Moving the fight costs ${m.G.rules.chargeMove}; Overdrive costs ${m.G.rules.overdrive} (next round, each of your attacks that lands deals its Charge as extra Damage instead of building it; choose it again to stay in). The exchange is free: put a card from your hand into your discard pile and take a different one back. ${Y.f.name} sees what you choose.</p>
-      ${gives.length ? html`<span class="label">${xg === null ? 'The exchange: pick a card to give' : `Give ${X.f.cards[xg].name}: pick a card to take back`}</span>
+      <p class="small">You have ${heatOf(m.G, side)} ${HN()} (your cap is ${heatCap(X, R)}). ${m.G.init === side ? 'You hold the initiative, so you choose first.' : `${Y.f.name} chose first (they hold the initiative)${bn ? `: ${M.boughtLine16(bn, Y.f.name)}` : ': they passed'}.`} ${parts.filter(Boolean).join(' ')} ${Y.f.name} sees what you choose.</p>
+      ${ups.length ? html`<span class="label">Charge up: discard an attack for its ${HN()}</span>
+        <div class="hand">${ups.map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} onClick=${() => pickOpt(o.opt)} /><span class="small">${o.gain ? `+${o.gain} ${HN()}` : '+0 (full)'}</span></div>`)}</div>` : null}
+      ${zones.length ? html`<span class="label">Zone: set a Pressure face down</span>
+        <div class="hand">${zones.map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.card.src} onClick=${() => pickOpt(o.opt)} /><span class="small">${`Zone: ${o.card.chip || 0} Damage`}</span></div>`)}</div>` : null}
+      ${R.exchange ? (gives.length ? html`<span class="label">${xg === null ? 'The exchange: pick a card to give' : `Give ${X.f.cards[xg].name}: pick a card to take back`}</span>
       ${xg === null ? html`<div class="hand">${gives.map(g => html`<div><${Card16} as="button" card=${X.f.cards[g].src} onClick=${() => setXg(g)} /></div>`)}</div>`
         : html`<div class="actions"><button class="btn ghost" onClick=${() => setXg(null)}>Back</button></div>
-          <div class="hand">${takes.map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.takeCard.src} onClick=${() => pickOpt(o.opt)} /><span class="small">${o.label}</span></div>`)}</div>`}` : html`<p class="small muted">The exchange: your discard pile has nothing to take yet.</p>`}`
+          <div class="hand">${takes.map(o => html`<div class="stack" style=${{ gap: '6px', justifyItems: 'center' }}><${Card16} as="button" card=${o.takeCard.src} onClick=${() => pickOpt(o.opt)} /><span class="small">${o.label}</span></div>`)}</div>`}` : html`<p class="small muted">The exchange: your discard pile has nothing to take yet.</p>`) : null}`
   }
   if (m.phase === 'buy') {
     const list = M.buyList(m, side)
@@ -462,7 +491,8 @@ function RoundLog16({ m, names }) {
             ${r.follow ? html`<span class="muted">· follow-up:</span> ${r.follow.name}` : null}
             ${r.combo.length ? html`<span class="muted">· combo:</span> ${r.combo.map(x => x.name).join(' → ')}` : null}</div>
           ${r.confiscated?.some(a => a.length) ? html`<div class="small muted">Confiscated: ${[0, 1].filter(k => r.confiscated[k].length).map(k => `${names[k]} ${r.confiscated[k].join(', ')}`).join(' · ')}</div>` : null}
-          ${r.bought?.some(Boolean) ? html`<div class="small muted">Bought: ${[0, 1].filter(k => r.bought[k]).map(k => r.bought[k].move ? `${names[k]} moved the fight to ${RANGE_NAME[r.bought[k].move]} (${r.bought[k].cost} ${HN()})` : r.bought[k].od ? `${names[k]} ${r.bought[k].staying ? 'stayed in' : 'went into'} Overdrive (${r.bought[k].cost} ${HN()})` : r.bought[k].exchange ? `${names[k]} swapped ${r.bought[k].give} for ${r.bought[k].take}` : `${names[k]} ${r.bought[k].name} (${r.bought[k].cost} ${HN()})`).join(' · ')}</div>` : null}
+          ${r.bought?.some(Boolean) ? html`<div class="small muted">${m.G.rules.overdrive ? 'End of round' : 'Bought'}: ${[0, 1].filter(k => r.bought[k]).map(k => M.boughtLine16(r.bought[k], names[k], m.phase === 'over' || (m.mode === 'ai' && k === 0))).join(' · ')}</div>` : null}
+          ${r.zoneHits?.length ? html`<div class="small muted">${r.zoneHits.map(h => `${names[h.side]}'s zone went off: ${h.dmg} to ${names[1 - h.side]}`).join(' · ')}</div>` : null}
           <div class="small muted num">${m.G.rules.heat ? `${names[0]} ${r.after[0].hp} HP · ${r.after[1].pile} ${HN()} — ${names[1]} ${r.after[1].hp} HP · ${r.after[0].pile} ${HN()}` : `${names[0]} ${r.after[0].hp} HP · ${r.after[0].pile} grey — ${names[1]} ${r.after[1].hp} HP · ${r.after[1].pile} grey`}</div>
         </div>
       </div>`)}
@@ -477,6 +507,8 @@ function DeckPanel({ X, title, mine }) {
   for (const i of X.hand) n[i].hand++
   for (const i of X.deck) n[i].deck++
   for (const d of X.discard) n[d.i][d.burned ? 'burned' : 'discard']++
+  // Zone (17 Nov): the zone's Pressure is face down: unseen to the opponent, shown to its owner
+  if (X.zone != null) n[X.zone][mine ? 'zone' : 'burned'] = (n[X.zone][mine ? 'zone' : 'burned'] || 0) + 1
   if (X.nhand) {
     for (const i of X.nhand) n[i].hand++
     for (const i of X.ndeck) n[i].deck++
@@ -489,9 +521,9 @@ function DeckPanel({ X, title, mine }) {
       <div class="spread small muted"><span>Card</span><span>${mine ? 'hand · deck · discarded' : 'unseen · discarded'}</span></div>
       ${X.f.cards.map((c, i) => html`<div class="spread small">
         <span class="row" style=${{ gap: '8px' }}><span class="tdot" data-t=${c.t === 'N' ? 'T' : c.t}></span>${c.name} <span class="muted">×${c.copies}</span>${c.counter ? html`<span class="icon counter tiny">Ct</span>` : null}</span>
-        <span class="num">${mine ? `${n[i].hand} · ${n[i].deck} · ${n[i].discard + n[i].burned}` : `${n[i].hand + n[i].deck + n[i].burned} · ${n[i].discard}`}</span>
+        <span class="num">${mine ? `${n[i].hand} · ${n[i].deck} · ${n[i].discard + n[i].burned}${n[i].zone ? ' · 1 zone' : ''}` : `${n[i].hand + n[i].deck + n[i].burned} · ${n[i].discard}`}</span>
       </div>`)}
-      <p class="small muted">${mine ? 'Burned cards count as discarded.' : 'Unseen: in their deck, their hand, or burned face down.'}</p>
+      <p class="small muted">${mine ? 'Burned cards count as discarded.' : `Unseen: in their deck, their hand, or face down${X.zone != null ? ' (one is their zone)' : ''}.`}</p>
     </div>` : null}
   </details>`
 }

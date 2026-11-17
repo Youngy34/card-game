@@ -30,7 +30,8 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 export const TEXT16 = { heat: null }
 export function useHeatWords(rules) {
   TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet, charge: rules.words === 'charge',
-    meter: !!rules.breakBuilds, breakBuild: rules.breakBuilds || 0, stats: rules.statNames === 'charge-damage', flat: rules.flatBuild || 0, noDrain: rules.guardDrain === false, perRound: rules.greyPerRound ?? 1, overdrive: rules.overdrive || 0, guardDraw: rules.guardDraw || null }    // v22 (14 Nov): Charge as a meter
+    meter: !!rules.breakBuilds, breakBuild: rules.breakBuilds || 0, stats: rules.statNames === 'charge-damage', flat: rules.flatBuild || 0, noDrain: rules.guardDrain === false, perRound: rules.greyPerRound ?? 1, overdrive: rules.overdrive || 0, guardDraw: rules.guardDraw || null,    // v22 (14 Nov): Charge as a meter
+    kdNow: !!rules.knockdownNoOption, odSpeed: !!rules.overdriveSpeed }                                              // 17 Nov: the knockdown, EX Overdrive
   Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
   KINDS16.guardBreak.label = 'Heavy'
   KINDS16.guard.label = 'Block'
@@ -337,6 +338,7 @@ function norm(c, isSuper) {
 // A fighter ready for the engine: distinct cards, and the deck as a list of card indices
 // Fighter abilities (17 Nov, on the fighter card, always on): 'clinch' (Brawler), 'zone' (Zoner)
 export const ABILITIES16 = ['clinch', 'zone']
+export const ABILITY_NAME16 = { clinch: 'Clinch', zone: 'Zone' }
 export const ABILITY_TEXT16 = {
   clinch: 'Clinch: if your Guard beats a Pressure at Close, they\'re knocked down.',
   zone: 'Zone: as your end-of-round option, while the fight is at Far, set a Pressure from your hand face down. If the fight moves to Close before the end of the next round, it hits them for its Damage; either way it then goes to your discard pile.',
