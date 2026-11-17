@@ -60,7 +60,7 @@ export function App16({ boot = {} }) {
   return html`<div>
     <header class="top">
       <div class="top-inner">
-        <div class="brand"><b>YOMI</b><span>Playtest table · ${st.edition?.subtitle || 'rules v16'}</span></div>
+        <div class="brand"><b>${st.edition?.title?.startsWith('Guardbreakers') ? 'GUARDBREAKERS' : 'YOMI'}</b><span>Playtest table · ${st.edition?.subtitle || 'rules v16'}</span></div>
         <nav class="tabs" aria-label="Sections">
           ${TABS.map(([k, label]) => html`<button class="tab" aria-current=${tab === k ? 'page' : undefined} onClick=${() => setTab(k)}>${label}${k === 'play' && m && m.phase !== 'over' ? ' ·' : ''}</button>`)}
         </nav>

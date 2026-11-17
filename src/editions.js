@@ -83,6 +83,16 @@ export const EDITIONS = {
     labels: {},
     defaultSides: ['brawler22', 'zoner22'],
   },
+  // v23 (16 Nov, Mark): Overdrive (+ the hit's Charge, 2 Charge), the exchange, Guards draw unless a Break beats them,
+  // range endings (on hit / on block), lower Charge (caps 6 / 5, moving 2), no specials or Super. Edition data/v23d.
+  v23: {
+    title: 'Guardbreakers Playtest v23', subtitle: 'rules v23: Overdrive, the exchange, range endings', out: 'guardbreakers-playtest-v23.html', settings: 'v23d/settings.json',
+    fighters: [],
+    reference: [],
+    drafts: [['v23d', 'brawler'], ['v23d', 'zoner']],
+    labels: {},
+    defaultSides: ['brawler23b', 'zoner23b'],
+  },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
     fighters: [],

@@ -30,7 +30,7 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 export const TEXT16 = { heat: null }
 export function useHeatWords(rules) {
   TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet, charge: rules.words === 'charge',
-    meter: !!rules.breakBuilds, breakBuild: rules.breakBuilds || 0, stats: rules.statNames === 'charge-damage', flat: rules.flatBuild || 0, noDrain: rules.guardDrain === false, perRound: rules.greyPerRound ?? 1 }    // v22 (14 Nov): Charge as a meter
+    meter: !!rules.breakBuilds, breakBuild: rules.breakBuilds || 0, stats: rules.statNames === 'charge-damage', flat: rules.flatBuild || 0, noDrain: rules.guardDrain === false, perRound: rules.greyPerRound ?? 1, overdrive: rules.overdrive || 0, guardDraw: rules.guardDraw || null }    // v22 (14 Nov): Charge as a meter
   Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
   KINDS16.guardBreak.label = 'Heavy'
   KINDS16.guard.label = 'Block'
@@ -123,6 +123,8 @@ export function statusText(s, self = false) {
 export function cardLines16(c, { isSuper = false } = {}) {
   const text = [], cost = []
   const t = T16[c.type]
+  if (t === 'R' && TEXT16.heat?.guardDraw) text.push('When revealed: draw a card, unless a Break beats it.')     // v23 (16 Nov)
+  if (t === 'R' && c.revealSpeed) text.push(`On reveal: your Pressures get +${c.revealSpeed} speed next round.`)
   if (c.reveal) for (const [k, v] of Object.entries(c.reveal)) if (REVEAL18[k] && v) text.push(k === 'read' && TEXT16.heat ? 'On reveal: draw a card.' : REVEAL18[k].line(v))
   if (t === 'R' && c.parry) text.push('If it beats a Pressure, you may follow up with any attack from your hand, and it can start a combo.')
   else if (t === 'R' && c.brace === 'reflect') text.push("If it beats a Pressure: no follow-up; instead, the Pressure's Build goes onto its owner's pile.")
@@ -137,6 +139,7 @@ export function cardLines16(c, { isSuper = false } = {}) {
   else { if (c.hitTo) text.push(`On hit: the fight ends at ${RANGE_NAME[c.hitTo]}.`); if (c.blockTo) text.push(`If it's Guarded: the fight ends at ${RANGE_NAME[c.blockTo]}.`) }
   if (t === 'R' && c.holdGround) text.push(`If it beats a Pressure, that Pressure doesn't move the fight.`)
   if (t === 'R' && c.blockCharge) text.push(`If it beats a Pressure, build ${c.blockCharge} Charge.`)
+  if (t === 'R' && c.breakReturn) text.push('If a Break beats it, it goes back to your hand.')
   if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
   if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
   if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
@@ -276,7 +279,7 @@ export function validateFighter16(f) {
     add(c?.name || `Card ${i + 1}`, validateCard16(c))
     if (c?.name) { if (names.has(c.name)) errors.push({ where: c.name, msg: 'Two cards share this name.' }); names.add(c.name) }
   })
-  if (f.super === null) warnings.push({ where: 'Super', msg: 'No Super.' })
+  if (f.super === null) { if (!TEXT16.heat?.overdrive) warnings.push({ where: 'Super', msg: 'No Super.' }) }     // v23 has no Super
   else if (!f.super) errors.push({ where: 'Super', msg: 'Needs a Super (or "super": null).' })
   else {
     add(f.super.name || 'Super', validateCard16(f.super, { isSuper: true }))
@@ -288,7 +291,9 @@ export function validateFighter16(f) {
   const neutral = f.cards.reduce((s, c) => s + (T16[c?.type] === 'N' && isInt(c?.copies) ? c.copies : 0), 0)
   const specials = f.cards.reduce((s, c) => s + (c?.special ? c.copies || 0 : 0), 0)
   const clash = size - neutral - (merged ? specials : 0)
-  if (clash && counters / clash < 0.3) warnings.push({ where: 'Clash deck', msg: `${counters} Counters in ${clash} clash cards: aim for about a third, so a Guard usually has a punish.` })
+  const attacks = f.cards.reduce((s, c) => s + (['P', 'C'].includes(T16[c?.type]) && !(merged && c.special) ? c.copies || 0 : 0), 0)
+  if (TEXT16.heat?.overdrive) { if (attacks && counters / attacks < 0.18) warnings.push({ where: 'Attacks', msg: `${counters} Counters in ${attacks} attacks: aim for about a quarter, so a Guard usually has a punish.` }) }    // rules v23
+  else if (clash && counters / clash < 0.3) warnings.push({ where: 'Clash deck', msg: `${counters} Counters in ${clash} clash cards: aim for about a third, so a Guard usually has a punish.` })
   if (merged) {
     // Rules v18: one deck of clash cards, at most 3 of any card; the riders replace the neutral deck
     if (neutral) errors.push({ where: 'Deck', msg: 'A v18 deck has no neutral cards: put their effects on clash cards as riders.' })

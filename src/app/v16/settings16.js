@@ -41,7 +41,7 @@ export function Settings16() {
     <span class="small muted">${lo}–${hi}${base.rules[key] !== d.rules[key] ? html` · <span class="diff">As written: ${base.rules[key]}</span>` : ''}</span></label>`
   return html`<div class="stack" style=${{ gap: '24px', maxWidth: '760px' }}>
     <div class="stack"><h1>Settings</h1>
-      <p class="lede">Rules v${d.rules.range ? 22 : d.rules.heat ? 20 : v18 ? 18 : d.rules.tableCards ? 17 : 16}'s dials and the sparring partner's weights. They apply to new matches and Lab runs, and every logged game records the settings it ran under.</p></div>
+      <p class="lede">Rules v${d.rules.overdrive ? 23 : d.rules.range ? 22 : d.rules.heat ? 20 : v18 ? 18 : d.rules.tableCards ? 17 : 16}'s dials and the sparring partner's weights. They apply to new matches and Lab runs, and every logged game records the settings it ran under.</p></div>
     ${readOnly ? html`<div class="banner">Only editors of this page can change settings.</div>` : null}
     <fieldset class="panel stack" disabled=${readOnly} style=${{ margin: 0 }}>
       <h3>Rules</h3>
@@ -49,26 +49,42 @@ export function Settings16() {
         ${num('openingHand', 3, 10, 'Opening hand')}
         ${num('handLimit', 4, 12, 'Clash hand limit')}
         ${v18 ? null : num('neutralHand', 1, 5, 'Neutral hand (refilled each round)')}
-        ${d.rules.heat ? num('specialCost', 1, 9, `A special costs (${HN()})`, 'Rules v20: bought at the end of a round, in initiative order; the Super costs your whole cap. 3 as written.') : null}
-        ${d.rules.range && d.rules.chargeMove ? num('chargeMove', 1, 9, `Moving the fight costs (${HN()})`, 'Rules v22: at the end of a round, instead of buying, a player may pay this much Charge to switch the range (Close to Far, or Far to Close). 3 as written.') : null}
-        ${num('greyPerRound', 0, 3, d.rules.heat ? hw('Heat each player gains each round', 'Charge each player gains each round') : 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
+        ${d.rules.overdrive ? num('overdrive', 1, 6, `Overdrive costs (${HN()})`, "Rules v23: an end-of-round option. Next round, each of your attacks that lands deals its Charge as extra Damage instead of building it; choose it again to stay in. 2 as written.") : null}
+        ${d.rules.heat && !d.rules.overdrive ? num('specialCost', 1, 9, `A special costs (${HN()})`, 'Rules v20: bought at the end of a round, in initiative order; the Super costs your whole cap. 3 as written.') : null}
+        ${d.rules.range && d.rules.chargeMove ? num('chargeMove', 1, 9, `Moving the fight costs (${HN()})`, d.rules.overdrive ? 'Rules v23: an end-of-round option: pay this much Charge to switch the range (Close to Far, or Far to Close). 2 as written.' : 'Rules v22: at the end of a round, instead of buying, a player may pay this much Charge to switch the range (Close to Far, or Far to Close). 3 as written.') : null}
+        ${d.rules.overdrive ? null : num('greyPerRound', 0, 3, d.rules.heat ? hw('Heat each player gains each round', 'Charge each player gains each round') : 'Grey taken each round', 'In the draw step each player adds this much grey to their own pile, so Converts and Guards always have grey to work on. 1 since 1 November; 0 is the old game.')}
         ${v18 ? num('greyCap', 0, 30, d.rules.heat ? hw('Heat cap for a fighter that prints none', 'Charge cap for a fighter that prints none') : 'Grey cap (0 = off)', 'v19 test: 9 on the v19 page, 0 is v18. A fighter may print its own cap, used whenever this is on. With Overflow, a pile can\'t go above its cap and grey beyond it is lost as HP at once; without it, a pile that has reached the cap at the end of the round is cashed for its size.') : null}
         ${num('confiscateFloor', 0, 5, 'Confiscate floor', 'Confiscate (the Warden) never takes a player below this many clash cards. 2 as written.')}
         ${d.rules.heat ? null : num('meterMax', 1, 5, 'Meter track maximum', 'Each Super prints its own cost; the Benchmark\'s Overdrive costs 3.')}
         ${v18 ? null : num('burnMax', 0, 5, 'Burning: most cards a round (0 = off)', 'The first draft burned cards for meter. Off since 31 October: Focus gains meter instead.')}
         ${num('maxRounds', 10, 200, 'Round limit (a draw)')}
       </div>
-      ${d.rules.tableCards ? null : html`<label class="field"><span>The Super</span>
+      ${d.rules.overdrive ? html`<label class="field"><span>Guards</span>
+        <select id="s-guarddraw" value=${d.rules.guardDraw || 'off'} onChange=${e => rule({ guardDraw: e.target.value === 'off' ? null : e.target.value })}>
+          <option value="unbeaten">Draw a card when revealed, unless a Break beats them; two Guards both draw (v23)</option>
+          <option value="off">Never draw (v22)</option>
+        </select></label>
+      <label class="field"><span>The exchange</span>
+        <select id="s-exchange" value=${d.rules.exchange ? 'on' : 'off'} onChange=${e => rule({ exchange: e.target.value === 'on' })}>
+          <option value="on">On: an end-of-round option, a card from hand for a different one from the discard pile (v23)</option>
+          <option value="off">Off</option>
+        </select></label>
+      <label class="field"><span>Time-out</span>
+        <select id="s-timeoutshare" value=${d.rules.timeoutShare ? 'share' : 'hp'} onChange=${e => rule({ timeoutShare: e.target.value === 'share' })}>
+          <option value="share">The higher share of starting HP left wins (v23)</option>
+          <option value="hp">The higher HP wins</option>
+        </select></label>` : null}
+      ${d.rules.tableCards || d.rules.overdrive ? null : html`<label class="field"><span>The Super</span>
         <select id="s-superuses" value=${String(d.rules.superUses)} onChange=${e => rule({ superUses: Number(e.target.value) })}>
           <option value="0">Reusable: meter is the only gate (as written)</option>
           <option value="1">Once per game</option>
         </select></label>`}
-      ${d.rules.heat ? html`<label class="field"><span>${hw("At max heat, the round's heat", "When Fully Charged, the round's Charge")}</span>
+      ${d.rules.heat && !d.rules.overdrive ? html`<label class="field"><span>${hw("At max heat, the round's heat", "When Fully Charged, the round's Charge")}</span>
         <select id="s-roundheat" value=${d.rules.roundHeatCaps ? 'stop' : 'damage'} onChange=${e => rule({ roundHeatCaps: e.target.value === 'stop' })}>
           <option value="stop">Stops at the cap: only your Pressures land in full (v20, 9 Nov)</option>
           <option value="damage">Lands on the opponent as damage (the first v20 page)</option>
         </select></label>` : null}
-      ${d.rules.heat ? html`<label class="field"><span>Two Guards</span>
+      ${d.rules.heat && !d.rules.overdrive ? html`<label class="field"><span>Two Guards</span>
         <select id="s-guards" value=${d.rules.guardsQuiet ? 'quiet' : 'douse'} onChange=${e => rule({ guardsQuiet: e.target.value === 'quiet' })}>
           <option value="quiet">Do nothing: nobody attacked (v21, 10 Nov)</option>
           <option value="douse">${hw("Each douses the other's heat (v20)", "Each drains the other's Charge (v20)")}</option>
@@ -99,7 +115,7 @@ export function Settings16() {
       <div class="spread"><h3>Sparring partner</h3><button class="link" type="button" onClick=${() => setD({ ...d, ai: { ...base.ai } })}>Use the defaults</button></div>
       <p class="small muted">It deals you possible hands from the cards it hasn't seen, scores every pairing of clash cards a round ahead with these weights, and plays the mix that's safest across them. Anything that pays off later is valued only through the weights.</p>
       <div class="grid3" style=${{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-        ${WEIGHTS.filter(([k]) => (v18 ? !PRE_V18.has(k) : !V18_ONLY.has(k))).map(([k, label, help]) => html`<label class="field" title=${help}><span>${label}</span>
+        ${WEIGHTS.filter(([k]) => (v18 ? !PRE_V18.has(k) : !V18_ONLY.has(k)) && !(d.rules.overdrive && k === 'superReady')).map(([k, label, help]) => html`<label class="field" title=${help}><span>${label}</span>
           <${NumField} id=${'s-' + k} int=${k === 'samples' || k === 'neutralSamples' || k === 'mySamples'} lo=${k === 'samples' || k === 'neutralSamples' || k === 'mySamples' ? 1 : 0} hi=${k === 'samples' || k === 'neutralSamples' || k === 'mySamples' ? 50 : undefined} value=${d.ai[k]} onValue=${v => setD({ ...d, ai: { ...d.ai, [k]: v } })} />
           ${base.ai[k] !== d.ai[k] ? html`<span class="small diff">Default ${base.ai[k]}</span>` : null}
         </label>`)}

@@ -53,7 +53,8 @@ export function narrate16(ev, names) {
   const how = { clash: '', follow: 'Follow-up: ', link: 'Linker: ', end: 'Ender: ' }
   for (const e of ev) {
     const who = names[e.side], them = names[1 - e.side]
-    if (e.kind === 'hit' && TEXT16.heat) {
+    if (e.kind === 'hit' && TEXT16.heat && e.od) out.push(`${how[e.how]}${e.name} lands in Overdrive: ${chips(e.chip)}, plus ${e.od} more from its Charge.`)
+    else if (e.kind === 'hit' && TEXT16.heat) {
       // rules v20: the pile on them is the hitter's heat
       if (e.t === 'P') out.push(`${how[e.how]}${e.name}: ${who} builds ${e.build} ${HN()}${e.chip ? ` and ${chips(e.chip)}` : ''}.${e.spill ? hw(` ${who} is at max heat: ${e.spill} more lands on ${them} as damage.`, ` ${who} is Fully Charged: ${e.spill} more overloads onto ${them} as damage.`) : ''}`)
       else if (e.t === 'C' && e.build !== undefined) out.push(`${how[e.how]}${e.name} smashes through: ${who} builds ${e.build} ${HN()} and ${chips(e.chip)}.${e.spill ? ` ${who} is Fully Charged: ${e.spill} more overloads onto ${them} as damage.` : ''}`)
@@ -75,6 +76,10 @@ export function narrate16(ev, names) {
     else if (e.kind === 'ended') out.push(`${them}'s ${e.by} hits: ${who}'s ${e.name} is broken and discarded.`)
     else if (e.kind === 'moveCancel') out.push('Both clash cards move the fight, opposite ways: it stays where it is.')
     else if (e.kind === 'moved') out.push(`The fight moves to ${e.to === 'far' ? 'Far' : 'Close'}.`)
+    else if (e.kind === 'holdGround') out.push(`${who}'s ${e.name} holds its ground: the fight doesn't move.`)
+    else if (e.kind === 'blockCharge') out.push(e.n ? `${who}'s ${e.name} slips the hit: ${who} builds ${e.n} ${HN()}.` : `${who}'s ${e.name} slips the hit (${who}'s battery is full).`)
+    else if (e.kind === 'breakfall') out.push(`${who}'s ${e.name} breaks the fall: it goes back to ${who}'s hand.`)
+    else if (e.kind === 'reveal' && e.what === 'guardDraw') out.push(`${who}'s ${e.name}: ${e.n ? 'draws a card' : 'no card left to draw'}.`)
   }
   return out
 }

@@ -243,7 +243,7 @@ export function riderList(m, side) {
 }
 // What each revealed rider did (from the clash events), for the board and the log
 export function riderLines(clash, names) {
-  return (clash?.events || []).filter(e => e.kind === 'reveal').map(e => {
+  return (clash?.events || []).filter(e => e.kind === 'reveal' && e.what !== 'guardDraw').map(e => {     // v23's Guard draws are narrated in order
     const who = names[e.side]
     switch (e.what) {
       case 'meter': return `${who}'s ${e.name}: +${e.n} meter${e.wasted ? ` (${e.wasted} lost at the cap)` : ''}.`
@@ -357,9 +357,12 @@ export function chooseBuy(m, side, choice) {
 export function buyList(m, side) {
   const X = P(m, side), h = heatOf(m.G, side)
   return buyOptions20(m.G, side).map(o => {
-    if (o === null) return { opt: null, label: `Keep your ${HN()} (${h})` }
+    if (o === null) return { opt: null, label: m.G.rules.overdrive ? `Pass (keep your ${h} ${HN()})` : `Keep your ${HN()} (${h})` }
     // v22: spend Charge to move the fight instead of buying
     if (o === 'M') { const to = m.G.range === 'far' ? 'close' : 'far', cost = m.G.rules.chargeMove; return { opt: 'M', move: to, label: `Move the fight to ${RANGE_NAME[to]} for ${cost} ${HN()} (${h - cost} left)` } }
+    // v23: Overdrive (next round your hits add their Charge as Damage) and the exchange (a card from hand for one in the discard pile)
+    if (o === 'O') { const cost = m.G.rules.overdrive; return { opt: 'O', od: true, label: `${X.od ? 'Stay in Overdrive' : 'Overdrive'} for ${cost} ${HN()} (${h - cost} left)` } }
+    if (typeof o === 'string' && o.startsWith('X:')) { const [, g, t] = o.split(':').map(Number); return { opt: o, exchange: true, give: g, take: t, giveCard: X.f.cards[g], takeCard: X.f.cards[t], label: `Swap ${X.f.cards[g].name} for ${X.f.cards[t].name}` } }
     const c = o === 'S' ? X.f.sup : X.f.cards[o], cost = tableCost(X, o)
     return { opt: o, card: c, sup: o === 'S', label: o === 'S' ? `Buy ${c.name}: all ${cost} ${HN()}` : `Buy ${c.name} for ${cost} ${HN()} (${h - cost} left)` }
   })

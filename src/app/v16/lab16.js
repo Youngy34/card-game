@@ -65,7 +65,7 @@ export function Lab16({ state, setState }) {
         <label class="field"><span>Seed</span><${NumField} id="lab-seed" lo=${0} value=${seed} onValue=${v => upd({ seed: v })} /></label>
       </div>
       <div class="row"><span class="label">Games</span><${Seg} value=${n} options=${SIZES} onChange=${v => upd({ n: v })} label="Games" /></div>
-      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (${neutralRule(s.rules)}${greyRule(s.rules)}, Super ${s.rules.superUses ? 'once per game' : 'reusable'}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
+      <p class="small muted">At 300 games a win rate is good to about ±6 points; at 1,000, about ±3. Rules and the partner's weights come from Settings (${neutralRule(s.rules)}${greyRule(s.rules)}${s.rules.overdrive ? '' : `, Super ${s.rules.superUses ? 'once per game' : 'reusable'}`}, speed ties ${s.rules.speedTie === 'lowhp' ? 'to less HP' : 'cancel'}). The exploit check plays each mindless bot, and Easy, against Hard in Fighter A's mirror.</p>
       <div class="actions">
         <button class="btn" disabled=${!!running} onClick=${one}>Run this matchup</button>
         <button class="btn ghost" disabled=${!!running} onClick=${check}>Run the exploit check</button>
