@@ -495,7 +495,7 @@ export function botBuy20(G, side, bot, rng) {
   if (bot === 'random') {
     // v23: pick a kind of option at random (nothing, a purchase, move, Overdrive, the exchange), then one of that kind,
     // so the exchange's many swaps don't crowd out everything else
-    const kindOf = o => (o === null ? 'none' : typeof o === 'string' && o.includes('X:') ? String(o).split('X:')[0] + 'X' : typeof o === 'string' && o.startsWith('T:') ? 'T' : String(o))
+    const kindOf = o => (o === null ? 'none' : typeof o === 'string' && o.includes('X:') ? String(o).split('X:')[0] + 'X' : typeof o === 'string' && /^[TUZ]:/.test(o) ? o[0] : String(o))
     const kinds = [...new Set(opts.map(kindOf))], k = kinds[Math.floor(rng() * kinds.length)], of = opts.filter(o => kindOf(o) === k)
     return of[Math.floor(rng() * of.length)]
   }

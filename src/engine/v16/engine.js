@@ -689,6 +689,10 @@ export function startClash16(G, a, b, lite = false, opts = null) {
     if (G.rules.stance2 && outcome === 'triangle' && wcd.t === 'C' && lc?.t === 'R' && sideOf(L) === 'wall') {
       L.side = 'rush'; ev.push({ side: 1 - winner, kind: 'flipped', to: 'rush' })      // the wall is broken
     }
+    // Clinch (17 Nov, the Brawler's ability): a Guard that beats a Pressure at Close knocks them down (Safe doesn't stop it)
+    if (outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P' && W.f.ability === 'clinch' && (G.range || 'close') === 'close') {
+      applyStatus(L.next, 'knockdown'); ev.push({ side: 1 - winner, kind: 'status', status: 'knockdown', from: 'Clinch', clinch: true })
+    }
     // Rules v21 (10 Nov): a fighter's own Guard pays out if it beats a Pressure
     if (outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P') {
       for (let n = wcd.blockConfiscate || 0; n > 0; n--) owe(L, 1, ev, 1 - winner, wcd.name)
@@ -804,7 +808,23 @@ const toRange = m => (m === 'push' ? 'far' : 'close')
 function setRange(G, r, ev) {
   if (!r || r === G.range) return G
   ev.push({ kind: 'moved', to: r, ends: true })
-  return { ...G, range: r, A: { ...G.A, at: r }, B: { ...G.B, at: r }, clash: { ...G.clash, moved: r } }
+  return zoneHits({ ...G, range: r, A: { ...G.A, at: r }, B: { ...G.B, at: r }, clash: { ...G.clash, moved: r } }, ev)
+}
+// Zone (17 Nov, the Zoner's ability): a zone (a Pressure set face down) hits the other player for its Damage when the fight
+// moves to Close, then goes to its owner's discard pile. No Charge, no Overdrive bonus.
+function zoneHits(G, ev) {
+  if (G.range !== 'close' || (G.A.zone == null && G.B.zone == null)) return G
+  const P = [G.A, G.B]
+  for (const k of [0, 1]) {
+    const X = P[k]
+    if (X.zone == null) continue
+    const c = X.f.cards[X.zone], O = P[1 - k], dmg = c.chip || 0
+    P[k] = { ...X, zone: null, zoneRound: null, discard: [...X.discard, { i: X.zone, burned: false, zone: true }] }
+    P[1 - k] = { ...O, hp: O.hp - dmg }
+    if (ev) ev.push({ side: k, kind: 'zoneHit', name: c.name, dmg })
+    G = { ...G, zoneHit: [...(G.zoneHit || []), { side: k, dmg }] }
+  }
+  return { ...G, A: P[0], B: P[1], result: G.result ?? resultOf(P[0], P[1]) }
 }
 function finishClash(G) {
   // Range by cards (13 Nov, Mark): only cards that move change the range, and they move it whether they win or lose.
@@ -942,6 +962,10 @@ export function buyOptions20(G, side) {
   // v23 (16 Nov): Overdrive for G.rules.overdrive Charge (going in, or staying in), and the exchange: put a card from
   // your hand into your discard pile and take a different card from it ('X:<give>:<take>')
   if (G.rules.overdrive && heat >= G.rules.overdrive) out.push('O')
+  // chargeUp (17 Nov, Mark): discard an attack from your hand and gain its Charge ('U:<card>')
+  if (G.rules.chargeUp) for (const i of new Set(X.hand)) { const c = X.f.cards[i]; if ((c.t === 'P' || c.t === 'C') && (c.build || 0) > 0) out.push(`U:${i}`) }
+  // Zone (17 Nov, the Zoner's ability): at Far, set a Pressure from your hand face down ('Z:<card>')
+  if (X.f.ability === 'zone' && G.range === 'far') for (const i of new Set(X.hand)) if (X.f.cards[i].t === 'P') out.push(`Z:${i}`)
   if (G.rules.exchange && X.discard.length && X.hand.length) {
     const inPile = [...new Set(X.discard.map(d => d.i))], ex = []
     for (const g of new Set(X.hand)) for (const t of inPile) if (t !== g) ex.push(`X:${g}:${t}`)
@@ -1016,7 +1040,26 @@ function applyBuy20raw(G, side, choice) {
     const r = G.range === 'far' ? 'close' : 'far'
     const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'move', cost: G.rules.chargeMove, sup: false, move: r }
     const A = side === 0 ? G.A : Y, B = side === 0 ? Y : G.B
-    return { ...G, range: r, A: { ...A, at: r }, B: { ...B, at: r }, bought }
+    return zoneHits({ ...G, range: r, A: { ...A, at: r }, B: { ...B, at: r }, bought }, null)
+  }
+  if (typeof choice === 'string' && choice.startsWith('U:')) {
+    // charge up: the card goes to the discard pile; its Charge is built (on the opponent's pile, up to your cap)
+    const i = +choice.slice(2), X = cloneP(side === 0 ? G.A : G.B), Y = { ...(side === 0 ? G.B : G.A) }
+    takeFromHand(X, i); toDiscard(X, i, G.rules)
+    const n = X.f.cards[i].build || 0, cap = capOf(Y, G.rules), before = Y.pile
+    Y.pile = cap ? Math.min(cap, before + n) : before + n
+    Y.pileIn = (Y.pileIn || 0) + n; Y.capLost = (Y.capLost || 0) + Math.max(0, before + n - Y.pile)
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'chargeUp', cost: 0, sup: false, chargeUp: true, card: X.f.cards[i].name, gain: Y.pile - before }
+    return side === 0 ? { ...G, A: X, B: Y, bought } : { ...G, A: Y, B: X, bought }
+  }
+  if (typeof choice === 'string' && choice.startsWith('Z:')) {
+    // Zone: the Pressure leaves the hand and sits face down; a zone already set goes to the discard pile
+    const i = +choice.slice(2), X = cloneP(side === 0 ? G.A : G.B)
+    takeFromHand(X, i)
+    if (X.zone != null) X.discard.push({ i: X.zone, burned: false, zone: true })
+    X.zone = i; X.zoneRound = G.round
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'zone', cost: 0, sup: false, zone: true, card: X.f.cards[i].name }
+    return side === 0 ? { ...G, A: X, bought } : { ...G, B: X, bought }
   }
   if (choice === 'F') {
     const X = { ...(side === 0 ? G.A : G.B) }; X.side = G.rules.sides ? (X.side === 'away' ? 'home' : 'away') : sideOf(X) === 'rush' ? 'wall' : 'rush'
@@ -1084,6 +1127,8 @@ export function discardDown16(G, side, cards) {
 export function finishRound16(G) {
   const P = [cloneP(G.A, true), cloneP(G.B, true)]
   for (const X of P) {
+    // Zone: it lasts until the end of the round after the one it was set in, then goes to the discard pile
+    if (X.zone != null && G.round > X.zoneRound) { X.discard = [...X.discard, { i: X.zone, burned: false, zone: true }]; X.zone = null; X.zoneRound = null }
     X.st = X.next; X.next = {}
     // v23: Overdrive bought this round is on for the next; anyone who didn't buy it flips back
     if (G.rules.overdrive) { X.od = !!X.odNext; X.odNext = false }

@@ -277,6 +277,7 @@ export function validateFighter16(f) {
   if (!f.name) errors.push({ where: 'Fighter', msg: 'Needs a name.' })
   if (!isInt(f.hp) || f.hp < 1 || f.hp > 99) errors.push({ where: 'Fighter', msg: 'HP must be a whole number from 1 to 99.' })
   if (f.passive) errors.push({ where: 'Fighter', msg: 'Passives aren\'t supported under rules v16 yet.' })
+  if (f.ability !== undefined && f.ability !== null && !ABILITIES16.includes(f.ability)) errors.push({ where: 'Fighter', msg: `ability is one of ${ABILITIES16.join(', ')}.` })
   if (!Array.isArray(f.cards) || !f.cards.length) { errors.push({ where: 'Deck', msg: 'Needs cards.' }); return { errors, warnings } }
   const names = new Set()
   f.cards.forEach((c, i) => {
@@ -334,9 +335,15 @@ function norm(c, isSuper) {
 }
 
 // A fighter ready for the engine: distinct cards, and the deck as a list of card indices
+// Fighter abilities (17 Nov, on the fighter card, always on): 'clinch' (Brawler), 'zone' (Zoner)
+export const ABILITIES16 = ['clinch', 'zone']
+export const ABILITY_TEXT16 = {
+  clinch: 'Clinch: if your Guard beats a Pressure at Close, they\'re knocked down.',
+  zone: 'Zone: as your end-of-round option, while the fight is at Far, set a Pressure from your hand face down. If the fight moves to Close before the end of the next round, it hits them for its Damage; either way it then goes to your discard pile.',
+}
 export function toFighter16(f) {
   const cards = f.cards.map(c => norm(c, false))
   const deck = []
   cards.forEach((c, i) => { for (let k = 0; k < c.copies; k++) deck.push(i) })
-  return { id: f.id, name: f.name, hp: f.hp, ...(f.greyCap ? { greyCap: f.greyCap } : {}), ...(f.prefers ? { prefers: f.prefers } : {}), v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
+  return { id: f.id, name: f.name, hp: f.hp, ...(f.greyCap ? { greyCap: f.greyCap } : {}), ...(f.prefers ? { prefers: f.prefers } : {}), ...(f.ability ? { ability: f.ability } : {}), v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
 }

@@ -8,7 +8,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { toFighter16 } from '../src/engine/v16/cards.js'
 import { playGame18, mulberry } from '../src/engine/v16/game.js'
-import { DEFAULT_W16 } from '../src/engine/v16/ai.js'
+import { DEFAULT_W16, chooseBuy20 } from '../src/engine/v16/ai.js'
+import { buyOptions20 } from '../src/engine/v16/engine.js'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
@@ -24,15 +25,21 @@ const fa = load(a), fb = load(b), prefs = [fa.prefers, fb.prefers]
 const rng = mulberry(seed * 7919 + 13)
 const rows = { normal: [], od: [] }, bigNormal = [], bigOD = [], bigAny = []
 const home = [0, 0], moves = [0, 0], ods = [0, 0], kdBlocked = [0, 0], odClash = { n: 0, won: 0, lost: 0, speed: 0 }
+// 17 Nov: charge up (how often it's available and taken), zones set and hit, Clinch knockdowns
+const cu = [{ avail: 0, took: 0, gain: 0 }, { avail: 0, took: 0, gain: 0 }], zones = [0, 0], zoneHits = [0, 0], clinch = [0, 0]
+const buyer = (G, k, r) => { const o = buyOptions20(G, k), c = chooseBuy20(G, k, W, r); if (o.some(x => String(x).startsWith('U:'))) { cu[k].avail++; if (String(c).startsWith('U:')) cu[k].took++ } return c }
 let rounds = 0, wins = 0, decided = 0
 for (let i = 0; i < n; i++) {
-  const g = playGame18(fa, fb, { rules, W, seed: seed * 100003 + i, rng })
+  let lastZH = 0
+  const g = playGame18(fa, fb, { rules, W, seed: seed * 100003 + i, rng, buyers: [buyer, buyer], onRound: (rec, G) => {
+    for (const e of G.clash.events) if (e.clinch) clinch[1 - e.side]++
+    const zh = G.zoneHit || []; for (const h of zh.slice(lastZH)) zoneHits[h.side]++; lastZH = zh.length } })
   if (g.result !== 0.5) { decided++; if (g.result === 1) wins++ }
   let bn = 0, bo = 0
   for (const r of g.rounds) {
     rounds++
     for (const k of [0, 1]) if (r.rangeAt === prefs[k]) home[k]++
-    for (const k of [0, 1]) { if (r.bought?.[k]?.move) moves[k]++; if (r.bought?.[k]?.od) ods[k]++ }
+    for (const k of [0, 1]) { if (r.bought?.[k]?.move) moves[k]++; if (r.bought?.[k]?.od) ods[k]++; if (r.bought?.[k]?.chargeUp) cu[k].gain += r.bought[k].gain || 0; if (r.bought?.[k]?.zone) zones[k]++ }
     for (const k of [0, 1]) if (r.od?.[k]) { odClash.n++; if (r.winner === k) odClash.won++; if (r.winner === 1 - k) odClash.lost++; if (r.outcome === 'speed' || r.outcome === 'tie') odClash.speed++ }
     const w = r.winner
     if (w == null || w < 0) continue
@@ -47,7 +54,7 @@ const share = (a, f) => a.filter(f).length / Math.max(1, a.length)
 const hist = a => { const h = {}; for (const v of a) h[v] = (h[v] || 0) + 1; return h }
 const out = {
   edition, matchup: [fa.name, fb.name], n, side0Wins: wins / Math.max(1, decided),
-  homeShare: home.map(v => v / rounds), odClash: { rounds: odClash.n, wonShare: odClash.won / Math.max(1, odClash.n), lostShare: odClash.lost / Math.max(1, odClash.n), speedShare: odClash.speed / Math.max(1, odClash.n) }, movesPerGame: moves.map(v => v / n), odPerGame: ods.map(v => v / n),
+  homeShare: home.map(v => v / rounds), chargeUp: cu.map(c => ({ perGame: c.took / n, takenWhenAvailable: c.took / Math.max(1, c.avail), gainEach: c.gain / Math.max(1, c.took) })), zonesSetPerGame: zones.map(v => v / n), zoneHitsPerGame: zoneHits.map(v => v / n), clinchKDPerGame: clinch.map(v => v / n), odClash: { rounds: odClash.n, wonShare: odClash.won / Math.max(1, odClash.n), lostShare: odClash.lost / Math.max(1, odClash.n), speedShare: odClash.speed / Math.max(1, odClash.n) }, movesPerGame: moves.map(v => v / n), odPerGame: ods.map(v => v / n),
   roundDamage: {
     normal: { rounds: rows.normal.length, mean: avg(rows.normal), max: Math.max(0, ...rows.normal), over6: share(rows.normal, v => v > 6), hist: hist(rows.normal) },
     od: { rounds: rows.od.length, mean: avg(rows.od), max: Math.max(0, ...rows.od), over6: share(rows.od, v => v > 6), atLeast9: share(rows.od, v => v >= 9), hist: hist(rows.od) },
