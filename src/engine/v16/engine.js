@@ -58,6 +58,8 @@ export const DEFAULT_RULES16 = { openingHand: 6, handLimit: 8, meterMax: 3, burn
 //     the table, to be taken again; it never sits in the discard pile.
 //   timeout: the deck never reshuffles. When a player's deck is empty at the end of a round (they
 //     drew its last card), the game ends: the higher HP wins, equal HP is a draw.
+//   timeoutPenalty (17 Nov, test, Mark): HP lost at a time-out by the player whose deck ran out first (only one deck
+//     empty; both empty in the same round, nobody). 0 = off.
 //   knockdownLocks: Knockdown means Lock Pressure next round (getting up, you can guard or go for
 //     a big reversal, but not a quick strike), since there is no neutral step to skip.
 //   knockdownSlow (6 Nov, replaces knockdownLocks): a knocked-down player loses every speed clash next
@@ -1140,15 +1142,24 @@ export function finishRound16(G) {
   // greyCap (test): a pile cashed at the end of the round can KO (both down: the one less far below 0 wins)
   if (P[0].hp <= 0 || P[1].hp <= 0) result = P[0].hp <= 0 && P[1].hp <= 0 ? (P[0].hp > P[1].hp ? 1 : P[0].hp < P[1].hp ? 0 : 0.5) : P[0].hp <= 0 ? 0 : 1
   // Rules v18: a deck that's run out ends the game at the end of the round; the higher HP wins
-  let timedOut = false
+  let timedOut = false, deckPenalty = null
   if (result === null && G.rules.timeout && (!P[0].deck.length || !P[1].deck.length)) {
     timedOut = true
     // v23 (timeoutShare): the higher share of starting HP left wins
-    const s = G.rules.timeoutShare ? P.map(X => X.hp / X.f.hp) : [P[0].hp, P[1].hp]
-    result = s[0] > s[1] ? 1 : s[0] < s[1] ? 0 : 0.5
+    const share = () => (G.rules.timeoutShare ? P.map(X => X.hp / X.f.hp) : [P[0].hp, P[1].hp])
+    const decide = s => (s[0] > s[1] ? 1 : s[0] < s[1] ? 0 : 0.5)
+    // timeoutPenalty (17 Nov, Mark): if only one deck is empty, its owner ran out first and loses that much HP before
+    // HP is compared (both empty in the same round: nobody does). 'pre' is the result without it.
+    const pen = G.rules.timeoutPenalty || 0
+    if (pen && !P[0].deck.length !== !P[1].deck.length) {
+      const k = P[0].deck.length ? 1 : 0, pre = decide(share())
+      P[k].hp -= pen
+      deckPenalty = { side: k, hp: pen, pre }
+    }
+    result = decide(share())
   }
   const init = G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init ?? null
-  return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? (G.rules.merged ? 'clash' : 'neutral') : 'over', result, ...(timedOut ? { timedOut } : {}), neutral: null, clash: null, pending: null, discardDown: null }
+  return { ...G, A: P[0], B: P[1], round, init, phase: result === null ? (G.rules.merged ? 'clash' : 'neutral') : 'over', result, ...(timedOut ? { timedOut } : {}), ...(deckPenalty ? { deckPenalty } : {}), neutral: null, clash: null, pending: null, discardDown: null }
 }
 
 // ---- what a player can see -------------------------------------------------------

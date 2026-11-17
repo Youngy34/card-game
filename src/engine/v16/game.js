@@ -223,7 +223,7 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
   const capKO = G.result !== null && !G.timedOut && !!(rounds.at(-1)?.capCash || rounds.at(-1)?.capSpill) && (G.A.hp <= 0 || G.B.hp <= 0)
   // Charge bookkeeping (16 Nov): by pile holder (the pile on A is B's Charge): how much came in, how much the cap threw away
   const chargeBook = [G.A, G.B].map(X => ({ in: X.pileIn || 0, lost: X.capLost || 0, end: X.pile || 0 }))
-  return { result: G.result, rounds, timedOut: !!G.timedOut, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)], chargeBook }
+  return { result: G.result, rounds, timedOut: !!G.timedOut, penalty: G.deckPenalty || null, capKO, reshuffles: [G.A.reshuffles, G.B.reshuffles], final: [snap16(G.A), snap16(G.B)], chargeBook }
 }
 
 // The random bot's choice for its clash card's Read or Recall rider: any legal option, at random

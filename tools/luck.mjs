@@ -331,6 +331,21 @@ function run(a, b, kind, sd = seed) {
 }
 
 // ---- reading the games ----------------------------------------------------------------------
+// On paper (games played without the penalty): the side whose deck alone was empty at the time-out, and whether
+// taking p HP off it would have changed the result
+function paperSide(g) {
+  if (g.penalty) return g.penalty.side
+  const d = g.final.map(f => f.deck)
+  return (d[0] === 0) !== (d[1] === 0) ? (d[0] === 0 ? 0 : 1) : null
+}
+function paperChange(g, p) {
+  if (g.penalty) return g.penalty.pre !== g.result
+  const k = paperSide(g); if (k === null) return false
+  const M = g.rounds[0] ? [g.rounds[0].before[0].hp, g.rounds[0].before[1].hp] : [1, 1]
+  const hp = g.final.map(f => f.hp); hp[k] -= p
+  const s = [hp[0] / M[0], hp[1] / M[1]], r = s[0] > s[1] ? 1 : s[0] < s[1] ? 0 : 0.5
+  return r !== g.result
+}
 function luck(games) {
   let wins = 0, decided = 0, decisive = 0, topShare = 0, timeouts = 0, bigDmg = 0
   const acts = [{ buy: 0, pair: 0, three: 0, flip: 0 }, { buy: 0, pair: 0, three: 0, flip: 0 }]
@@ -346,7 +361,8 @@ function luck(games) {
     wins += g.result; rounds.push(g.rounds.length); if (g.timedOut) timeouts++
     if (g.result === 0.5) continue
     const loser = g.result === 1 ? 1 : 0
-    const hp = g.rounds.map(r => r.before[loser].hp).concat([g.final[loser].hp])
+    // the time-out penalty isn't a hit: leave it out of the loser's damage
+    const hp = g.rounds.map(r => r.before[loser].hp).concat([g.final[loser].hp + (g.penalty?.side === loser ? g.penalty.hp : 0)])
     const loss = hp.slice(1).map((v, i) => hp[i] - v)
     const total = loss.reduce((a, v) => a + Math.max(0, v), 0)
     if (total <= 0) continue
@@ -354,7 +370,13 @@ function luck(games) {
     decided++; topShare += top; bigDmg += Math.max(...loss); if (top >= 0.4) decisive++
   }
   rounds.sort((x, y) => x - y)
-  return { win: wins / games.length, median: rounds[Math.floor(rounds.length / 2)], timeouts: timeouts / games.length,
+  // time-out penalty (17 Nov): how often it lands, and how often it changes the result HP alone would give
+  const to = games.filter(g => g.timedOut), pen = to.filter(g => g.penalty)
+  const penalty = { timeouts: to.length, penalised: pen.length, changed: pen.filter(g => g.penalty.pre !== g.result).length,
+    draws: to.filter(g => g.result === 0.5).length, preDraws: to.filter(g => (g.penalty ? g.penalty.pre : g.result) === 0.5).length,
+    // would a 3 HP penalty have changed it (today's rule, where none is applied): the player whose deck ran out alone
+    paper3: to.filter(g => paperChange(g, 3)).length, paperOut: to.filter(g => paperSide(g) !== null).length }
+  return { penalty, win: wins / games.length, median: rounds[Math.floor(rounds.length / 2)], timeouts: timeouts / games.length,
     decisive: decisive / Math.max(1, decided), topShare: topShare / Math.max(1, decided), bigDmg: bigDmg / Math.max(1, decided),
     acts: acts.map(a => Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v / games.length]))),
     far: farRounds / Math.max(1, nRounds), whiffs: whiffs.map(v => v / games.length), wall: wall.map(v => v / Math.max(1, nRounds)) }
@@ -479,7 +501,21 @@ function rangeStats(games, prefs, caps) {
     chargeBuiltPerGame: V.cIn / G0(games), chargeMoveSpentPerGame: V.moves * (rules.chargeMove || 0) / G0(games), chargeODSpentPerGame: V.odSpent / G0(games),
     chargeLostPerGame: V.cLost / G0(games), chargeLeftPerGame: V.cEnd / G0(games) }))
   const G = games.length
-  return { v23: v23out, odInBiggestRound: bigN ? odBig / bigN : null, snow, charge, leaderWins: ledWins / Math.max(1, led), guardShare: guards.map((v, k) => v / Math.max(1, cards[k])), fullShare: full.map(v => v / Math.max(1, n)), changes: changes / G, roundsPerChange: n / Math.max(1, changes), home: home.map(v => v / n), awaySide: away.map(v => v / n), flips: flips.map(v => v / G), buys: buys.map(v => v / G), moves: moves.map(v => v / G), supers: supers.map(v => v / G) }
+  // time-out penalty (17 Nov): Guard share of clash cards late on (the smaller deck at 6 or fewer at the start of the
+  // round), overall and split by the player with the smaller deck and the larger one
+  const late = { all: [0, 0], short: [0, 0], long: [0, 0], early: [0, 0] }
+  for (const g of games) for (const r of g.rounds) {
+    const d = [r.before[0].deck, r.before[1].deck], lo = Math.min(...d)
+    for (const k of [0, 1]) {
+      const t = r.types?.[k]; if (!t) continue
+      const isG = t === 'R' ? 1 : 0
+      if (lo > 6) { late.early[0] += isG; late.early[1]++; continue }
+      late.all[0] += isG; late.all[1]++
+      if (d[k] < d[1 - k]) { late.short[0] += isG; late.short[1]++ } else if (d[k] > d[1 - k]) { late.long[0] += isG; late.long[1]++ }
+    }
+  }
+  const lateGuard = Object.fromEntries(Object.entries(late).map(([k, [a, b]]) => [k, { share: a / Math.max(1, b), n: b }]))
+  return { lateGuard, v23: v23out, odInBiggestRound: bigN ? odBig / bigN : null, snow, charge, leaderWins: ledWins / Math.max(1, led), guardShare: guards.map((v, k) => v / Math.max(1, cards[k])), fullShare: full.map(v => v / Math.max(1, n)), changes: changes / G, roundsPerChange: n / Math.max(1, changes), home: home.map(v => v / n), awaySide: away.map(v => v / n), flips: flips.map(v => v / G), buys: buys.map(v => v / G), moves: moves.map(v => v / G), supers: supers.map(v => v / G) }
 }
 const pct = x => (100 * x).toFixed(1) + '%'
 const avg = a => (a?.length ? a.reduce((s, v) => s + v, 0) / a.length : 0)
@@ -547,7 +583,7 @@ if (mode === 'game') {
   const kinds = (opt('--kinds', null) || args[3] || 'hard').split(','), out = []
   for (const kind of kinds) {
     const r = run(args[1], args[2] || args[1], kind), L = luck(r.games), S = rangeStats(r.games, r.prefs, r.caps)
-    out.push({ kind, matchup: r.names, n, win: L.win, median: L.median, timeouts: L.timeouts, decisive: L.decisive, topShare: L.topShare, bigDmg: L.bigDmg, ...S })
+    out.push({ kind, matchup: r.names, n, win: L.win, median: L.median, timeouts: L.timeouts, decisive: L.decisive, topShare: L.topShare, bigDmg: L.bigDmg, penalty: L.penalty, ...S })
     if (!json) console.log(`${kind.padEnd(12)} ${r.names.join(' v ')}: side 0 ${pct(L.win)} · median ${L.median} · time-outs ${pct(L.timeouts)} · range changes ${S.changes.toFixed(1)} a game (every ${S.roundsPerChange.toFixed(1)} rounds) · at own range ${S.home.map(pct).join(' / ')} · away side ${S.awaySide.map(pct).join(' / ')} · flips ${S.flips.map(v => v.toFixed(1)).join(' / ')} · buys ${S.buys.map(v => v.toFixed(1)).join(' / ')}`)
   }
   if (json) console.log(JSON.stringify(out))

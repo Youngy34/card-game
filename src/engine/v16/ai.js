@@ -69,7 +69,9 @@ export function score16(X, W, rules, Y = null) {
 }
 // Fitted value (13 Nov, luck plan): the features a position is scored on, for one side. W.fit holds a weight for each
 // (fitted by regression on Hard v Hard games, tools/fit.py); value16 then scores the difference between the sides.
-export const FIT_KEYS = ['hp', 'charge', 'full', 'nP', 'nC', 'nR', 'spec', 'counter', 'starter', 'combo', 'superReady', 'knockdown', 'staggered', 'deck', 'init', 'home', 'dead', 'movers', 'sideFit']
+export const FIT_KEYS = ['hp', 'charge', 'full', 'nP', 'nC', 'nR', 'spec', 'counter', 'starter', 'combo', 'superReady', 'knockdown', 'staggered', 'deck', 'init', 'home', 'dead', 'movers', 'sideFit', 'outFirst']
+// outFirst (17 Nov, time-out penalty): your deck is the smaller one, scaled from 0 (8+ cards left in the smaller deck)
+// up to 1 (empty); zero unless rules.timeoutPenalty
 // The range features (13 Nov; zero unless rules.range by cards): at your own range; attacks in hand out of reach;
 // cards in hand that move the fight; your fighter card on the side that suits the range (home at home, away away)
 export function features16(G, side) {
@@ -88,7 +90,14 @@ export function features16(G, side) {
     superReady: superReady(X, rules) ? 1 : 0, knockdown: X.next?.knockdown ? 1 : 0, staggered: X.next?.staggered ? 1 : 0,
     deck: X.deck.length, init: G.init === side ? 0 : 1,          // the initiative passes: the other player holds it next round
     ...rangeFeatures(G, X, cards),
+    outFirst: outFirst(X, Y, rules),
   }
+}
+// (a card counted but not yet drawn, in the lite lookahead, has already left the deck)
+function outFirst(X, Y, rules) {
+  if (!rules.timeoutPenalty) return 0
+  const left = Z => Math.max(0, Z.deck.length - (Z.pendingDraw || 0)), x = left(X)
+  return x < left(Y) ? Math.max(0, 1 - x / 8) : 0
 }
 function rangeFeatures(G, X, cards) {
   const rules = G.rules || {}
