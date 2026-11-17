@@ -72,6 +72,17 @@ export const EDITIONS = {
     labels: {},
     defaultSides: ['benchmark21', 'benchmark21'],
   },
+  // v22 (13 Nov, Mark): range. The initiative token shows Close or Far; attacks reach Close, Far or both, and can't be
+  // played out of reach; movers move the fight win or lose; at the end of a round you can pay 3 Charge to move it
+  // instead of buying. Two test fighters: the Brawler (wants Close) and the Zoner (wants Far)
+  v22: {
+    title: 'Guardbreakers Playtest v22', subtitle: 'rules v22: range (Close and Far), moving with Charge', out: 'yomi-playtest-v22.html', settings: 'v22/settings.json',
+    fighters: [],
+    reference: [],
+    drafts: [['v22', 'brawler'], ['v22', 'zoner']],
+    labels: {},
+    defaultSides: ['brawler22', 'zoner22'],
+  },
   v17: {
     title: 'Yomi Playtest v17', subtitle: 'rules v17', out: 'yomi-playtest-v17.html', settings: 'v17/settings.json',
     fighters: [],

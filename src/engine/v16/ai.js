@@ -12,7 +12,7 @@
 // beyond the next round (a knockdown is worth only what the weights say).
 
 import { maximin, bayesMaximin, bayesGame } from '../lp.js'
-import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf, buyOptions20, applyBuy20 } from './engine.js'
+import { clashOptions16, clashChoices16, neutralOptions16, runClash16, decideClash16, unseenPool, card16, superReady, handLimitOf, confiscateFloor, neutralModes16, tableCost, readModes18, recallModes18, locked, hiddenSplit, capOf, buyOptions20, applyBuy20, reachOk } from './engine.js'
 
 export const DEFAULT_W16 = {
   alpha: 0.6,        // a grey token on you costs 0.6 HP
@@ -66,10 +66,54 @@ export function score16(X, W, rules, Y = null) {
   if (n.lock) for (const t of ['P', 'C', 'R']) if (n.lock[t]) e -= W.lock
   return e
 }
+// Fitted value (13 Nov, luck plan): the features a position is scored on, for one side. W.fit holds a weight for each
+// (fitted by regression on Hard v Hard games, tools/fit.py); value16 then scores the difference between the sides.
+export const FIT_KEYS = ['hp', 'charge', 'full', 'nP', 'nC', 'nR', 'spec', 'counter', 'starter', 'combo', 'superReady', 'knockdown', 'staggered', 'deck', 'init', 'home', 'dead', 'movers', 'sideFit']
+// The range features (13 Nov; zero unless rules.range by cards): at your own range; attacks in hand out of reach;
+// cards in hand that move the fight; your fighter card on the side that suits the range (home at home, away away)
+export function features16(G, side) {
+  const X = side === 0 ? G.A : G.B, Y = side === 0 ? G.B : G.A, rules = G.rules || {}
+  const charge = Y.pile || 0, cap = capOf(Y, rules) || 99
+  const cards = X.hand.map(i => X.f.cards[i])
+  const n = t => cards.filter(c => c.t === t && !c.special).length
+  return {
+    hp: X.hp, charge, full: charge >= cap ? 1 : 0, nP: n('P'), nC: n('C'), nR: n('R'),
+    spec: cards.filter(c => c.special).length,
+    counter: cards.filter(c => c.counter).length, starter: cards.filter(c => c.starter).length,
+    combo: cards.filter(c => c.linker || c.ender).length,
+    superReady: superReady(X, rules) ? 1 : 0, knockdown: X.next?.knockdown ? 1 : 0, staggered: X.next?.staggered ? 1 : 0,
+    deck: X.deck.length, init: G.init === side ? 0 : 1,          // the initiative passes: the other player holds it next round
+    ...rangeFeatures(G, X, cards),
+  }
+}
+function rangeFeatures(G, X, cards) {
+  const rules = G.rules || {}
+  if (!(rules.range && rules.rangeMode === 'cards')) return { home: 0, dead: 0, movers: 0, sideFit: 0 }
+  const r = G.range, pref = X.f.prefers
+  return {
+    home: pref && r === pref ? 1 : 0,
+    dead: cards.filter(c => c.t !== 'R' && !reachOk(c, r)).length,
+    movers: cards.filter(c => c.move).length,
+    sideFit: rules.sides && pref ? ((X.side === 'away') === (r !== pref) ? 1 : 0) : 0,
+  }
+}
 // The chance that A wins, as the value function sees it
 export function value16(G, W) {
   if (G.result !== null && G.result !== undefined) return G.result
-  return 1 / (1 + Math.exp(-W.k * (score16(G.A, W, G.rules, G.B) - score16(G.B, W, G.rules, G.A))))
+  if (W.fit) {
+    const a = features16(G, 0), b = features16(G, 1)
+    let z = 0
+    for (const k of FIT_KEYS) z += (W.fit[k] || 0) * (a[k] - b[k])
+    return 1 / (1 + Math.exp(-z))
+  }
+  let d = score16(G.A, W, G.rules, G.B) - score16(G.B, W, G.rules, G.A)
+  // range test: a range-aware partner (W.rangeW) values being at a range where more of its attacks reach than theirs
+  if (W.rangeW && G.rules.range) {
+    const r = G.range || 'close'
+    const live = X => { const at = X.hand.map(i => X.f.cards[i]).filter(c => c.t !== 'R'); return at.length ? at.filter(c => !c.reach || c.reach === 'both' || c.reach === r).length / at.length : 0 }
+    d += W.rangeW * (live(G.A) - live(G.B))
+  }
+  return 1 / (1 + Math.exp(-W.k * d))
 }
 
 // Follow-ups, Linkers and Enders: the choice (or none) that leaves the board
@@ -176,6 +220,43 @@ function pooledMix16(G, side, W, rng, level, hands, pool, K) {
   const util = rows.map((_, i) => grids[0].reduce((a, g, b) => a + g.M[i].reduce((t, q, j) => t + q * y[b][j], 0), 0) / theirs.length)
   const lambda = LEVELS16[level]?.lambda
   return { options: rows, x: lambda ? softmax(util, lambda) : x, value: v, util }
+}
+
+// Stance (luck plan test): Hard picks its stance by solving the clash for each pair of stances
+// (fewer dealt hands, for speed), then the unexploitable mix over the 3×3 stance game.
+export function stanceMix16(G, side, W, rng) {
+  const T = ['P', 'C', 'R'], Wl = { ...W, samples: 2, mySamples: 1 }
+  const M = T.map(a => T.map(b => {
+    const st = side === 0 ? [a, b] : [b, a]
+    return clashMix16({ ...G, stance: st }, side, Wl, rng, 'hard').value
+  }))
+  const { x } = maximin(M)
+  return { options: T, x, M }
+}
+
+// Luck plan, Phase 0: a partner that learns habits. It solves the clash as Hard does (pooled,
+// over dealt hands), then plays the best reply to a blend of that answer and the opponent's
+// observed type habits: freq = { P, C, R } counts (decayed by the caller), beta = how far it
+// trusts them. With beta 0 it plays Hard's best reply to Hard's own answer.
+export function exploitMix16(G, side, W, rng, freq, beta) {
+  const me = side === 0 ? G.A : G.B, op = side === 0 ? G.B : G.A
+  const theirs = Array.from({ length: W.samples || 6 }, dealer(op, rng))
+  const grids = theirs.map(oh => grid(withHands(G, side, me.hand, oh), side, W))
+  const rows = grids[0].rows
+  const { y } = bayesMaximin(grids.map(g => g.M))
+  const tot = (freq.P || 0) + (freq.C || 0) + (freq.R || 0)
+  const util = rows.map(() => 0)
+  grids.forEach((g, b) => {
+    const ty = g.cols.map(c => (c === null ? null : card16(op, c)?.t))
+    const w = ty.map(t => (t ? ((freq[t] || 0) + 0.5) / (tot + 1.5) : 0))
+    const cnt = {}; for (const t of ty) if (t) cnt[t] = (cnt[t] || 0) + 1
+    let pred = w.map((v, j) => (ty[j] ? v / cnt[ty[j]] : 0))
+    const s = pred.reduce((a, v) => a + v, 0)
+    pred = s > 0 ? pred.map(v => v / s) : y[b]
+    const yy = y[b].map((v, j) => (1 - beta) * v + beta * pred[j])
+    for (let i = 0; i < rows.length; i++) util[i] += g.M[i].reduce((t, q, j) => t + q * yy[j], 0) / grids.length
+  })
+  return { options: rows, x: softmax(util, 60), util }
 }
 
 // One reveal: the setup card and the clash card are one secret choice, made

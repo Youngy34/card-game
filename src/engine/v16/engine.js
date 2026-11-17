@@ -185,7 +185,7 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
     if (rules.timeout) X.noReshuffle = true
     if (rules.tableCards) {
       X.table = f.cards.map((c, i) => (c.special ? i : null)).filter(i => i !== null)   // specials still on the table
-      X.superAt = f.sup ? 'table' : null                                               // 'table' | 'hand' | 'gone'
+      X.superAt = f.sup ? (rules.superLive ? 'live' : 'table') : null                // 'table' | 'hand' | 'gone' | 'live'
     }
     if (split) { X.ndeck = shuffle(f.deck.filter(i => f.cards[i].t === 'N'), R); X.nhand = []; X.ndiscard = []; X.nused = [] }
     drawCards(X, rules.openingHand, R)
@@ -200,7 +200,12 @@ export function newGame16(fa, fb, rules = DEFAULT_RULES16, seed = 1) {
     for (const X of [A, B]) { X.heatRules = true; const cap = own(X.f); X.heatCost = { special: rules.specialCost ?? 3, sup: cap, supPrice: rules.superPrice === 'half' ? Math.ceil(cap / 2) : rules.superPrice === 'free' ? 0 : cap } }   // superPrice (local test, 10 Nov): the Super still needs max heat, but costs half the cap, or nothing
   }
   const init = rules.initiative ? (rnd(R) < 0.5 ? 0 : 1) : null
-  return { A, B, round: 1, rules, rng: R.s, phase: rules.merged ? 'clash' : 'neutral', result: null, pending: null, clash: null, neutral: null, init }
+  // Range by cards (13 Nov): the token starts at rangeStart; each player carries the range (X.at) so their options can
+  // be filtered. Sides: each fighter card starts on its home side.
+  let range
+  if (rules.range && rules.rangeMode === 'cards') { range = rules.rangeStart || 'far'; A.at = B.at = range }
+  if (rules.sides) A.side = B.side = rules.sidesStart || 'home'
+  return syncOwn({ A, B, round: 1, rules, rng: R.s, phase: rules.merged ? 'clash' : 'neutral', result: null, pending: null, clash: null, neutral: null, init, ...(range ? { range } : {}) })
 }
 
 // ---- 1. neutral phase ----------------------------------------------------------
@@ -321,9 +326,15 @@ function gainMeter(X, n, rules) {
   if (rules.oneReveal && n) X.pendingMeter = (X.pendingMeter || 0) + n
 }
 
+// superLive (13 Nov): each player carries their own Charge as X.own (the pile is on the other player), so the
+// Super's readiness can be read from the player alone. Synced wherever Charge settles.
+const syncOwn = G => (G.rules?.superLive ? { ...G, A: { ...G.A, own: G.B.pile }, B: { ...G.B, own: G.A.pile } } : G)
 // ---- 2. clash ----------------------------------------------------------------
 // The distinct cards a player may set as their clash card ('S' = the Super)
-export const superReady = (X, rules) => (rules?.tableCards ? X.superAt === 'hand'
+// superLive (13 Nov): the Super is never bought; it can be your clash card whenever you're Fully Charged, and
+// playing it empties your Charge. It comes back each round you're full again.
+export const superReady = (X, rules) => (rules?.superLive ? X.superAt === 'live' && !X.superSpent && ownCap(X, rules) > 0 && (X.own ?? 0) >= ownCap(X, rules)
+  : rules?.tableCards ? X.superAt === 'hand'
   : !!X.f.sup && X.meter >= X.f.sup.meter && !(rules?.superUses > 0 && X.supersUsed >= rules.superUses))
 // …and playable this round (with one reveal, this round's meter isn't there yet)
 const superPlayable = (X, rules) => superReady(X, rules) && (rules?.tableCards || X.meter - (X.pendingMeter || 0) >= X.f.sup.meter)
@@ -333,6 +344,7 @@ const superPlayable = (X, rules) => superReady(X, rules) && (rules?.tableCards |
 export function clashChoices16(X, rules) {
   const o = clashOptions16(X, rules)
   if (X.st.dizzy) return []
+  if (rules?.rangeDead && !o.length) return [null]               // nothing in reach: play nothing
   return rules?.blankClash === false || rules?.blankClash === 0 ? o : [...o, null]
 }
 
@@ -343,9 +355,10 @@ export function clashOptions16(X, rules) {
     if (seen.has(i)) continue
     seen.add(i)
     const c = X.f.cards[i]
+    if (rules?.rangeDead && X.at && !reachOk(c, X.at)) continue       // range by cards: out of reach, it can't be played
     if (c.t !== 'N') out.push(i)                      // a Locked card can be played: it's voided at the reveal
   }
-  if (superPlayable(X, rules) && !locked(X, X.f.sup.t)) out.push('S')
+  if (superPlayable(X, rules) && !locked(X, X.f.sup.t) && !(rules?.rangeDead && X.at && !reachOk(X.f.sup, X.at))) out.push('S')
   return out
 }
 
@@ -381,7 +394,8 @@ function attackOptions(X, rules) {
 // Whether a neutral card bends this card's type this round (Armor: Converts; Mix-Up: Pressures)
 const bent = (X, c) => (c.t === 'C' && !!X.fx.armor) || (c.t === 'P' && !!X.fx.mixup)
 
-export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0)
+// Sides (13 Nov): on the away side, cards that move the fight are 2 faster
+export const speedOf = (X, c) => c.speed + (X.fx.speed || 0) - (X.st.staggered ? STAGGER : 0) + (X.side === 'away' && c.move ? 2 : 0)
 
 // Who wins a same-type duel at equal speed: 0, 1, or -1 (cancel)
 export function tieWinner16(A, B, rules, init = null) {
@@ -391,7 +405,8 @@ export function tieWinner16(A, B, rules, init = null) {
 }
 
 function play(X, i, ev, side, how, rules = {}) {
-  if (i === 'S' && rules.tableCards) { X.superAt = 'gone'; X.supersUsed = (X.supersUsed || 0) + 1 }       // paid when taken; used once
+  if (i === 'S' && rules.superLive) { X.superSpent = true; X.supersUsed = (X.supersUsed || 0) + 1 }
+  else if (i === 'S' && rules.tableCards) { X.superAt = 'gone'; X.supersUsed = (X.supersUsed || 0) + 1 }       // paid when taken; used once
   else if (i === 'S') { X.meter -= X.f.sup.meter; X.supersUsed = (X.supersUsed || 0) + 1 }
   else takeFromHand(X, i)
   X.used.push(i)
@@ -435,27 +450,38 @@ function spill(X, rules) {
   const cap = rules?.greyOverflow ? capOf(X, rules) : 0
   if (!cap || X.pile <= cap) return 0
   const n = X.pile - cap
-  X.pile = cap; X.hp -= n
+  X.pile = cap
+  if (rules.overflowLost) return 0     // overflowLost (14 Nov test): Charge past the cap is simply lost, no damage
+  X.hp -= n
   return n
 }
 
+// Sides (13 Nov): on the home side, at your own range, your attacks deal 1 more chip
+const homeChip = (X, rules) => (rules.sides && X.side === 'home' && X.f.prefers && X.at === X.f.prefers ? 1 : 0)
 // One card resolving: its type effect, then its On hit status
 function hit(X, Y, c, ev, side, how, rules = {}) {
   const e = { side, kind: 'hit', how, name: c.name, t: c.t }
   if (c.t === 'P') {
-    e.build = c.build + (X.fx.pressureBuild || 0)
-    e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0)
+    e.build = (rules.flatBuild ?? c.build) + (X.fx.pressureBuild || 0)       // flatBuild (14 Nov test): every attack builds the same
+    e.chip = c.chip + (X.fx.attackChip || 0) + (X.fx.pressureChip || 0) + homeChip(X, rules)
     // lateGrey (under test): grey from this clash lands when the clash ends, so an Ender cashes only what was already there
     if (rules.lateGrey) Y.fresh = (Y.fresh || 0) + e.build; else { Y.pile += e.build; const n = spill(Y, rules); if (n) e.spill = n }
+    Y.hp -= e.chip
+  } else if (c.t === 'C' && rules.breakBuilds) {
+    // breakBuilds (13 Nov, Mark's test): a Break no longer discharges your Charge; like a Pressure it builds that much
+    // (and overloads past your cap), plus its chip
+    e.build = rules.flatBuild ?? (c.build || rules.breakBuilds); e.cash = 0     // a Break's own Build (14 Nov), else the rule's
+    e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0) + homeChip(X, rules)
+    Y.pile += e.build; const n = spill(Y, rules); if (n) e.spill = n
     Y.hp -= e.chip
   } else if (c.t === 'C') {
     // cashOnWin (test): a Convert played after the clash (follow-up, Linker, Ender) doesn't cash
     e.cash = rules.cashOnWin && how !== 'clash' ? 0 : Y.pile
-    e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0)
+    e.chip = c.chip + (X.fx.convertChip || 0) + (X.fx.attackChip || 0) + homeChip(X, rules)
     Y.pile -= e.cash; Y.hp -= e.cash + e.chip
   } else if (c.t === 'R') {
     // guardHalf (under test): a Guard clears half the pile, rounded up, so grey can build across exchanges
-    e.cleared = rules.guardHalf ? Math.ceil(X.pile / 2) : X.pile; X.pile -= e.cleared
+    e.cleared = rules.guardDrain === false ? 0 : rules.guardHalf ? Math.ceil(X.pile / 2) : X.pile; X.pile -= e.cleared     // guardDrain false (13 Nov test): a Guard leaves their Charge alone
     if (c.chip) { e.chip = c.chip; Y.hp -= c.chip }            // a Recover Super's second verb
   }
   ev.push(e)
@@ -567,6 +593,13 @@ export function defaultRecall18(X, attacksOnly = false) {
 // Set both clash cards and resolve the clash. Returns the game waiting on a
 // decision (G.pending: a follow-up, a Linker or an Ender) or with the clash done.
 // opts (rules v18): each side's Read choice, if its clash card has a Read rider.
+// ---- Range and stance tests (12 Nov, luck plan; off unless rules.range / rules.stance2) --------------------------
+// Range: the initiative token shows Close or Far (G.range). An attack whose reach doesn't include it whiffs (spent,
+// does nothing, like a Locked card). The clash winner's last card moves the fight: push to Far, pull to Close.
+// Stance: each fighter card has two sides (X.side 'rush' | 'wall'); flipping is an end-of-round action ('F').
+export const rangeOf = G => G.range || 'close'
+export const reachOk = (c, range) => !c || c.t === 'R' || !c.reach || c.reach === 'both' || c.reach === range
+export const sideOf = X => X.side || 'rush'
 export function startClash16(G, a, b, lite = false, opts = null) {
   FLOOR = confiscateFloor(G.rules)
   const A = cloneP(G.A, lite), B = cloneP(G.B, lite)
@@ -574,8 +607,10 @@ export function startClash16(G, a, b, lite = false, opts = null) {
   const picks = [a ?? null, b ?? null]
   const played = picks.map((p, k) => (p === null ? null : play(P[k], p, ev, k, 'clash', G.rules)))
   // Lock: a card of a Locked type is spent but does nothing, as if nothing were played
-  const voided = played.map((c, k) => !!c && locked(P[k], c.t))
-  voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: 'voided', name: played[k].name, t: played[k].t }) })
+  const ownBefore = [B.pile, A.pile]                 // each player's Charge as the clash starts (chargeSafe)
+  const whiff = played.map(c => !!c && !!G.rules.range && !reachOk(c, rangeOf(G)))
+  const voided = played.map((c, k) => !!c && (locked(P[k], c.t) || whiff[k]))
+  voided.forEach((v, k) => { if (v) ev.push({ side: k, kind: whiff[k] ? 'whiff' : 'voided', name: played[k].name, t: played[k].t }) })
   const cards = played.map((c, k) => (voided[k] ? null : c))
   const rng = G.rules.merged ? revealRiders(G, P, cards, opts, lite, ev) : G.rng
   const [ca, cb] = cards
@@ -625,6 +660,12 @@ export function startClash16(G, a, b, lite = false, opts = null) {
       applyStatus(L.next, wcd.onBlock)
       ev.push({ side: 1 - winner, kind: 'status', status: wcd.onBlock, from: wcd.name, block: true })
     }
+    if (G.rules.stance2 && outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P' && sideOf(W) === 'wall') {
+      applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: 'Wall' })
+    }
+    if (G.rules.stance2 && outcome === 'triangle' && wcd.t === 'C' && lc?.t === 'R' && sideOf(L) === 'wall') {
+      L.side = 'rush'; ev.push({ side: 1 - winner, kind: 'flipped', to: 'rush' })      // the wall is broken
+    }
     // Rules v21 (10 Nov): a fighter's own Guard pays out if it beats a Pressure
     if (outcome === 'triangle' && wcd.t === 'R' && lc?.t === 'P') {
       for (let n = wcd.blockConfiscate || 0; n > 0; n--) owe(L, 1, ev, 1 - winner, wcd.name)
@@ -640,16 +681,45 @@ export function startClash16(G, a, b, lite = false, opts = null) {
       else { applyStatus(L.next, 'staggered'); ev.push({ side: 1 - winner, kind: 'status', status: 'staggered', from: wcd.name }) }
     }
   }
+  // Stance (luck plan test, 12 Nov): G.stance = [type, type], set face up before the clash. A winning clash card that
+  // matches its player's stance gains them stanceBonus Charge (up to the cap, never overloading); one that doesn't
+  // (a feint) can't follow up or combo when stanceCost is 'combo'.
+  let feint = false
+  if (G.stance && winner >= 0 && cards[winner]) {
+    if (cards[winner].t === G.stance[winner]) {
+      const O = winner === 0 ? B : A, cap = capOf(O, G.rules), gain = G.rules.stanceBonus ?? 1
+      if (gain && (!cap || O.pile < cap)) { const n = cap ? Math.min(gain, cap - O.pile) : gain; O.pile += n; ev.push({ kind: 'stance', side: winner, gain: n }) }
+    } else if ((G.rules.stanceCost ?? 'combo') === 'combo') feint = true
+  }
+  // guardCost (13 Nov test): playing a Guard as your clash card costs that much of your Charge (what you have, if less)
+  if (G.rules.guardCost) for (const k of [0, 1]) if (played[k]?.t === 'R' && P[1 - k].pile > 0) { const n = Math.min(G.rules.guardCost, P[1 - k].pile); P[1 - k].pile -= n; ev.push({ side: k, kind: 'guardCost', n }) }
+  // hitCharge (13 Nov test): when an attack wins the clash against you, you gain that much Charge (up to your cap)
+  if (G.rules.hitCharge && winner >= 0 && (cards[winner]?.t === 'P' || cards[winner]?.t === 'C')) {
+    const O = P[winner], cap = capOf(O, G.rules), n = cap ? Math.min(G.rules.hitCharge, Math.max(0, cap - O.pile)) : G.rules.hitCharge
+    if (n > 0) { O.pile += n; ev.push({ side: 1 - winner, kind: 'hitCharge', n }) }
+  }
+  // superLive: playing the Super empties your Charge (a Break Super has just discharged it)
+  if (G.rules.superLive) for (const k of [0, 1]) if (played[k]?.sup && P[1 - k].pile > 0) { ev.push({ side: k, kind: 'superSpent', n: P[1 - k].pile }); P[1 - k].pile = 0 }
+  // breakSpends (13 Nov, Mark): playing a Break spends your Charge; it only hurts them if it wins. A clash Break that
+  // doesn't win discharges your Charge for nothing ('all'), or half of it, rounded up ('half'). The pile on the other
+  // player is yours.
+  if (G.rules.breakSpends) for (const k of [0, 1]) {
+    if (cards[k]?.t !== 'C' || winner === k) continue
+    const O = P[1 - k], lost = G.rules.breakSpends === 'half' ? Math.ceil(O.pile / 2) : O.pile
+    if (lost > 0) { O.pile -= lost; ev.push({ side: k, kind: 'wasted', n: lost }) }
+  }
   const clash = { picks, types: cards.map(c => c?.t ?? null), names: played.map(c => c?.name ?? null), voided, outcome, winner, events: ev, follow: null, combo: [] }
   let next = { ...G, A, B, rng, phase: 'clash', clash, pending: null, result: resultOf(A, B) }
-  if (next.result !== null || winner < 0) return finishClash(next)
+  if (next.result !== null || winner < 0 || feint) return finishClash(next)
   const wc = cards[winner], lc = cards[1 - winner]
   if (outcome === 'triangle' && wc.t === 'R' && lc.t === 'P') {
     // Safe Pressures (6 Nov) can't be followed up
-    const safe = lc.safe && !wc.throughSafe                         // rules v21: a Guard can follow up through Safe
+    // chargeSafe (13 Nov): a Pressure played while holding that much Charge or more is Safe
+    const safe = (lc.safe || (G.rules.chargeSafe && ownBefore[1 - winner] >= G.rules.chargeSafe)) && !wc.throughSafe                         // rules v21: a Guard can follow up through Safe
     if (safe && !wc.brace && !wc.noFollow) ev.push({ kind: 'safe', side: 1 - winner, name: lc.name })
     if (wc.followCombo) next = { ...next, clash: { ...next.clash, followCombo: winner } }
-    return wc.brace || wc.noFollow || safe ? finishClash(next) : ask(next, 'follow', winner)
+    const rushNoFollow = !!G.rules.stance2 && sideOf(P[winner]) === 'rush'          // stance test: a Rush player's Guards don't follow up
+    return wc.brace || wc.noFollow || safe || rushNoFollow ? finishClash(next) : ask(next, 'follow', winner)
   }
   if (wc.starter && (outcome === 'triangle' || outcome === 'armor' || outcome === 'mixup' || outcome === 'outpaced' || outcome === 'speed' || outcome === 'tie' || outcome === 'unopposed')) return ask(next, 'link', winner)
   return finishClash(next)
@@ -664,6 +734,7 @@ function ask(G, stage, side) {
     const lineT = G.clash.follow?.side === side ? G.clash.follow.t : G.clash.types[side]
     options = options.filter(i => (i === 'S' ? X.f.sup : X.f.cards[i]).t === lineT)
   }
+  if (G.rules.range) options = options.filter(i => reachOk(i === 'S' ? X.f.sup : X.f.cards[i], rangeOf(G)))
   G = { ...G, clash: { ...G.clash, offered: { ...(G.clash.offered || {}), [stage]: options.length } } }
   if (!options.length) {
     if (stage === 'link') return ask(G, 'end', side)
@@ -672,7 +743,36 @@ function ask(G, stage, side) {
   return { ...G, pending: { stage, side, options } }
 }
 
+const toRange = m => (m === 'push' ? 'far' : 'close')
 function finishClash(G) {
+  // Range by cards (13 Nov, Mark): only cards that move change the range, and they move it whether they win or lose.
+  // Two clash cards moving opposite ways cancel. On the away side, a Guard that beats a Pressure moves the fight to
+  // your range. Then the winner's follow-up and combo cards, in order.
+  if (G.rules.range && G.rules.rangeMode === 'cards' && G.clash) {
+    const P = [G.A, G.B], { picks, voided = [], winner: w } = G.clash
+    const cd = k => (picks[k] == null || voided[k] ? null : card16(P[k], picks[k]))
+    const mv = [cd(0)?.move || null, cd(1)?.move || null]
+    let r = G.range
+    if (!(mv[0] && mv[1] && mv[0] !== mv[1]) && (mv[0] || mv[1])) r = toRange(mv[0] || mv[1])
+    if (G.rules.sides && w >= 0 && cd(w)?.t === 'R' && cd(1 - w)?.t === 'P' && P[w].side === 'away' && P[w].f.prefers) r = P[w].f.prefers
+    if (w >= 0 && cd(w)?.t === 'R' && cd(1 - w)?.t === 'P' && cd(w).blockMove) r = toRange(cd(w).blockMove)     // a Guard that moves the fight if it beats a Pressure (Backstep)
+    for (const x of [...(G.clash.follow ? [G.clash.follow] : []), ...(G.clash.combo || [])]) {
+      const X = P[x.side], c = X.f.sup?.name === x.name ? X.f.sup : X.f.cards.find(cc => cc.name === x.name)
+      if (c?.move) r = toRange(c.move)
+    }
+    const evs = mv[0] && mv[1] && mv[0] !== mv[1] ? [{ kind: 'moveCancel' }] : []
+    if (r !== G.range) evs.push({ kind: 'moved', to: r })
+    if (evs.length) G = { ...G, clash: { ...G.clash, events: [...G.clash.events, ...evs] } }
+    if (r !== G.range) G = { ...G, range: r, A: { ...G.A, at: r }, B: { ...G.B, at: r }, clash: { ...G.clash, moved: r } }
+  } else if (G.rules.range && G.clash && G.clash.winner >= 0) {
+    const w = G.clash.winner, X = w === 0 ? G.A : G.B
+    const lastCombo = [...(G.clash.combo || [])].reverse().find(x => x.side === w)
+    const name = lastCombo?.name || (G.clash.follow?.side === w ? G.clash.follow.name : null) || G.clash.names?.[w]
+    const c = name ? (X.f.sup?.name === name ? X.f.sup : X.f.cards.find(cc => cc.name === name)) : null
+    let mv = c?.move || null
+    if (!mv && c && G.rules.stanceRange) mv = c.t === 'R' ? (sideOf(X) === 'wall' ? 'push' : null) : (sideOf(X) === 'rush' ? 'pull' : null)
+    if (mv) G = { ...G, range: mv === 'push' ? 'far' : 'close', clash: { ...G.clash, moved: mv } }
+  }
   if (G.A.fresh || G.B.fresh) {
     const land = X => { const Y = { ...X, pile: X.pile + (X.fresh || 0), fresh: 0 }; spill(Y, G.rules); return Y }
     G = { ...G, A: land(G.A), B: land(G.B) }
@@ -681,7 +781,7 @@ function finishClash(G) {
   // spent cards on a combo never discards below the floor (or, for "discard down to", below nothing)
   const settle = X => { if (!X.owe) return X; const max = X.oweDown ? X.hand.length : Math.max(0, X.hand.length - confiscateFloor(G.rules)); return X.owe > max ? { ...X, owe: max } : X }
   if (G.A.owe || G.B.owe) G = { ...G, A: settle(G.A), B: settle(G.B) }
-  return { ...G, pending: null, clash: { ...G.clash, done: true }, phase: G.result !== null ? 'over' : 'draw' }
+  return syncOwn({ ...G, pending: null, clash: { ...G.clash, done: true }, phase: G.result !== null ? 'over' : 'draw' })
 }
 
 // The player answers G.pending: a card index, 'S', or null (none / skip)
@@ -726,11 +826,13 @@ export function startDraw16(G) {
   const capCash = [0, 0], capSpill = [0, 0]
   for (const [k, X] of P.entries()) {
     for (const i of X.used) if (i !== 'S') toDiscard(X, i, G.rules)
-    X.used = []; X.fx = {}; X.pendingMeter = 0
+    X.used = []; X.fx = {}; X.pendingMeter = 0; X.superSpent = false
     drawCards(X, 1, R)
-    if (G.rules.greyPerRound) X.pile += G.rules.greyPerRound      // everyone takes grey with their draw
+    // stance test: the pile on X is the opponent's Charge; a Rush opponent gains 1 more, a Wall opponent none
+    const opp = P[1 - k], gain = (G.rules.greyPerRound || 0) + (G.rules.stance2 ? (sideOf(opp) === 'wall' ? -(G.rules.greyPerRound || 0) : 1) : 0)
+    if (gain) X.pile += gain      // everyone takes grey with their draw
     // roundHeatCaps (test, 9 Nov): the round's heat stops at the cap; only attacks overflow as damage
-    if (G.rules.roundHeatCaps && capOf(X, G.rules) && X.pile > capOf(X, G.rules)) X.pile = Math.max(capOf(X, G.rules), X.pile - G.rules.greyPerRound)
+    if (G.rules.roundHeatCaps && capOf(X, G.rules) && X.pile > capOf(X, G.rules)) X.pile = Math.max(capOf(X, G.rules), X.pile - gain)
     // greyCap (test): a pile that has reached the cap is cashed now
     // (greyOverflow: the pile never passes its cap; the round's grey spills over as HP instead)
     if (G.rules.greyOverflow) capSpill[k] = spill(X, G.rules)
@@ -743,8 +845,8 @@ export function startDraw16(G) {
   }
   const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', capCash, capSpill }
   // Rules v20: before discarding down, each player in initiative order may spend heat at the table
-  if (G.rules.heat) return nextBuy20({ ...g, phase: 'buy', bought: [null, null], buyLeft: initOrder(g) })
-  return toDiscardDown(g)
+  if (G.rules.heat) return nextBuy20(syncOwn({ ...g, phase: 'buy', bought: [null, null], buyLeft: initOrder(g) }))
+  return toDiscardDown(syncOwn(g))
 }
 // The draw step's last part: who must discard down to the hand limit (or on to the next round)
 function toDiscardDown(g) {
@@ -766,6 +868,30 @@ export function buyOptions20(G, side) {
   const out = [null]
   for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
   if (X.superAt === 'table' && X.f.sup && X.heatCost?.sup > 0 && heat >= X.heatCost.sup) out.push('S')
+  // chargeMove (13 Nov): instead of buying, spend that much Charge to move the fight (Close to Far, or Far to Close)
+  if (G.rules.chargeMove && G.rules.range && G.rules.rangeMode === 'cards' && heat >= G.rules.chargeMove) out.push('M')
+  if (G.rules.stance2 || G.rules.sides) out.push('F')                  // stance test / sides: flip your fighter card instead of buying
+  // Pair trade (v22 test, luck plan): instead of buying, discard a pair of identical cards to search the deck for 1,
+  // or three of a kind for 2. Options are 'T:<card>:<2|3>'. The searched cards are picked by tradeTargets.
+  if (G.rules.trade && X.deck.length) {
+    const count = {}
+    for (const i of X.hand) count[i] = (count[i] || 0) + 1
+    for (const [i, n] of Object.entries(count)) {
+      if (n >= 2) out.push(`T:${i}:2`)
+      if (n >= 3 && G.rules.trade !== 'pairs') out.push(`T:${i}:3`)
+    }
+  }
+  return out
+}
+// The cards a trade searches for: a type the hand is missing first, then a card it doesn't hold, then the first in the deck
+export function tradeTargets(X, hand, k) {
+  const pool = X.deck.slice(), out = [], h = hand.slice()
+  for (let n = 0; n < k && pool.length; n++) {
+    const types = new Set(h.map(i => X.f.cards[i].t))
+    let best = 0, bs = -1
+    pool.forEach((i, j) => { const c = X.f.cards[i]; const sc = (types.has(c.t) ? 0 : 10) + (h.includes(i) ? 0 : 3); if (sc > bs) { bs = sc; best = j } })
+    const pick = pool.splice(best, 1)[0]; out.push(pick); h.push(pick)
+  }
   return out
 }
 // Skip players with nothing they can buy; stop at the next player who has a choice
@@ -777,7 +903,37 @@ function nextBuy20(g) {
 }
 // Pay for a card from the table with heat (no turn order, no phase change): the partner looks ahead with it
 export function applyBuy20(G, side, choice) {
+  return syncOwn(applyBuy20raw(G, side, choice))
+}
+function applyBuy20raw(G, side, choice) {
   if (choice === null || choice === undefined) return G
+  if (choice === 'M') {
+    const Y = { ...(side === 0 ? G.B : G.A) }; Y.pile -= G.rules.chargeMove
+    const r = G.range === 'far' ? 'close' : 'far'
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'move', cost: G.rules.chargeMove, sup: false, move: r }
+    const A = side === 0 ? G.A : Y, B = side === 0 ? Y : G.B
+    return { ...G, range: r, A: { ...A, at: r }, B: { ...B, at: r }, bought }
+  }
+  if (choice === 'F') {
+    const X = { ...(side === 0 ? G.A : G.B) }; X.side = G.rules.sides ? (X.side === 'away' ? 'home' : 'away') : sideOf(X) === 'rush' ? 'wall' : 'rush'
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'flip', cost: 0, sup: false, flip: X.side }
+    return side === 0 ? { ...G, A: X, bought } : { ...G, B: X, bought }
+  }
+  if (typeof choice === 'string' && choice.startsWith('T:')) {
+    const [, ci, cn] = choice.split(':'), i = +ci, n = +cn
+    const X = cloneP(side === 0 ? G.A : G.B)
+    for (let k = 0; k < n; k++) {
+      X.hand.splice(X.hand.indexOf(i), 1)
+      if (G.rules.tradeTo === 'bottom') X.deck.unshift(i); else toDiscard(X, i, G.rules)   // tradeTo 'bottom': the traded cards go under the deck (the deck clock doesn't shorten)
+      if (X.known) { const q = X.known.indexOf(i); if (q >= 0) { X.known = X.known.slice(); X.known.splice(q, 1) } }
+    }
+    const got = tradeTargets(X, X.hand, n - 1 + (G.rules.tradeBonus || 0))   // tradeBonus 1: a pair searches 2, three of a kind 3
+    for (const t of got) { X.deck.splice(X.deck.indexOf(t), 1); X.hand.push(t) }
+    X.known = [...(X.known || []), ...got]                           // searched cards are shown
+    const bought = (G.bought || [null, null]).slice()
+    bought[side] = { name: X.f.cards[i].name, cost: 0, sup: false, trade: n, got: got.map(t => X.f.cards[t].name) }
+    return side === 0 ? { ...G, A: X, bought } : { ...G, B: X, bought }
+  }
   const X = cloneP(side === 0 ? G.A : G.B, true), Y = { ...(side === 0 ? G.B : G.A) }
   const cost = tableCost(X, choice)
   Y.pile -= cost

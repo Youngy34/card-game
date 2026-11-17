@@ -1,8 +1,8 @@
 // Rules v16: whole games between sparring partners (or bots), round records
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
-import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20 } from './engine.js'
-import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18, chooseBuy20, botBuy20 } from './ai.js'
+import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20, reachOk } from './engine.js'
+import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18, chooseBuy20, botBuy20, stanceMix16 } from './ai.js'
 
 export function mulberry(seed) {
   let a = seed >>> 0
@@ -19,7 +19,7 @@ export const snap16 = X => ({ hp: X.hp, pile: X.pile, hand: X.hand.length, meter
 
 // Pay any owed Confiscates (each victim chooses), returning the game and what went
 // W may be one set of weights or a pair, one for each side (the victim's are used)
-function payConfiscates(G, levels, W, rng) {
+export function payConfiscates(G, levels, W, rng) {
   const paid = [[], []]
   for (const k of initOrder(G)) {
     const X = k === 0 ? G.A : G.B
@@ -156,23 +156,42 @@ export function playGame16(fa, fb, { rules = DEFAULT_RULES16, W = DEFAULT_W16, l
 // before. The end of the round: discard, draw 1, grey, discard down, pass the token. The game
 // ends on a KO, or at the end of the round in which a player draws the last card of their deck.
 // Ws (optional): a set of weights for each side, to pit two partners against each other
-export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed) } = {}) {
+export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels = ['hard', 'hard'], seed = 1, rng = mulberry(seed), pickers = [null, null], onRound = null, buyers = [null, null], stancers = [null, null], combos = [null, null], discarders = [null, null] } = {}) {
   let G = newGame16(fa, fb, rules, seed)
   const rounds = []
   const none = [{ kind: 'none' }, { kind: 'none' }]
   while (G.result === null) {
     const before = [snap16(G.A), snap16(G.B)]
-    const picks = [0, 1].map(k => aiClash(G, k, levels[k], Ws[k], rng))
+    if (G.rules.stance) {
+      const st = [0, 1].map(k => (stancers[k] ? stancers[k](G, k, rng) : BOTS16[levels[k]] ? ['P', 'C', 'R'][Math.floor(rng() * 3)] : (m => m.options[sampleIndex(m.x, rng)])(stanceMix16(G, k, Ws[k], rng))))
+      G = { ...G, stance: st }
+    }
+    const picks = [0, 1].map(k => (pickers[k] ? pickers[k](G, k, rng) : aiClash(G, k, levels[k], Ws[k], rng)))
     const opts = [undefined, undefined]
     for (const k of initOrder(G)) {
       if (!BOTS16[levels[k]]) opts[k] = chooseRead18(G, k, picks, opts, Ws[k])
       else if (levels[k] === 'random') opts[k] = randomReveal18(G, k, picks[k], rng)     // the random bot's rider choices are random too
     }
-    const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init
-    G = runClash16(G, picks[0], picks[1], (g, p) => aiCombo(g, p, Ws[p.side]), false, opts)
+    const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init, rangeAt = G.range, sidesAt = [G.A.side, G.B.side]
+    // escape check (14 Nov): what each player held at the clash to get the fight to their own range
+    const escAt = G.rules.range && G.rules.rangeMode === 'cards' ? [G.A, G.B].map((X, k) => {
+      const pref = X.f.prefers, Y = k ? G.A : G.B, cs = X.hand.map(i => card16(X, i)).filter(Boolean)
+      const live = c => reachOk(c, G.range)
+      return { mv: cs.filter(c => c.move && live(c) && (c.move === 'push' ? 'far' : 'close') === pref).length,
+        gd: cs.filter(c => c.t === 'R' && c.blockMove && (c.blockMove === 'push' ? 'far' : 'close') === pref).length,
+        mvNames: cs.filter(c => c.move && live(c) && (c.move === 'push' ? 'far' : 'close') === pref).map(c => c.name),
+        ch: (Y.pile || 0) >= (G.rules.chargeMove || 99), att: cs.filter(c => c.t !== 'R' && live(c)).length }
+    }) : null
+    G = runClash16(G, picks[0], picks[1], (g, p) => (combos[p.side] ? combos[p.side](g, p, rng) : aiCombo(g, p, Ws[p.side])), false, opts)
     const post = payConfiscates(G, levels, Ws, rng); G = post.G
     const rec = roundRecord16(G.round, before, G, none)
     rec.handAtClash = handAtClash
+    if (G.stance) rec.stance = G.stance
+    if (G.rules.range) { rec.range = G.range || 'close'; rec.whiffs = G.clash.events.filter(e => e.kind === 'whiff').map(e => e.side) }
+    if (G.rules.stance2) rec.sides = [G.A.side || 'rush', G.B.side || 'rush']
+    if (G.rules.sides) rec.sides = sidesAt
+    if (G.rules.range && G.rules.rangeMode === 'cards') { rec.rangeAt = rangeAt; rec.esc = escAt }
+    if (G.rules.superLive) rec.supers = [0, 1].map(k => G.clash.events.some(e => e.kind === 'play' && e.side === k && e.sup))
     rec.init = initHeld
     rec.confiscated = post.paid
     rec.confPre = [0, 0]
@@ -180,16 +199,17 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     rec.played = [0, 1].map(k => G.clash.events.filter(e => e.kind === 'play' && e.side === k).map(e => e.name))
     rec.parry = [0, 1].map(k => G.clash.winner === k && !!card16(k === 0 ? G.A : G.B, G.clash.picks[k])?.parry && !!G.clash.follow)
     rounds.push(rec)
+    if (onRound) onRound(rec, G)
     if (G.result !== null) break
     G = startDraw16(G)
     // Rules v20: spending heat at the table, in initiative order
     while (G.phase === 'buy') {
       const k = G.buying
-      G = buy20(G, k, BOTS16[levels[k]] ? botBuy20(G, k, levels[k], rng) : chooseBuy20(G, k, Ws[k], rng, levels[k]))
+      G = buy20(G, k, buyers[k] ? buyers[k](G, k, rng) : BOTS16[levels[k]] ? botBuy20(G, k, levels[k], rng) : chooseBuy20(G, k, Ws[k], rng, levels[k]))
     }
     if (G.bought?.some(Boolean)) rec.bought = G.bought
     while (G.phase === 'draw') {
-      for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
+      for (const k of initOrder(G)) if (G.discardDown?.[k]) G = discardDown16(G, k, discarders[k] ? discarders[k](k === 0 ? G.A : G.B, G.discardDown[k], rng) : chooseDiscards(k === 0 ? G.A : G.B, G.discardDown[k]))
     }
     if (G.capCash?.some(n => n > 0)) rec.capCash = G.capCash
     if (G.capSpill?.some(n => n > 0)) rec.capSpill = G.capSpill

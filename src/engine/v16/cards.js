@@ -29,7 +29,8 @@ export const SPEED_BAND16 = { P: [11, 20], C: [1, 10] }
 // read Pressure, Break and Guard (kinds: Heavy and Grab; Block), and card text prices specials and the Super in heat.
 export const TEXT16 = { heat: null }
 export function useHeatWords(rules) {
-  TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet, charge: rules.words === 'charge' }
+  TEXT16.heat = { special: rules.specialCost ?? 3, guardsQuiet: !!rules.guardsQuiet, charge: rules.words === 'charge',
+    meter: !!rules.breakBuilds, breakBuild: rules.breakBuilds || 0, stats: rules.statNames === 'charge-damage', flat: rules.flatBuild || 0, noDrain: rules.guardDrain === false, perRound: rules.greyPerRound ?? 1 }    // v22 (14 Nov): Charge as a meter
   Object.assign(LABEL16, { C: 'Break', R: 'Guard' })
   KINDS16.guardBreak.label = 'Heavy'
   KINDS16.guard.label = 'Block'
@@ -51,6 +52,14 @@ export const ICONS = {
 export const ICON_ORDER = ['starter', 'linker', 'ender', 'counter']
 // Safe (rules v18, 6 Nov): a card property shown with the icons
 export const SAFE_LINE = 'Safe: if a Guard beats this, it gets no follow-up.'
+// Range (v22): where an attack reaches, and what moves the fight. Guards reach anywhere.
+export const RANGE_NAME = { close: 'Close', far: 'Far' }
+export const REACH16 = {
+  close: { label: 'Close', line: 'Reach: Close. It can only be played while the fight is at Close.' },
+  far: { label: 'Far', line: 'Reach: Far. It can only be played while the fight is at Far.' },
+  both: { label: 'Close or Far', line: 'Reach: Close or Far. It can be played at either range.' },
+}
+export const moveTo = m => (m === 'push' ? 'far' : 'close')
 // Twin (rules v18, 8 Nov, Vex): a Linker that a second copy of itself can follow in a combo
 export const twinLine = name => `Twin: in a combo, a second ${name} can follow this one.`
 
@@ -85,7 +94,7 @@ export const NOW = {
   meter: { label: 'Meter', line: n => `Gain ${n} meter.` },
 }
 
-export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'core', 'art', 'flavour', 'notes']
+export const BASE_FIELDS16 = ['name', 'type', 'kind', 'speed', 'build', 'chip', 'copies', 'icons', 'onHit', 'cost', 'onLossSelf', 'meter', 'thisRound', 'now', 'stays', 'prevent', 'confiscate', 'discardDownTo', 'atClash', 'capHand', 'endsOn', 'special', 'orSelect', 'orFetch', 'reveal', 'parry', 'brace', 'noFollow', 'safe', 'twin', 'onBlock', 'blockConfiscate', 'throughSafe', 'followCombo', 'blockHeat', 'reach', 'move', 'blockMove', 'core', 'art', 'flavour', 'notes']
 
 // Rules v18 riders: what a clash card does On reveal (when it's your clash card and isn't voided)
 export const REVEAL18 = {
@@ -118,6 +127,9 @@ export function cardLines16(c, { isSuper = false } = {}) {
   else if (t === 'R' && c.noFollow) text.push('No follow-up.')
   else if (t === 'R') text.push('If it beats a Pressure, you may follow up with a Counter from your hand.')
   // Rules v21 (10 Nov): a fighter's own Guard pays out only if it beats a Pressure
+  // Range (v22): movers move the fight whether they win or lose; a Guard with blockMove moves it if it beats a Pressure
+  if (c.move) text.push(`Moves the fight to ${RANGE_NAME[moveTo(c.move)]}, win or lose. If the other clash card moves it the other way, neither moves.`)
+  if (t === 'R' && c.blockMove) text.push(`If it beats a Pressure: the fight moves to ${RANGE_NAME[moveTo(c.blockMove)]}.`)
   if (t === 'R' && c.throughSafe) text.push('You follow up even if the Pressure was Safe.')
   if (t === 'R' && c.followCombo) text.push('Your follow-up can start a combo.')
   if (t === 'R' && c.blockConfiscate) text.push(`If it beats a Pressure: Confiscate${c.blockConfiscate > 1 ? ` ×${c.blockConfiscate}` : ''}.`)
@@ -172,7 +184,7 @@ export function validateCard16(c, { isSuper = false } = {}) {
     if (!isInt(c.speed) || c.speed < band[0] || c.speed > (isSuper ? band[1] : top)) E(`Speed must be ${band[0]}–${isSuper ? band[1] : top}${t === 'P' && !isSuper ? ' (20 is kept for Supers)' : ''}.`)
   } else if (c.speed !== undefined) E('Only attacks have a speed.')
   if (t === 'P') { if (!isInt(c.build) || c.build < 1) E('A Pressure needs a Build of at least 1.') }
-  else if (c.build) E('Only Pressures build.')
+  else if (c.build && t !== 'C') E('Only attacks build.')                     // v22 (14 Nov): Breaks may carry their own Build
   if (c.chip !== undefined && (!isInt(c.chip) || c.chip < 0)) E('chip must be 0 or more.')
   if (t === 'C' && !(c.chip >= 1)) E('Every Convert chips (chip 1 or more).')
   if ((t === 'R' || t === 'N') && c.chip) { if (isSuper && t === 'R') W('A Recover Super that deals damage is a second verb (allowed on Supers).'); else E(`A ${t === 'R' ? 'Recover' : 'neutral card'} never deals damage.`) }
@@ -230,6 +242,10 @@ export function validateCard16(c, { isSuper = false } = {}) {
   }
   if (c.blockConfiscate !== undefined && (t !== 'R' || !isInt(c.blockConfiscate) || c.blockConfiscate < 1 || c.blockConfiscate > 3)) E('blockConfiscate is 1–3, on a Guard (Confiscate if it beats a Pressure).')
   for (const k of ['throughSafe', 'followCombo', 'blockHeat']) if (c[k] !== undefined && (t !== 'R' || c[k] !== true || c.brace || c.noFollow)) E(`${k} is true, on a Guard that follows up.`)
+  if (c.reach !== undefined && !['close', 'far', 'both'].includes(c.reach)) E('reach is "close", "far" or "both".')
+  if (c.reach !== undefined && t === 'R') W('Guards reach anywhere: reach on a Guard does nothing.')
+  if (c.move !== undefined && !['push', 'pull'].includes(c.move)) E('move is "push" (to Far) or "pull" (to Close).')
+  if (c.blockMove !== undefined && (t !== 'R' || !['push', 'pull'].includes(c.blockMove))) E('blockMove is "push" or "pull", on a Guard.')
   return { errors, warnings }
 }
 
@@ -290,6 +306,7 @@ function norm(c, isSuper) {
     reveal: c.reveal ?? null, parry: !!c.parry, brace: c.brace ?? null, noFollow: !!c.noFollow, safe: !!c.safe,
     twin: !!c.twin, onBlock: c.onBlock ?? null,
     blockConfiscate: c.blockConfiscate ?? 0, throughSafe: !!c.throughSafe, followCombo: !!c.followCombo, blockHeat: !!c.blockHeat,
+    reach: c.reach ?? null, move: c.move ?? null, blockMove: c.blockMove ?? null,         // range test (12 Nov): 'close' | 'far' | 'both'; 'push' | 'pull'
     sup: isSuper, src: c,
   }
 }
@@ -299,5 +316,5 @@ export function toFighter16(f) {
   const cards = f.cards.map(c => norm(c, false))
   const deck = []
   cards.forEach((c, i) => { for (let k = 0; k < c.copies; k++) deck.push(i) })
-  return { id: f.id, name: f.name, hp: f.hp, ...(f.greyCap ? { greyCap: f.greyCap } : {}), v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
+  return { id: f.id, name: f.name, hp: f.hp, ...(f.greyCap ? { greyCap: f.greyCap } : {}), ...(f.prefers ? { prefers: f.prefers } : {}), v16: true, cards, sup: f.super ? norm(f.super, true) : null, deck, ai: f.ai || null }
 }

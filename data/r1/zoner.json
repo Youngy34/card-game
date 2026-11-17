@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "zoner-r1",
+  "name": "Zoner",
+  "epithet": "Far range",
+  "prefers": "far",
+  "hp": 24,
+  "greyCap": 8,
+  "passive": null,
+  "concept": "Test fighter for the range test (13 Nov): wants Far. At Close only Poke, its movers (Fade Shot, Hop Kick), Throw and Guards reach.",
+  "cards": [
+    {
+      "name": "Poke",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 16,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "safe": true
+    },
+    {
+      "name": "Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 12,
+      "build": 3,
+      "chip": 2,
+      "copies": 3,
+      "icons": [],
+      "reach": "far",
+      "safe": true
+    },
+    {
+      "name": "Arc Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 14,
+      "build": 4,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "reach": "far"
+    },
+    {
+      "name": "Low Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 13,
+      "build": 3,
+      "chip": 0,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reach": "far",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Fade Shot",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 11,
+      "build": 2,
+      "chip": 1,
+      "copies": 2,
+      "icons": [],
+      "reach": "both",
+      "move": "push"
+    },
+    {
+      "name": "Charged Blast",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "far"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Hop Kick",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "move": "push"
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      }
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "read": true
+      }
+    },
+    {
+      "name": "Block",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3
+    },
+    {
+      "name": "Barrage",
+      "type": "pressure",
+      "kind": "projectile",
+      "speed": 15,
+      "build": 4,
+      "chip": 2,
+      "copies": 1,
+      "icons": [],
+      "reach": "far",
+      "special": true
+    },
+    {
+      "name": "Lance",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 5,
+      "chip": 4,
+      "copies": 1,
+      "icons": [],
+      "reach": "far",
+      "special": true
+    },
+    {
+      "name": "Deflect",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 1,
+      "special": true,
+      "onBlock": "staggered"
+    }
+  ],
+  "super": {
+    "name": "Beam",
+    "type": "pressure",
+    "kind": "projectile",
+    "speed": 20,
+    "build": 5,
+    "chip": 3,
+    "reach": "both"
+  }
+}

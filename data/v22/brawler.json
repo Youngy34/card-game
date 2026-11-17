@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 3,
+  "rules": 18,
+  "id": "brawler22",
+  "name": "Brawler",
+  "epithet": "Close range",
+  "prefers": "close",
+  "hp": 24,
+  "greyCap": 9,
+  "passive": null,
+  "concept": "v22 test fighter (13 Nov): wants Close. At Far only its movers (Dash Punch, Leaping Slam) and Guards reach.",
+  "cards": [
+    {
+      "name": "Jab",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 17,
+      "build": 1,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "close",
+      "safe": true
+    },
+    {
+      "name": "Hook",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 14,
+      "build": 3,
+      "chip": 2,
+      "copies": 3,
+      "icons": [
+        "linker",
+        "counter"
+      ],
+      "reach": "close"
+    },
+    {
+      "name": "Uppercut",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 12,
+      "build": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender",
+        "counter"
+      ],
+      "reach": "close",
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Dash Punch",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 13,
+      "build": 2,
+      "chip": 1,
+      "copies": 2,
+      "icons": [
+        "starter"
+      ],
+      "reach": "both",
+      "move": "pull"
+    },
+    {
+      "name": "Haymaker",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 11,
+      "build": 2,
+      "chip": 4,
+      "copies": 2,
+      "icons": [],
+      "reach": "both"
+    },
+    {
+      "name": "Throw",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 7,
+      "chip": 1,
+      "copies": 3,
+      "icons": [],
+      "reach": "close",
+      "onHit": "knockdown",
+      "build": 4
+    },
+    {
+      "name": "Body Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 3,
+      "chip": 3,
+      "copies": 3,
+      "icons": [
+        "starter"
+      ],
+      "reach": "close",
+      "build": 2
+    },
+    {
+      "name": "Leaping Slam",
+      "type": "convert",
+      "kind": "guardBreak",
+      "speed": 2,
+      "chip": 2,
+      "copies": 2,
+      "icons": [
+        "ender"
+      ],
+      "reach": "both",
+      "move": "pull",
+      "build": 3
+    },
+    {
+      "name": "Recall",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "recall": "attack"
+      }
+    },
+    {
+      "name": "Read",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "core": true,
+      "reveal": {
+        "read": true
+      }
+    },
+    {
+      "name": "Step In",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 3,
+      "blockMove": "pull"
+    },
+    {
+      "name": "Rush Strike",
+      "type": "pressure",
+      "kind": "strike",
+      "speed": 18,
+      "build": 2,
+      "chip": 1,
+      "copies": 1,
+      "icons": [
+        "starter",
+        "linker"
+      ],
+      "reach": "both",
+      "special": true,
+      "move": "pull"
+    },
+    {
+      "name": "Piledriver",
+      "type": "convert",
+      "kind": "grab",
+      "speed": 6,
+      "chip": 4,
+      "copies": 1,
+      "icons": [],
+      "reach": "close",
+      "special": true,
+      "onHit": "knockdown"
+    },
+    {
+      "name": "Parry",
+      "type": "recover",
+      "kind": "guard",
+      "copies": 1,
+      "special": true,
+      "onBlock": "staggered"
+    }
+  ],
+  "super": {
+    "name": "Giant Swing",
+    "type": "convert",
+    "kind": "guardBreak",
+    "speed": 10,
+    "chip": 5,
+    "onHit": "knockdown",
+    "reach": "close"
+  }
+}

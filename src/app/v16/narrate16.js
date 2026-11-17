@@ -47,6 +47,7 @@ export function outcomeTitle16(c, names) {
   }
 }
 
+const chips = n => (TEXT16.heat?.stats ? `deals ${n} damage` : `chips ${n}`)
 export function narrate16(ev, names) {
   const out = []
   const how = { clash: '', follow: 'Follow-up: ', link: 'Linker: ', end: 'Ender: ' }
@@ -54,9 +55,11 @@ export function narrate16(ev, names) {
     const who = names[e.side], them = names[1 - e.side]
     if (e.kind === 'hit' && TEXT16.heat) {
       // rules v20: the pile on them is the hitter's heat
-      if (e.t === 'P') out.push(`${how[e.how]}${e.name}: ${who} builds ${e.build} ${HN()}${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? hw(` ${who} is at max heat: ${e.spill} more lands on ${them} as damage.`, ` ${who} is Fully Charged: ${e.spill} more overloads onto ${them} as damage.`) : ''}`)
-      else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} smashes through: ${e.cash ? hw(`${who} spends ${e.cash} heat`, `${who} discharges ${e.cash} Charge`) : hw(`${who} has no heat to spend`, `${who} has no Charge to discharge`)} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
-      else if (e.t === 'R') out.push(`${who}'s ${e.name} ${hw('douses', 'drains')} ${e.cleared ? `${them}'s ${e.cleared} ${HN()}` : `nothing: ${them} had no ${HN()}`}${e.chip ? ` and chips ${e.chip}` : ''}.`)
+      if (e.t === 'P') out.push(`${how[e.how]}${e.name}: ${who} builds ${e.build} ${HN()}${e.chip ? ` and ${chips(e.chip)}` : ''}.${e.spill ? hw(` ${who} is at max heat: ${e.spill} more lands on ${them} as damage.`, ` ${who} is Fully Charged: ${e.spill} more overloads onto ${them} as damage.`) : ''}`)
+      else if (e.t === 'C' && e.build !== undefined) out.push(`${how[e.how]}${e.name} smashes through: ${who} builds ${e.build} ${HN()} and ${chips(e.chip)}.${e.spill ? ` ${who} is Fully Charged: ${e.spill} more overloads onto ${them} as damage.` : ''}`)
+      else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} ${chips(e.chip)}.` : `${how[e.how]}${e.name} smashes through: ${e.cash ? hw(`${who} spends ${e.cash} heat`, `${who} discharges ${e.cash} Charge`) : hw(`${who} has no heat to spend`, `${who} has no Charge to discharge`)} and ${chips(e.chip)}: ${e.cash + e.chip} damage.`)
+      else if (e.t === 'R' && TEXT16.heat.noDrain) out.push(`${who}'s ${e.name} stops the attack${e.chip ? ` and ${chips(e.chip)}` : ''}.`)
+      else if (e.t === 'R') out.push(`${who}'s ${e.name} ${hw('douses', 'drains')} ${e.cleared ? `${them}'s ${e.cleared} ${HN()}` : `nothing: ${them} had no ${HN()}`}${e.chip ? ` and ${chips(e.chip)}` : ''}.`)
     } else if (e.kind === 'hit') {
       if (e.t === 'P') out.push(`${how[e.how]}${e.name} puts ${e.build} grey on ${them}${e.chip ? ` and chips ${e.chip}` : ''}.${e.spill ? ` ${them}'s pile is full: ${e.spill} of it is lost as HP.` : ''}`)
       else if (e.t === 'C') out.push(e.how !== 'clash' && !e.cash ? `${how[e.how]}${e.name} chips ${e.chip}.` : `${how[e.how]}${e.name} ${e.cash ? `cashes ${them}'s ${e.cash} grey` : 'cashes an empty pile'} and chips ${e.chip}: ${e.cash + e.chip} damage.`)
@@ -70,6 +73,8 @@ export function narrate16(ev, names) {
     else if (e.kind === 'play' && e.sup) out.push(e.gone ? `${who} plays their Super, ${e.name}: it's used up for the game.` : `${who} spends meter on ${e.name}.`)
     else if (e.kind === 'confiscate') out.push(`${e.from} Confiscates: ${who} discards ${e.n} clash card${e.n === 1 ? '' : 's'} of their choice.`)
     else if (e.kind === 'ended') out.push(`${them}'s ${e.by} hits: ${who}'s ${e.name} is broken and discarded.`)
+    else if (e.kind === 'moveCancel') out.push('Both clash cards move the fight, opposite ways: it stays where it is.')
+    else if (e.kind === 'moved') out.push(`The fight moves to ${e.to === 'far' ? 'Far' : 'Close'}.`)
   }
   return out
 }

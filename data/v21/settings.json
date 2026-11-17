@@ -48,6 +48,24 @@
     "samples": 6,
     "neutralSamples": 3,
     "pooled": 1,
-    "mySamples": 4
+    "mySamples": 4,
+    "fit": {
+      "hp": 0.1222,
+      "charge": 0.0725,
+      "full": -0.0815,
+      "nP": 0.0909,
+      "nC": 0.0286,
+      "nR": 0.0621,
+      "spec": 0.156,
+      "counter": -0.0532,
+      "starter": 0.0084,
+      "combo": 0.0513,
+      "superReady": 0.4512,
+      "knockdown": -0.0946,
+      "staggered": -0.0604,
+      "deck": -0.0066,
+      "init": 0.0183
+    },
+    "fitNote": "Fitted 13 Nov 2026 to 33,437 Hard v Hard positions (tools/fit.py); value16 uses these in place of the hand-tuned weights."
   }
 }

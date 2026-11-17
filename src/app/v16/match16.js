@@ -12,11 +12,11 @@
 
 import { newGame16, applyNeutral16, startClash16, decideClash16, startDraw16, discardDown16, clashOptions16, neutralOptions16,
          card16, unseenPool, unseenCounts, superReady, statusList, iconOptions, speedOf, confiscate16, handLimitOf, neutralModes16, initOrder, tableCost,
-         readModes18, recallModes18, locked, capOf, buy20, buyOptions20, heatOf, ownCap } from '../../engine/v16/engine.js'
+         readModes18, recallModes18, locked, capOf, buy20, buyOptions20, heatOf, ownCap, reachOk } from '../../engine/v16/engine.js'
 import { toFighter16, fighterHash16 } from './fighters16.js'
 import { clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, chooseConfiscate, chooseMode16, chooseRead18, sampleIndex, LEVELS16, BOTS16, chooseBuy20, botBuy20 } from '../../engine/v16/ai.js'
 import { roundRecord16, winRoute16, snap16, randomReveal18 } from '../../engine/v16/game.js'
-import { LABEL16, STATUSES, hw, HN } from '../../engine/v16/cards.js'
+import { LABEL16, STATUSES, hw, HN, RANGE_NAME } from '../../engine/v16/cards.js'
 
 const HUMANS = { ai: [true, false], hotseat: [true, true], watch: [false, false] }
 export const WHO16 = { ai: ['You', 'Sparring partner'], hotseat: ['Player 1', 'Player 2'], watch: ['Partner 1', 'Partner 2'] }
@@ -358,6 +358,8 @@ export function buyList(m, side) {
   const X = P(m, side), h = heatOf(m.G, side)
   return buyOptions20(m.G, side).map(o => {
     if (o === null) return { opt: null, label: `Keep your ${HN()} (${h})` }
+    // v22: spend Charge to move the fight instead of buying
+    if (o === 'M') { const to = m.G.range === 'far' ? 'close' : 'far', cost = m.G.rules.chargeMove; return { opt: 'M', move: to, label: `Move the fight to ${RANGE_NAME[to]} for ${cost} ${HN()} (${h - cost} left)` } }
     const c = o === 'S' ? X.f.sup : X.f.cards[o], cost = tableCost(X, o)
     return { opt: o, card: c, sup: o === 'S', label: o === 'S' ? `Buy ${c.name}: all ${cost} ${HN()}` : `Buy ${c.name} for ${cost} ${HN()} (${h - cost} left)` }
   })
@@ -407,6 +409,7 @@ export function clashWhy(X) {
   return c => {
     if (c.t === 'N') return 'Neutral: play it in the neutral phase'
     if (X.st.lock?.[c.t]) return `Locked: voided if played`
+    if (X.at && !reachOk(c, X.at)) return `Out of reach at ${RANGE_NAME[X.at]}`
     return 'Unavailable'
   }
 }
@@ -423,10 +426,19 @@ export function boardNotes16(m, side) {
   if (m.G.rules.heat) {
     // rules v20: your heat is the pile on them, up to your own cap; theirs is the pile on you
     const mine = Y.pile, theirs = X.pile, myCap = ownCap(X, m.G.rules), theirCap = ownCap(Y, m.G.rules)
-    if (m.boughtNote?.[1 - side]) notes.push({ tone: 'bad', text: `${name} bought ${m.boughtNote[1 - side].name} for ${m.boughtNote[1 - side].cost} ${HN()} at the end of last round${m.boughtNote[1 - side].sup ? ': their Super is in their hand' : ''}.` })
-    if (mine >= myCap) notes.push({ tone: 'good', text: `${hw("You're at max heat", "You're Fully Charged")} (${mine} of ${myCap}): ${m.G.rules.roundHeatCaps ? `every Pressure that lands now hits ${name} in full: its Build is straight damage.` : hw(`heat you gain now lands on ${name} as damage, the round's 1 too.`, `Charge you gain now overloads onto ${name} as damage, the round's 1 too.`)} A Break that beats their Guard ${hw('spends', 'discharges')} all ${mine}; a Guard that beats your Pressure ${hw('douses', 'drains')} it.` })
-    else if (mine + 3 >= myCap) notes.push({ tone: 'good', text: `Your ${HN()} is ${mine} of ${myCap}: one Pressure hit could ${hw('take you to max', 'leave you Fully Charged')}.` })
-    if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is ${hw('at max heat', 'Fully Charged')} (${theirs} of ${theirCap}): ${m.G.rules.roundHeatCaps ? 'every Pressure of theirs that lands now hits you in full.' : hw('heat they gain lands on you as damage.', 'Charge they gain overloads onto you as damage.')} A Break of theirs that beats your Guard ${hw('spends', 'discharges')} all ${theirs}; your Guard beating their Pressure ${hw('douses', 'drains')} it.` })
+    const bn = m.boughtNote?.[1 - side]
+    if (bn) notes.push({ tone: 'bad', text: bn.move ? `${name} spent ${bn.cost} ${HN()} at the end of last round to move the fight to ${RANGE_NAME[bn.move]}.` : `${name} bought ${bn.name} for ${bn.cost} ${HN()} at the end of last round${bn.sup ? ': their Super is in their hand' : ''}.` })
+    // v22: where the fight is, and what reaches
+    if (m.G.rules.range && m.G.rules.rangeMode === 'cards' && m.G.range) {
+      const r = m.G.range, live = X.hand.filter(i => X.f.cards[i].t !== 'R' && reachOk(X.f.cards[i], r)).length, att = X.hand.filter(i => X.f.cards[i].t !== 'R').length
+      const want = X.f.prefers, theyWant = Y.f.prefers
+      notes.push({ tone: want === r ? 'good' : want ? 'bad' : '', text: `The fight is at ${RANGE_NAME[r]}${want ? (want === r ? ': your range' : `; you want ${RANGE_NAME[want]}`) : ''}. ${live} of your ${att} attacks in hand reach here; Guards always do.${theyWant && theyWant !== want ? ` ${name} wants ${RANGE_NAME[theyWant]}.` : ''}` })
+    }
+    if (mine >= myCap && m.G.rules.breakBuilds) notes.push({ tone: 'good', text: `You're Fully Charged (${mine} of ${myCap}): every attack of yours that lands now hits ${name} in full: the Charge it would build is straight damage. Spending ${HN()} (a special, a move) drops you below full.` })
+    else if (mine >= myCap) notes.push({ tone: 'good', text: `${hw("You're at max heat", "You're Fully Charged")} (${mine} of ${myCap}): ${m.G.rules.roundHeatCaps ? `every Pressure that lands now hits ${name} in full: its Build is straight damage.` : hw(`heat you gain now lands on ${name} as damage, the round's 1 too.`, `Charge you gain now overloads onto ${name} as damage, the round's 1 too.`)} A Break that beats their Guard ${hw('spends', 'discharges')} all ${mine}; a Guard that beats your Pressure ${hw('douses', 'drains')} it.` })
+    else if (mine + 3 >= myCap) notes.push({ tone: 'good', text: `Your ${HN()} is ${mine} of ${myCap}: one ${m.G.rules.breakBuilds ? 'attack that lands' : 'Pressure hit'} could ${hw('take you to max', 'leave you Fully Charged')}.` })
+    if (theirs >= theirCap && m.G.rules.breakBuilds) notes.push({ tone: 'bad', text: `${name} is Fully Charged (${theirs} of ${theirCap}): every attack of theirs that lands now hits you in full.` })
+    else if (theirs >= theirCap) notes.push({ tone: 'bad', text: `${name} is ${hw('at max heat', 'Fully Charged')} (${theirs} of ${theirCap}): ${m.G.rules.roundHeatCaps ? 'every Pressure of theirs that lands now hits you in full.' : hw('heat they gain lands on you as damage.', 'Charge they gain overloads onto you as damage.')} A Break of theirs that beats your Guard ${hw('spends', 'discharges')} all ${theirs}; your Guard beating their Pressure ${hw('douses', 'drains')} it.` })
     else if (theirs + 3 >= theirCap) notes.push({ tone: 'bad', text: `${name}'s ${HN()} is ${theirs} of ${theirCap}: one Pressure hit could ${hw('take them to max', 'leave them Fully Charged')}.` })
   } else {
   const gpr = m.G.rules.greyPerRound || 0, cX = capOf(X, m.G.rules), cY = capOf(Y, m.G.rules)
@@ -494,7 +506,7 @@ export function boardNotes16(m, side) {
     else if (myBest < theirBest) notes.push({ text: `${label} duel: they could hold a faster one (${theirBest}) than your fastest (${myBest}).` })
     else notes.push({ text: `${label} duel: your fastest and theirs could both be ${myBest}: a tie ${m.G.rules.speedTie === 'lowhp' ? 'goes to the player on less HP' : m.G.rules.speedTie === 'initiative' && (m.G.init === 0 || m.G.init === 1) ? (m.G.init === side ? 'goes to you (you hold the initiative)' : `goes to ${name} (they hold the initiative)`) : 'cancels'}.` })
   }
-  if (Y.pile > 0) notes.push({ tone: 'good', text: m.G.rules.heat ? `A Break of yours that beats their Guard ${hw('spends', 'discharges')} your ${Y.pile} ${HN()} as damage, plus its chip.` : `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
+  if (Y.pile > 0 && !m.G.rules.breakBuilds) notes.push({ tone: 'good', text: m.G.rules.heat ? `A Break of yours that beats their Guard ${hw('spends', 'discharges')} your ${Y.pile} ${HN()} as damage, plus its chip.` : `A Convert that beats ${name} cashes their ${Y.pile} grey, plus its chip.` })
   return notes
 }
 
