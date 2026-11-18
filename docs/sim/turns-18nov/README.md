@@ -4,7 +4,7 @@
 
 ## Verdict
 
-**Don't adopt B as written.** It fixes being *stuck* at the weak range, but it makes "I can barely play anything" more common, which was Mark's complaint. All three partners show it, and the partner on the second refit too. **Footwork is the cause.** Turns on their own are worth keeping as a candidate.
+**Don't adopt B as written** (nor A, tested after: see Option A below). It fixes being *stuck* at the weak range, but it makes "I can barely play anything" more common, which was Mark's complaint. All three partners show it, and the partner on the second refit too. **Footwork is the cause.** Turns on their own are worth keeping as a candidate.
 
 How sure: **confident about footwork**. Every partner shows the same thing, and a strong player loses nothing by never using it. **Moderately sure about turns alone**: that's one run on a partner fitted with footwork.
 
@@ -114,6 +114,53 @@ The run without footwork confirms the cause. With turns and two actions alone:
 - **Under turns, Overdrive matters much more:** never using it costs 15 points, against 4 today. The defender can't meet an EX with their own in the same clash. Overdrive isn't a reflex (it's bought in about 40% of turns), but if defence feels hopeless at the table, the lever the idea doc named is still there: a reversal.
 - **The knockdown's price nearly doubles** under turns (0.46 → 0.81 HP), because one action instead of two is a real loss.
 - **Two actions already let you turn a dead card into a move:** charge up a Throw at Far (2 Charge), then move with it, in one turn. That's a way out that costs a dead card, not a live one.
+
+## Option A: Today's Rules Plus Footwork (Today's Partner Only, 18 November, Evening)
+
+*Mark asked for this after B. It's today's rules (both players choose one end-of-round option, in initiative order) plus footwork, run with `--set footwork=true` on `data/v23tp2`. There was no refit. Predictions were added to `PREDICTIONS.md` before the run.*
+
+**Verdict: worse than B, and it fails the same bar.** It has B's card cost and adds ping-pong.
+
+| | Today | A | B (today's partner) |
+|---|---|---|---|
+| Brawler at Far: ≤2 choices | 29.8% | **54.2%** | 44.3% |
+| Brawler at Far: 1 choice | 6.4% | 22.5% | 14.0% |
+| Brawler: games with 3+ clashes in a row at ≤2 choices | 22.3% | **54.2%** | 40.7% |
+| Brawler: games with 2+ in a row at 1 choice | 8.1% | 30.8% | 15.9% |
+| Brawler: away spells of 3+ | 31.4% | 22.2% | 15.5% |
+| Brawler: hand at the clash | 5.40 | 4.38 | 4.66 |
+| Share of clashes Guarded | 41% | 32% | 36% |
+| End-of-round moves a game | 3.6 | 6.6 (footwork 3.2) | 4.6 |
+| Range changes a game | 4.4 | 5.3 | 6.8 |
+| Moves answered straight back | 28% | **43%** | 38% |
+| Brawler win | 45.3% | 48.5% | 46.6% |
+| First player | 47.8% | 53.2% | 49.5% |
+| Time-outs | 9.4% | 3.2% | 2.7% |
+| Swing | 13.4% | 6.8% | 19.0% |
+
+Other measurements:
+- **Mirrors:** Brawler mirror swing 20.1%, time-outs 5.0%; Zoner mirror swing 9.7%, time-outs 7.3%.
+- **Guard draws per player per game:** 2.72 (today 3.76).
+- **Ladder against Hard** (1,200 games each):
+  - never footwork 45.8%, so footwork is worth about 4 points;
+  - never Overdrive 40.7% (today 46.0%);
+  - Medium 38.5% (today 34.1%).
+
+**Why:**
+- Footwork is used more than under B (3.2 a game, against 2.1), so hands shrink further.
+- **Both players act at every end of round, so the second chooser can undo a move at once:**
+  - 6.6 moves a game produce only 5.3 range changes;
+  - 43% of moves are answered straight back, often costing a Guard each.
+- Swing falls, probably because smaller hands mean fewer combos. That's a side effect, not a reason to take it.
+- Under A, footwork is worth about 4 points to Hard, but mostly as a way to cancel the opponent's move.
+
+**Predictions against results:**
+- choices 38–44%: **missed, worse** (54%);
+- ping-pong above B's: **hit** (43%);
+- stuck spells (3+) 20–25%: **hit** (22%);
+- never footwork within 3 points: **just missed** (4 points, inside the noise).
+
+Files: `A_*.json`, `ladder_A_*.json`.
 
 ## Suggested next step
 

@@ -34,3 +34,10 @@ Written 18 November, before any sim run.
 - Ladder: Medium against Hard not above 40% (skill not lost).
 - Ping-pong: report how often a move is answered by a move straight back; a fail if it's most of them
   AND range changes go above 10 a game (range stops being a position at all).
+
+# Option A (today's rules plus footwork), today's partner only: predictions (18 Nov, 20:18, before the run)
+- Hands shrink as in B (about 0.5-0.7 cards at the clash), so Brawler at Far ≤2 choices rises from 30% to about 38-44%.
+- More ping-pong than B: moves answered straight back above B's 34-38% (today 28%).
+- Stuck spells shrink less than under B (3+ spells about 20-25%, B 16-17%).
+- Never using footwork costs Hard little (within 3 points).
+- Pass bar as for B: Brawler at Far ≤2 choices at or under 20%.
