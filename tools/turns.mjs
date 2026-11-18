@@ -23,7 +23,7 @@ function tally(games, names, prefs) {
     changes: 0, turnMoves: 0, answered: 0, fwMoves: 0, chMoves: 0, turns: 0, acts: { 0: 0, 1: 0, 2: 0 }, kinds: {},
     odBuys: 0, odDouble: 0, odRounds: 0, moveOd: 0, moveOdDmg: 0, otherOdDmg: 0, otherOdN: 0, selfZone: 0, zoneHits: 0,
     by: {} }
-  for (const nm of names) T.by[nm] = { clashAway: 0, le2Away: 0, one: 0, early: 0, earlyLe2: 0, clashHome: 0, le2Home: 0, spells: [], hand: 0, n: 0, guards: 0, cards: 0, choicesAway: 0, wins: 0 }
+  for (const nm of names) T.by[nm] = { clashAway: 0, le2Away: 0, one: 0, le2All: 0, poor3: 0, one2: 0, poorMax: [], early: 0, earlyLe2: 0, clashHome: 0, le2Home: 0, spells: [], hand: 0, n: 0, guards: 0, cards: 0, choicesAway: 0, wins: 0 }
   for (const { g, seat } of games) {
     const N = [names[seat[0]], names[seat[1]]], P = [prefs[seat[0]], prefs[seat[1]]]
     T.games++; T.rounds += g.rounds.length; T.lengths.push(g.rounds.length); if (g.timedOut) T.timeouts++
@@ -41,8 +41,11 @@ function tally(games, names, prefs) {
     for (const k of [0, 1]) {
       const B = T.by[N[k]]
       if (g.result !== 0.5) B.wins += k === 0 ? g.result : 1 - g.result
-      let run = 0
+      let run = 0, poor = 0, poorBest = 0, ones = 0, onesBest = 0
       g.rounds.forEach((r, i) => {
+        const c0 = r.choices?.[k] ?? 0
+        if (c0 <= 2) { B.le2All++; poor++; poorBest = Math.max(poorBest, poor) } else poor = 0
+        if (c0 <= 1) { ones++; onesBest = Math.max(onesBest, ones) } else ones = 0
         const away = r.rangeAt && P[k] && r.rangeAt !== P[k]
         B.n++; B.hand += r.handAtClash?.[k] || 0
         if (r.types?.[k]) { B.cards++; if (r.types[k] === 'R') B.guards++ }
@@ -57,6 +60,9 @@ function tally(games, names, prefs) {
         }
       })
       if (run) B.spells.push(run)
+      if (poorBest >= 3) B.poor3++
+      if (onesBest >= 2) B.one2++
+      B.poorMax.push(poorBest)
     }
     // range changes (clash to clash), turn moves, answered moves, actions, Overdrive
     g.rounds.forEach((r, i) => {
@@ -105,7 +111,8 @@ function report(T) {
       awayShare: f(B.clashAway, B.n), le2Away: f(B.le2Away, B.clashAway), oneAway: f(B.one, B.clashAway), meanChoicesAway: f(B.choicesAway, B.clashAway),
       earlyLe2Away: f(B.earlyLe2, B.early), le2Home: f(B.le2Home, B.clashHome),
       spellMean: f(B.spells.reduce((a, v) => a + v, 0), B.spells.length), spell3plus: f(B.spells.filter(v => v >= 3).length, B.spells.length), spellMax: Math.max(0, ...B.spells),
-      handAtClash: f(B.hand, B.n), guardShare: f(B.guards, B.cards) }]))
+      handAtClash: f(B.hand, B.n), guardShare: f(B.guards, B.cards),
+      le2Any: f(B.le2All, B.n), gamesPoor3: f(B.poor3, B.poorMax.length), gamesOne2: f(B.one2, B.poorMax.length) }]))
   }
   return out
 }
@@ -115,7 +122,10 @@ function print(o) {
   console.log(`range changes/game ${d(o.rangeChangesPerGame)} · end-of-round moves/game ${d(o.turnMovesPerGame)} (footwork ${d(o.footworkPerGame)}, Charge ${d(o.chargeMovesPerGame)}) · answered straight back ${p(o.answeredShare)} · zone then own move ${d(o.selfZonePerGame)}/game`)
   console.log(`turns: no action ${p(o.actions.none)}, one ${p(o.actions.one)}, two ${p(o.actions.two)} · actions/game ${Object.entries(o.kindsPerGame).map(([k, v]) => `${k} ${d(v)}`).join(', ')}`)
   console.log(`Overdrive: buys/game ${d(o.odBuysPerGame)}, double ${d(o.odDoublePerGame)}, rounds in it ${d(o.odRoundsPerGame)} · Damage in the clash after move+Overdrive ${d(o.dmgAfterMoveOd)} (${d(o.moveOdPerGame)}/game), after other Overdrive ${d(o.dmgAfterOtherOd)}`)
-  for (const [nm, B] of Object.entries(o.by)) console.log(`  ${nm}: away ${p(B.awayShare)} · at the weak range ≤2 choices ${p(B.le2Away)}, 1 choice ${p(B.oneAway)}, mean ${d(B.meanChoicesAway)} · rounds 1-4 away ≤2 ${p(B.earlyLe2Away)} · home ≤2 ${p(B.le2Home)} · away spells mean ${d(B.spellMean)}, 3+ ${p(B.spell3plus)}, longest ${B.spellMax} · hand ${d(B.handAtClash)} · Guard share ${p(B.guardShare)}`)
+  for (const [nm, B] of Object.entries(o.by)) {
+    console.log(`  ${nm}: away ${p(B.awayShare)} · at the weak range ≤2 choices ${p(B.le2Away)}, 1 choice ${p(B.oneAway)}, mean ${d(B.meanChoicesAway)} · rounds 1-4 away ≤2 ${p(B.earlyLe2Away)} · home ≤2 ${p(B.le2Home)} · away spells mean ${d(B.spellMean)}, 3+ ${p(B.spell3plus)}, longest ${B.spellMax} · hand ${d(B.handAtClash)} · Guard share ${p(B.guardShare)}`)
+    console.log(`     ≤2 choices anywhere ${p(B.le2Any)} · games with 3+ clashes in a row at ≤2 ${p(B.gamesPoor3)} · games with 2+ in a row at 1 ${p(B.gamesOne2)}`)
+  }
 }
 
 if (poolArg) {
