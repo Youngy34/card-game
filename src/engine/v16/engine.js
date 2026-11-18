@@ -447,6 +447,15 @@ export function confiscate16(G, side, cards) {
 export const owes = G => [G.A.owe || 0, G.B.owe || 0]
 // The order players act in wherever an order is needed: the initiative holder first
 export const initOrder = G => (G.init === 1 ? [1, 0] : [0, 1])
+// turns (18 Nov, option B): only the initiative holder takes the end-of-round turn, with rules.turnActions actions (2);
+// knocked down (this round, or in force this round from the last), one action
+export const turnActionsOf = (G, side) => {
+  const X = side === 0 ? G.A : G.B, n = G.rules.turnActions ?? 2
+  return X.next?.knockdown || X.st?.knockdown ? Math.min(1, n) : n
+}
+const turnOrder = G => { const k = G.init === 1 ? 1 : 0; return Array(turnActionsOf(G, k)).fill(k) }
+// The kind of an end-of-round option, for the one-move and one-zone limits within a turn
+const actKind = o => (o === null || o === undefined ? null : o === 'M' || (typeof o === 'string' && o.startsWith('W:')) ? 'move' : typeof o === 'string' && o.startsWith('Z:') ? 'zone' : typeof o === 'string' && o.startsWith('U:') ? 'chargeUp' : o === 'O' ? 'od' : String(o))
 
 // A player's grey cap: the fighter's own, else the rule's; 0 when the rule's cap is off
 // Rules v20 (heat): the pile on X is the opponent's heat, so its cap is the opponent's (X.oppCap)
@@ -932,7 +941,7 @@ export function startDraw16(G) {
   }
   const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', capCash, capSpill }
   // Rules v20: before discarding down, each player in initiative order may spend heat at the table
-  if (G.rules.heat) return nextBuy20(syncOwn({ ...g, phase: 'buy', bought: [null, null], buyLeft: initOrder(g) }))
+  if (G.rules.heat) return nextBuy20(syncOwn({ ...g, phase: 'buy', bought: [null, null], buyLeft: G.rules.turns ? turnOrder(g) : initOrder(g), turnActs: [] }))
   return toDiscardDown(syncOwn(g))
 }
 // The draw step's last part: who must discard down to the hand limit (or on to the next round)
@@ -955,11 +964,14 @@ export function buyOptions20(G, side) {
   const out = [null]
   // knockdownNoOption (17 Nov, Mark): knocked down this round, you can't take the end-of-round option (no move, no
   // Overdrive); you're on the floor. Only the other player can change the range. It ends once your next clash is over.
-  if (G.rules.knockdownNoOption && X.next?.knockdown) return out
+  if (G.rules.knockdownNoOption && !G.rules.turns && X.next?.knockdown) return out
+  const done = G.rules.turns ? (G.turnActs || []) : []
   for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
   if (X.superAt === 'table' && X.f.sup && X.heatCost?.sup > 0 && heat >= X.heatCost.sup) out.push('S')
   // chargeMove (13 Nov): instead of buying, spend that much Charge to move the fight (Close to Far, or Far to Close)
-  if (G.rules.chargeMove && G.rules.range && G.rules.rangeMode === 'cards' && heat >= G.rules.chargeMove) out.push('M')
+  if (G.rules.chargeMove && G.rules.range && G.rules.rangeMode === 'cards' && heat >= G.rules.chargeMove && !done.includes('move')) out.push('M')
+  // footwork (18 Nov, option B): move the fight by discarding a Guard instead of paying Charge ('W:<card>')
+  if (G.rules.footwork && G.rules.range && G.rules.rangeMode === 'cards' && !done.includes('move')) for (const i of new Set(X.hand)) if (X.f.cards[i].t === 'R') out.push(`W:${i}`)
   if (G.rules.stance2 || G.rules.sides) out.push('F')                  // stance test / sides: flip your fighter card instead of buying
   // v23 (16 Nov): Overdrive for G.rules.overdrive Charge (going in, or staying in), and the exchange: put a card from
   // your hand into your discard pile and take a different card from it ('X:<give>:<take>')
@@ -967,7 +979,7 @@ export function buyOptions20(G, side) {
   // chargeUp (17 Nov, Mark): discard an attack from your hand and gain its Charge ('U:<card>')
   if (G.rules.chargeUp) for (const i of new Set(X.hand)) { const c = X.f.cards[i]; if ((c.t === 'P' || c.t === 'C') && (c.build || 0) > 0) out.push(`U:${i}`) }
   // Zone (17 Nov, the Zoner's ability): at Far, set a Pressure from your hand face down ('Z:<card>')
-  if (X.f.ability === 'zone' && G.range === 'far') for (const i of new Set(X.hand)) if (X.f.cards[i].t === 'P') out.push(`Z:${i}`)
+  if (X.f.ability === 'zone' && G.range === 'far' && !done.includes('zone')) for (const i of new Set(X.hand)) if (X.f.cards[i].t === 'P') out.push(`Z:${i}`)
   if (G.rules.exchange && X.discard.length && X.hand.length) {
     const inPile = [...new Set(X.discard.map(d => d.i))], ex = []
     for (const g of new Set(X.hand)) for (const t of inPile) if (t !== g) ex.push(`X:${g}:${t}`)
@@ -1011,6 +1023,17 @@ export function applyBuy20(G, side, choice) {
 }
 function applyBuy20raw(G, side, choice) {
   if (choice === null || choice === undefined) return G
+  if (G.rules.turns) {
+    const g = applyBuy20one({ ...G, bought: [null, null] }, side, choice), b = g.bought[side]
+    const prev = G.bought?.[side], acts = [...(prev?.acts || (prev ? [prev] : [])), b]
+    // the turn's record: every action in acts; the flags any of them set (move, od, chargeUp, zone) on the record itself
+    const merged = prev ? { ...prev, ...b, name: acts.map(a => a.name).join('+'), cost: acts.reduce((t, a) => t + (a.cost || 0), 0), od: acts.some(a => a.od), move: acts.find(a => a.move)?.move, chargeUp: acts.some(a => a.chargeUp), zone: acts.some(a => a.zone), footwork: acts.some(a => a.footwork), acts } : { ...b, acts }
+    const bought = (G.bought || [null, null]).slice(); bought[side] = merged
+    return { ...g, bought, turnActs: [...(G.turnActs || []), actKind(choice)] }
+  }
+  return applyBuy20one(G, side, choice)
+}
+function applyBuy20one(G, side, choice) {
   if (typeof choice === 'string' && choice.includes('|')) {
     // exchangeFree: an option and an exchange together
     const [first, second] = choice.split('|'), opt = /^\d+$/.test(first) ? +first : first
@@ -1020,7 +1043,8 @@ function applyBuy20raw(G, side, choice) {
     return { ...g2, bought }
   }
   if (choice === 'O') {
-    const X = { ...(side === 0 ? G.A : G.B), odNext: true }, Y = { ...(side === 0 ? G.B : G.A) }
+    // turns: each Overdrive action covers one clash; taken as both actions, your next two clashes
+    const X = { ...(side === 0 ? G.A : G.B), odNext: G.rules.turns ? (+(side === 0 ? G.A : G.B).odNext || 0) + 1 : true }, Y = { ...(side === 0 ? G.B : G.A) }
     Y.pile -= G.rules.overdrive
     const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'overdrive', cost: G.rules.overdrive, sup: false, od: true, staying: !!X.od }
     return side === 0 ? { ...G, A: X, B: Y, bought } : { ...G, A: Y, B: X, bought }
@@ -1036,6 +1060,15 @@ function applyBuy20raw(G, side, choice) {
     const bought = (G.bought || [null, null]).slice()
     bought[side] = { name: 'exchange', cost: 0, sup: false, exchange: true, give: X.f.cards[g].name, take: X.f.cards[t].name, takeI: t }
     return side === 0 ? { ...G, A: X, bought } : { ...G, B: X, bought }
+  }
+  if (typeof choice === 'string' && choice.startsWith('W:')) {
+    // footwork: the Guard goes to the discard pile and the fight moves (a zone can go off)
+    const i = +choice.slice(2), X = cloneP(side === 0 ? G.A : G.B)
+    takeFromHand(X, i); toDiscard(X, i, G.rules)
+    const r = G.range === 'far' ? 'close' : 'far'
+    const bought = (G.bought || [null, null]).slice(); bought[side] = { name: 'footwork', cost: 0, sup: false, move: r, footwork: true, card: X.f.cards[i].name }
+    const A = side === 0 ? X : G.A, B = side === 0 ? G.B : X
+    return zoneHits({ ...G, range: r, A: { ...A, at: r }, B: { ...B, at: r }, bought }, null)
   }
   if (choice === 'M') {
     const Y = { ...(side === 0 ? G.B : G.A) }; Y.pile -= G.rules.chargeMove
@@ -1097,7 +1130,9 @@ export function buy20(G, side, choice) {
   if (G.phase !== 'buy' || G.buying !== side) throw new Error('not your turn to buy')
   if (choice === undefined) choice = null
   if (!buyOptions20(G, side).includes(choice)) throw new Error("can't buy that")
-  const g = applyBuy20({ ...G, buyLeft: G.buyLeft.filter(k => k !== side), buying: null }, side, choice)
+  // turns: each pick is one action; passing (null) ends the turn
+  const left = G.rules.turns && choice !== null ? G.buyLeft.slice(1) : G.buyLeft.filter(k => k !== side)
+  const g = applyBuy20({ ...G, buyLeft: left, buying: null }, side, choice)
   return nextBuy20(g)
 }
 
@@ -1133,7 +1168,7 @@ export function finishRound16(G) {
     if (X.zone != null && G.round > X.zoneRound) { X.discard = [...X.discard, { i: X.zone, burned: false, zone: true }]; X.zone = null; X.zoneRound = null }
     X.st = X.next; X.next = {}
     // v23: Overdrive bought this round is on for the next; anyone who didn't buy it flips back
-    if (G.rules.overdrive) { X.od = !!X.odNext; X.odNext = false }
+    if (G.rules.overdrive) { const n = +X.odNext || 0; X.od = n > 0; X.odNext = n > 1 ? n - 1 : false }
     // Rules v18: Knockdown is Lock Pressure next round
     if (G.rules.knockdownLocks && X.st.knockdown) X.st = { ...X.st, lock: { ...(X.st.lock || {}), P: true } }
   }

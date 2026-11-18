@@ -1,7 +1,7 @@
 // Rules v16: whole games between sparring partners (or bots), round records
 // shared with the app's log, and the balance report the Lab and sim16 print.
 
-import { newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20, reachOk } from './engine.js'
+import { clashOptions16, newGame16, applyNeutral16, runClash16, startDraw16, discardDown16, card16, statusList, DEFAULT_RULES16, confiscate16, initOrder, readModes18, recallModes18, locked, buy20, reachOk } from './engine.js'
 import { DEFAULT_W16, LEVELS16, BOTS16, clashMix16, neutralChoice16, bestChoice16, botNeutral, botClash, chooseDiscards, sampleIndex, afterNeutral, jointMix16, chooseConfiscate, chooseMode16, chooseRead18, chooseBuy20, botBuy20, stanceMix16 } from './ai.js'
 import { homeward } from './cards.js'
 
@@ -173,6 +173,7 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
       if (!BOTS16[levels[k]]) opts[k] = chooseRead18(G, k, picks, opts, Ws[k])
       else if (levels[k] === 'random') opts[k] = randomReveal18(G, k, picks[k], rng)     // the random bot's rider choices are random too
     }
+    const choicesAt = [clashOptions16(G.A, G.rules).length, clashOptions16(G.B, G.rules).length]   // 18 Nov: different playable cards
     const handAtClash = [G.A.hand.length, G.B.hand.length], initHeld = G.init, rangeAt = G.range, sidesAt = [G.A.side, G.B.side]
     const odAt = [!!G.A.od, !!G.B.od]                     // v23: in Overdrive this round
     // escape check (14 Nov): what each player held at the clash to get the fight to their own range
@@ -189,6 +190,7 @@ export function playGame18(fa, fb, { rules, W = DEFAULT_W16, Ws = [W, W], levels
     const post = payConfiscates(G, levels, Ws, rng); G = post.G
     const rec = roundRecord16(G.round, before, G, none)
     rec.handAtClash = handAtClash
+    rec.choices = choicesAt
     if (G.stance) rec.stance = G.stance
     if (G.rules.range) { rec.range = G.range || 'close'; rec.whiffs = G.clash.events.filter(e => e.kind === 'whiff').map(e => e.side) }
     if (G.rules.stance2) rec.sides = [G.A.side || 'rush', G.B.side || 'rush']

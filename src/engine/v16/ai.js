@@ -484,13 +484,22 @@ export function chooseBuy20(G, side, W, rng, level = 'hard', keep = null) {
   const deal = dealer(op, rng)
   const hands = Array.from({ length: W.buySamples ?? W.neutralSamples ?? 3 }, deal)
   const Wq = { ...W, mySamples: 1 }
-  const values = opts.map(o => {
-    let g = applyBuy20(G, side, o)
-    // look at the position the next clash starts from: statuses move on (discards and the shuffle aside)
-    const on = X => ({ ...X, st: X.next, next: {}, fx: {}, ...(G.rules.overdrive ? { od: !!X.odNext, odNext: false } : {}) })
-    g = { ...g, A: on(g.A), B: on(g.B), phase: 'clash', round: G.round + 1, init: G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init }
-    return clashMix16(g, side, Wq, rng, 'hard', hands).value
-  })
+  // look at the position the next clash starts from: statuses move on (discards and the shuffle aside)
+  const on = X => { const n = +X.odNext || 0; return { ...X, st: X.next, next: {}, fx: {}, ...(G.rules.overdrive ? { od: n > 0, odNext: n > 1 ? n - 1 : false } : {}) } }
+  const score = g => clashMix16({ ...g, A: on(g.A), B: on(g.B), phase: 'clash', round: G.round + 1, init: G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init }, side, Wq, rng, 'hard', hands).value
+  let values = opts.map(o => score(applyBuy20(G, side, o)))
+  // turns (18 Nov, option B): on the first of two actions, look at pairs: the best few first actions, each with its best second
+  const picksLeft = G.rules.turns ? (G.buyLeft || []).filter(k => k === side).length : 1
+  if (picksLeft >= 2) {
+    const top = opts.map((o, j) => [o, values[j], j]).filter(x => x[0] !== null).sort((x, y) => y[1] - x[1]).slice(0, W.pairShortlist ?? 3)
+    values = values.slice()
+    for (const [o, v, j] of top) {
+      const g1 = applyBuy20(G, side, o)
+      const o2s = buyOptions20(g1, side).filter(x => x !== null && (!keep || keep(x)))
+      for (const o2 of o2s) values[j] = Math.max(values[j], score(applyBuy20(g1, side, o2)))
+      values[j] = Math.max(values[j], v)
+    }
+  }
   const lambda = LEVELS16[level]?.neutral ?? 60
   const p = softmax(values, lambda)
   let r = rng(), k = p.length - 1
@@ -504,7 +513,7 @@ export function botBuy20(G, side, bot, rng) {
   if (bot === 'random') {
     // v23: pick a kind of option at random (nothing, a purchase, move, Overdrive, the exchange), then one of that kind,
     // so the exchange's many swaps don't crowd out everything else
-    const kindOf = o => (o === null ? 'none' : typeof o === 'string' && o.includes('X:') ? String(o).split('X:')[0] + 'X' : typeof o === 'string' && /^[TUZ]:/.test(o) ? o[0] : String(o))
+    const kindOf = o => (o === null ? 'none' : typeof o === 'string' && o.includes('X:') ? String(o).split('X:')[0] + 'X' : typeof o === 'string' && /^[TUZW]:/.test(o) ? o[0] : String(o))
     const kinds = [...new Set(opts.map(kindOf))], k = kinds[Math.floor(rng() * kinds.length)], of = opts.filter(o => kindOf(o) === k)
     return of[Math.floor(rng() * of.length)]
   }

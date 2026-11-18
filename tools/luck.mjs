@@ -292,12 +292,13 @@ function run(a, b, kind, sd = seed) {
       const s = +kind.at(-1), mv = kind[4] === 'm'
       const noTable = (G, k, r) => { const X = k === 0 ? G.A : G.B, Y = { ...X, table: [], superAt: X.superAt === 'table' ? 'gone' : X.superAt }; return chooseBuy20(k === 0 ? { ...G, A: Y } : { ...G, B: Y }, k, W, r) }
       buyers[s] = (G, k, r) => { const o = buyOptions20(G, k); if (o.includes('S')) return 'S'; return mv ? noTable(G, k, r) : null }
-    } else if (/^(odg|nod|nex|nsp|onlyod|ncu|nzn)[01]$/.test(kind)) {
+    } else if (/^(odg|nod|nex|nsp|onlyod|ncu|nzn|nfw)[01]$/.test(kind)) {
       // v23 (16 Nov): one side Overdrives whenever it can ('odg'), never Overdrives ('nod'), never exchanges ('nex'),
       // never spends Charge ('nsp': no Overdrive, no moving), or spends only on Overdrive ('onlyod': no moving)
       const s = +kind.at(-1), how = kind.slice(0, -1)
       const parts = o => (o === null ? [] : String(o).split('|')), has = (o, p) => parts(o).some(x => x === p || (p === 'X' && x.startsWith('X:')))
-      const keep = { nod: o => !has(o, 'O'), nex: o => !has(o, 'X'), nsp: o => !has(o, 'O') && !has(o, 'M'), onlyod: o => !has(o, 'M'), ncu: o => !(o !== null && String(o).startsWith('U:')), nzn: o => !(o !== null && String(o).startsWith('Z:')) }[how]     // ncu (17 Nov): never charges up
+      const keep = { nod: o => !has(o, 'O'), nex: o => !has(o, 'X'), nsp: o => !has(o, 'O') && !has(o, 'M'), onlyod: o => !has(o, 'M'), ncu: o => !(o !== null && String(o).startsWith('U:')), nzn: o => !(o !== null && String(o).startsWith('Z:')),
+        nfw: o => !(o !== null && String(o).startsWith('W:')) }[how]     // nfw (18 Nov, turns): never uses footwork     // ncu (17 Nov): never charges up
       buyers[s] = how === 'odg' ? (G, k, r) => (buyOptions20(G, k).includes('O') ? 'O' : chooseBuy20(G, k, Ws[k], r)) : (G, k, r) => chooseBuy20(G, k, Ws[k], r, 'hard', keep)
     } else if (kind === 'kb0') { Ws = [dropKeys(W), W]
     } else if (kind === 'kb1') { Ws = [W, dropKeys(W)]
