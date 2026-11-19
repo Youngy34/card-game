@@ -162,11 +162,17 @@ Other measurements:
 
 Files: `A_*.json`, `ladder_A_*.json`.
 
-## Suggested next step
+## Suggested next step (revised 18 November, night; parked by Mark 19 November)
 
-Sim **turns plus a footwork that doesn't cost a card**: discard a Guard to move, then draw a card. It's hand-neutral. It runs the deck about one card faster per player per game, and time-outs have room (3–7% under turns).
-
-Compare it with **turns alone**, each with its own refit. Option D (start with 2 Charge) is still the cheapest test of the opening.
+- **Withdrawn: footwork that draws** (discard a Guard to move, then draw a card).
+  - Mark pointed out it's nearly free: a Guard swapped for a random card is about even in cards, and the deck clock has room. Its only cost is one of two actions.
+  - That makes it close to a reflex: most turns would end at the actor's range, so range becomes a fixed rhythm rather than a position.
+- **Suggested instead, if this is picked up again:** turns alone, against turns plus **dead-card footwork**, each with its own refit.
+  - Dead-card footwork: move by discarding an attack that can't reach at the current range.
+  - It costs a real card (one that would be live after the move), but nothing you can play this clash.
+  - It mostly helps the player who's stuck, since they hold the dead cards. The Brawler at Close has none.
+  - Check that it's a decision with a partner that never uses it.
+- **Parked by Mark (19 November):** leave it for now.
 
 ## Files
 
