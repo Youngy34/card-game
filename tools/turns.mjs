@@ -21,7 +21,7 @@ function tally(games, names, prefs) {
   // index by fighter name so both seat orders pool
   const T = { games: 0, rounds: 0, bWins: 0, firstWins: 0, firstN: 0, timeouts: 0, lengths: [], decided: 0, decisive: 0,
     changes: 0, turnMoves: 0, answered: 0, fwMoves: 0, chMoves: 0, turns: 0, acts: { 0: 0, 1: 0, 2: 0 }, kinds: {},
-    odBuys: 0, odDouble: 0, odRounds: 0, moveOd: 0, moveOdDmg: 0, otherOdDmg: 0, otherOdN: 0, selfZone: 0, zoneHits: 0,
+    odBuys: 0, odDouble: 0, eitherOd: 0, bothOd: 0, cuMove: 0, kd: 0, pActs: { 0: 0, 1: 0, 2: 0 }, pTurns: 0, firstMoves: 0, firstUndone: 0, secondMoves: 0, nextDecided: 0, nextSecondWins: 0, moveOdFirst: 0, moveOdSecond: 0, odRounds: 0, moveOd: 0, moveOdDmg: 0, otherOdDmg: 0, otherOdN: 0, selfZone: 0, zoneHits: 0,
     by: {} }
   for (const nm of names) T.by[nm] = { clashAway: 0, le2Away: 0, one: 0, le2All: 0, poor3: 0, one2: 0, poorMax: [], early: 0, earlyLe2: 0, clashHome: 0, le2Home: 0, spells: [], hand: 0, n: 0, guards: 0, cards: 0, choicesAway: 0, wins: 0 }
   for (const { g, seat } of games) {
@@ -91,6 +91,22 @@ function tally(games, names, prefs) {
         }
       }
       for (const k of [0, 1]) if (r.od?.[k]) T.odRounds++
+      // 22 Nov (both act): every player's actions, the holder's move undone in the same end of round, who wins the next clash
+      if (r.od) { if (r.od[0] || r.od[1]) T.eitherOd++; if (r.od[0] && r.od[1]) T.bothOd++ }
+      for (const k of [0, 1]) if ((r.statuses?.[k] || []).includes('Knockdown')) T.kd++
+      const h = r.init === 0 || r.init === 1 ? r.init : null
+      for (const k of [0, 1]) {
+        const b = r.bought?.[k], acts = b ? (b.acts || [b]) : []
+        if (nx) { T.pTurns++; T.pActs[Math.min(2, acts.length)]++ }
+        if (acts.some(a => a.chargeUp) && b?.move) T.cuMove++
+        if (b?.move && acts.some(a => a.od)) { if (k === h) T.moveOdFirst++; else T.moveOdSecond++ }
+      }
+      if (h !== null && nx) {
+        const bf = r.bought?.[h], bs = r.bought?.[1 - h]
+        if (bf?.move) { T.firstMoves++; if (bs?.move && bs.move !== bf.move) T.firstUndone++ }
+        if (bs?.move) T.secondMoves++
+        if (nx.winner === 0 || nx.winner === 1) { T.nextDecided++; if (nx.winner === 1 - h) T.nextSecondWins++ }
+      }
     })
   }
   return T
@@ -106,6 +122,10 @@ function report(T) {
     actions: { none: f(T.acts[0], T.turns), one: f(T.acts[1], T.turns), two: f(T.acts[2], T.turns) },
     kindsPerGame: Object.fromEntries(Object.entries(T.kinds).map(([k, v]) => [k, f(v, T.games)])),
     odBuysPerGame: f(T.odBuys, T.games), odDoublePerGame: f(T.odDouble, T.games), odRoundsPerGame: f(T.odRounds, T.games),
+    eitherOdShare: f(T.eitherOd, T.rounds), bothOdShare: f(T.bothOd, T.rounds), cuMovePerGame: f(T.cuMove, T.games), knockdownsPerGame: f(T.kd, T.games),
+    playerActs: { none: f(T.pActs[0], T.pTurns), one: f(T.pActs[1], T.pTurns), two: f(T.pActs[2], T.pTurns) },
+    firstMovesPerGame: f(T.firstMoves, T.games), firstUndoneShare: f(T.firstUndone, T.firstMoves), secondMovesPerGame: f(T.secondMoves, T.games),
+    secondWinsNextClash: f(T.nextSecondWins, T.nextDecided), moveOdFirstPerGame: f(T.moveOdFirst, T.games), moveOdSecondPerGame: f(T.moveOdSecond, T.games),
     dmgAfterMoveOd: f(T.moveOdDmg, T.moveOd), moveOdPerGame: f(T.moveOd, T.games), dmgAfterOtherOd: f(T.otherOdDmg, T.otherOdN),
     by: Object.fromEntries(Object.entries(T.by).map(([nm, B]) => [nm, {
       awayShare: f(B.clashAway, B.n), le2Away: f(B.le2Away, B.clashAway), oneAway: f(B.one, B.clashAway), meanChoicesAway: f(B.choicesAway, B.clashAway),
@@ -122,6 +142,7 @@ function print(o) {
   console.log(`range changes/game ${d(o.rangeChangesPerGame)} · end-of-round moves/game ${d(o.turnMovesPerGame)} (footwork ${d(o.footworkPerGame)}, Charge ${d(o.chargeMovesPerGame)}) · answered straight back ${p(o.answeredShare)} · zone then own move ${d(o.selfZonePerGame)}/game`)
   console.log(`turns: no action ${p(o.actions.none)}, one ${p(o.actions.one)}, two ${p(o.actions.two)} · actions/game ${Object.entries(o.kindsPerGame).map(([k, v]) => `${k} ${d(v)}`).join(', ')}`)
   console.log(`Overdrive: buys/game ${d(o.odBuysPerGame)}, double ${d(o.odDoublePerGame)}, rounds in it ${d(o.odRoundsPerGame)} · Damage in the clash after move+Overdrive ${d(o.dmgAfterMoveOd)} (${d(o.moveOdPerGame)}/game), after other Overdrive ${d(o.dmgAfterOtherOd)}`)
+  if (o.playerActs) console.log(`both act: players' actions none ${p(o.playerActs.none)}, one ${p(o.playerActs.one)}, two ${p(o.playerActs.two)} · either / both in Overdrive ${p(o.eitherOdShare)} / ${p(o.bothOdShare)} · charge up + move ${d(o.cuMovePerGame)}/game · knockdowns ${d(o.knockdownsPerGame)}/game · first player's moves ${d(o.firstMovesPerGame)}/game, undone ${p(o.firstUndoneShare)} · second's moves ${d(o.secondMovesPerGame)} · second player wins the next clash ${p(o.secondWinsNextClash)} · move+OD first ${d(o.moveOdFirstPerGame)}, second ${d(o.moveOdSecondPerGame)}`)
   for (const [nm, B] of Object.entries(o.by)) {
     console.log(`  ${nm}: away ${p(B.awayShare)} · at the weak range ≤2 choices ${p(B.le2Away)}, 1 choice ${p(B.oneAway)}, mean ${d(B.meanChoicesAway)} · rounds 1-4 away ≤2 ${p(B.earlyLe2Away)} · home ≤2 ${p(B.le2Home)} · away spells mean ${d(B.spellMean)}, 3+ ${p(B.spell3plus)}, longest ${B.spellMax} · hand ${d(B.handAtClash)} · Guard share ${p(B.guardShare)}`)
     console.log(`     ≤2 choices anywhere ${p(B.le2Any)} · games with 3+ clashes in a row at ≤2 ${p(B.gamesPoor3)} · games with 2+ in a row at 1 ${p(B.gamesOne2)}`)
@@ -135,7 +156,7 @@ if (poolArg) {
   for (const q of parts.slice(1)) {
     for (const k of Object.keys(q)) {
       if (k === 'by') { for (const nm of Object.keys(q.by)) { const A = T.by[nm] || (T.by[nm] = q.by[nm]); if (A === q.by[nm]) continue; for (const kk of Object.keys(A)) A[kk] = Array.isArray(A[kk]) ? A[kk].concat(q.by[nm][kk]) : A[kk] + q.by[nm][kk] } }
-      else if (k === 'acts' || k === 'kinds') { for (const kk of Object.keys(q[k])) T[k][kk] = (T[k][kk] || 0) + q[k][kk] }
+      else if (k === 'acts' || k === 'kinds' || k === 'pActs') { for (const kk of Object.keys(q[k])) T[k][kk] = (T[k][kk] || 0) + q[k][kk] }
       else if (Array.isArray(T[k])) T[k] = T[k].concat(q[k])
       else T[k] += q[k]
     }

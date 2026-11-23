@@ -454,6 +454,11 @@ export const turnActionsOf = (G, side) => {
   return X.next?.knockdown || X.st?.knockdown ? Math.min(1, n) : n
 }
 const turnOrder = G => { const k = G.init === 1 ? 1 : 0; return Array(turnActionsOf(G, k)).fill(k) }
+// bothAct (22 Nov, the both-act candidate): both players act at every end of round, the initiative holder first, each
+// taking up to rules.bothAct different actions (a knocked-down player takes none: knockdownNoOption)
+const bothOrder = G => initOrder(G).flatMap(k => Array(G.rules.bothAct).fill(k))
+// the actions a player has taken this end of round (turns: the holder's; bothAct: each player's own)
+const actsDone = (G, side) => (G.rules.bothAct ? G.acts2?.[side] || [] : G.rules.turns ? G.turnActs || [] : [])
 // The kind of an end-of-round option, for the one-move and one-zone limits within a turn
 const actKind = o => (o === null || o === undefined ? null : o === 'M' || (typeof o === 'string' && o.startsWith('W:')) ? 'move' : typeof o === 'string' && o.startsWith('Z:') ? 'zone' : typeof o === 'string' && o.startsWith('U:') ? 'chargeUp' : o === 'O' ? 'od' : String(o))
 
@@ -941,7 +946,7 @@ export function startDraw16(G) {
   }
   const g = { ...G, A: P[0], B: P[1], rng: R.s, phase: 'draw', capCash, capSpill }
   // Rules v20: before discarding down, each player in initiative order may spend heat at the table
-  if (G.rules.heat) return nextBuy20(syncOwn({ ...g, phase: 'buy', bought: [null, null], buyLeft: G.rules.turns ? turnOrder(g) : initOrder(g), turnActs: [] }))
+  if (G.rules.heat) return nextBuy20(syncOwn({ ...g, phase: 'buy', bought: [null, null], buyLeft: G.rules.turns ? turnOrder(g) : G.rules.bothAct ? bothOrder(g) : initOrder(g), turnActs: [], acts2: [[], []] }))
   return toDiscardDown(syncOwn(g))
 }
 // The draw step's last part: who must discard down to the hand limit (or on to the next round)
@@ -965,7 +970,7 @@ export function buyOptions20(G, side) {
   // knockdownNoOption (17 Nov, Mark): knocked down this round, you can't take the end-of-round option (no move, no
   // Overdrive); you're on the floor. Only the other player can change the range. It ends once your next clash is over.
   if (G.rules.knockdownNoOption && !G.rules.turns && X.next?.knockdown) return out
-  const done = G.rules.turns ? (G.turnActs || []) : []
+  const done = actsDone(G, side)
   for (const j of X.table || []) if (heat >= tableCost(X, j)) out.push(j)
   if (X.superAt === 'table' && X.f.sup && X.heatCost?.sup > 0 && heat >= X.heatCost.sup) out.push('S')
   // chargeMove (13 Nov): instead of buying, spend that much Charge to move the fight (Close to Far, or Far to Close)
@@ -997,6 +1002,9 @@ export function buyOptions20(G, side) {
       if (n >= 3 && G.rules.trade !== 'pairs') out.push(`T:${i}:3`)
     }
   }
+  // bothAct: the actions must be different (one move, one Overdrive, one charge up, one zone)
+  // noMoveOd (test, the lever for swing): no moving the fight and Overdrive in the same end of round
+  if (G.rules.bothAct && done.length) return out.filter(o => o === null || (!done.includes(actKind(o)) && !(G.rules.noMoveOd && ((actKind(o) === 'od' && done.includes('move')) || (actKind(o) === 'move' && done.includes('od'))))))
   return out
 }
 // The cards a trade searches for: a type the hand is missing first, then a card it doesn't hold, then the first in the deck
@@ -1023,12 +1031,13 @@ export function applyBuy20(G, side, choice) {
 }
 function applyBuy20raw(G, side, choice) {
   if (choice === null || choice === undefined) return G
-  if (G.rules.turns) {
+  if (G.rules.turns || G.rules.bothAct) {
     const g = applyBuy20one({ ...G, bought: [null, null] }, side, choice), b = g.bought[side]
     const prev = G.bought?.[side], acts = [...(prev?.acts || (prev ? [prev] : [])), b]
     // the turn's record: every action in acts; the flags any of them set (move, od, chargeUp, zone) on the record itself
     const merged = prev ? { ...prev, ...b, name: acts.map(a => a.name).join('+'), cost: acts.reduce((t, a) => t + (a.cost || 0), 0), od: acts.some(a => a.od), move: acts.find(a => a.move)?.move, chargeUp: acts.some(a => a.chargeUp), zone: acts.some(a => a.zone), footwork: acts.some(a => a.footwork), acts } : { ...b, acts }
     const bought = (G.bought || [null, null]).slice(); bought[side] = merged
+    if (G.rules.bothAct) { const a2 = (G.acts2 || [[], []]).map(a => a.slice()); a2[side].push(actKind(choice)); return { ...g, bought, acts2: a2 } }
     return { ...g, bought, turnActs: [...(G.turnActs || []), actKind(choice)] }
   }
   return applyBuy20one(G, side, choice)
@@ -1131,7 +1140,7 @@ export function buy20(G, side, choice) {
   if (choice === undefined) choice = null
   if (!buyOptions20(G, side).includes(choice)) throw new Error("can't buy that")
   // turns: each pick is one action; passing (null) ends the turn
-  const left = G.rules.turns && choice !== null ? G.buyLeft.slice(1) : G.buyLeft.filter(k => k !== side)
+  const left = (G.rules.turns || G.rules.bothAct) && choice !== null ? G.buyLeft.slice(1) : G.buyLeft.filter(k => k !== side)
   const g = applyBuy20({ ...G, buyLeft: left, buying: null }, side, choice)
   return nextBuy20(g)
 }

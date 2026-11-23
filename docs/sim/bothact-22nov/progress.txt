@@ -1,0 +1,13 @@
+00:01:03 start
+00:01:03 ba: turns
+00:03:29 ba: nod/odg ladder
+00:08:05 ba: Hard v Medium
+00:09:14 ba: done
+00:09:14 refit: recording
+00:15:17 refit: done
+00:15:17 ba1: turns
+00:18:10 ba1: nod/odg ladder
+00:24:00 ba1: Hard v Medium
+00:25:26 ba1: done
+00:25:26 step 3 skipped: swing under 18%
+00:25:26 all done

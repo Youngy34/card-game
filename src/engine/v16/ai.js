@@ -489,7 +489,7 @@ export function chooseBuy20(G, side, W, rng, level = 'hard', keep = null) {
   const score = g => clashMix16({ ...g, A: on(g.A), B: on(g.B), phase: 'clash', round: G.round + 1, init: G.rules.initiative && (G.init === 0 || G.init === 1) ? 1 - G.init : G.init }, side, Wq, rng, 'hard', hands).value
   let values = opts.map(o => score(applyBuy20(G, side, o)))
   // turns (18 Nov, option B): on the first of two actions, look at pairs: the best few first actions, each with its best second
-  const picksLeft = G.rules.turns ? (G.buyLeft || []).filter(k => k === side).length : 1
+  const picksLeft = G.rules.turns || G.rules.bothAct ? (G.buyLeft || []).filter(k => k === side).length : 1
   if (picksLeft >= 2) {
     const top = opts.map((o, j) => [o, values[j], j]).filter(x => x[0] !== null).sort((x, y) => y[1] - x[1]).slice(0, W.pairShortlist ?? 3)
     values = values.slice()

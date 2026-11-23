@@ -1,0 +1,47 @@
+{
+ "tag": "ba1",
+ "brawlerFarLe2": 0.40704305674365554,
+ "brawlerFarOne": 0.1228970630168235,
+ "brawlerPoor3": 0.3408333333333333,
+ "brawlerSpell3": 0.22104144527098832,
+ "brawlerHand": 4.763031949295046,
+ "zonerCloseLe2": 0.19140625,
+ "zonerSpell3": 0.4022222222222222,
+ "swing": 0.1319327731092437,
+ "timeouts": 0.10666666666666667,
+ "brawler": 0.4325,
+ "firstPlayer": 0.5083333333333333,
+ "median": 13,
+ "eitherOd": 0.38694864829905573,
+ "bothOd": 0.06823179407579873,
+ "odBuys": 5.935,
+ "chargeUps": 7.955,
+ "cuMove": 2.5191666666666666,
+ "rangeChanges": 4.761666666666667,
+ "moves": 4.889166666666667,
+ "firstMoves": 2.026666666666667,
+ "firstUndone": 0.3515625,
+ "secondWinsNext": 0.5250480889855315,
+ "moveOdFirst": 0.23666666666666666,
+ "moveOdSecond": 0.3016666666666667,
+ "knockdowns": 1.7708333333333333,
+ "playerActs": {
+  "none": 0.4689734960033656,
+  "one": 0.26135885570046274,
+  "two": 0.2696676482961716
+ },
+ "neverOd": {
+  "win": 0.39916666666666667,
+  "games": 1200
+ },
+ "neverOdCost": 0.10083333333333333,
+ "odWhenever": {
+  "win": 0.3983333333333333,
+  "games": 1200
+ },
+ "odWheneverCost": 0.10166666666666668,
+ "medium": {
+  "win": 0.3566666666666667,
+  "games": 600
+ }
+}

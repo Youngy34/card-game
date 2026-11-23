@@ -1,0 +1,9 @@
+games 1200 · Brawler 43.3% · first player 50.8% · time-outs 10.7% · median 13 · swing 13.2%
+range changes/game 4.76 · end-of-round moves/game 4.89 (footwork 0.00, Charge 4.89) · answered straight back 35.1% · zone then own move 0.05/game
+turns: no action 51.3%, one 24.6%, two 24.1% · actions/game charge up 7.96, charge move 4.89, overdrive 5.93, zone 0.59
+Overdrive: buys/game 5.93, double 0.00, rounds in it 5.87 · Damage in the clash after move+Overdrive 2.41 (0.53/game), after other Overdrive 1.99
+both act: players' actions none 46.9%, one 26.1%, two 27.0% · either / both in Overdrive 38.7% / 6.8% · charge up + move 2.52/game · knockdowns 1.77/game · first player's moves 2.03/game, undone 35.2% · second's moves 2.75 · second player wins the next clash 52.5% · move+OD first 0.24, second 0.30
+  Brawler: away 45.4% · at the weak range ≤2 choices 40.7%, 1 choice 12.3%, mean 2.76 · rounds 1-4 away ≤2 19.3% · home ≤2 13.8% · away spells mean 1.86, 3+ 22.1%, longest 10 · hand 4.76 · Guard share 43.1%
+     ≤2 choices anywhere 26.0% · games with 3+ clashes in a row at ≤2 34.1% · games with 2+ in a row at 1 15.7%
+  Zoner: away 54.6% · at the weak range ≤2 choices 19.1%, 1 choice 3.7%, mean 3.44 · rounds 1-4 away ≤2 6.4% · home ≤2 14.6% · away spells mean 2.68, 3+ 40.2%, longest 15 · hand 4.99 · Guard share 39.9%
+     ≤2 choices anywhere 17.1% · games with 3+ clashes in a row at ≤2 23.9% · games with 2+ in a row at 1 7.3%

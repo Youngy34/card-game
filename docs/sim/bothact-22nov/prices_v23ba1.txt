@@ -1,0 +1,4 @@
+46819 positions
+FULL  charge=+0.39 full=-0.18 nP=+1.08 nC=+1.51 nR=+1.37 counter=+0.11 starter=-0.07 combo=+0.40 knockdown=-0.17 deck=+0.56 init=+0.06 home=+0.35 dead=-0.08 movers=+0.12
+REDUC charge=+0.34 cards=+1.38 knockdown=-0.02 init=+0.06 home=+0.36 dead=-0.01
+TYPES charge=+0.34 nP=+1.33 nC=+1.49 nR=+1.35 knockdown=-0.05 init=+0.06 home=+0.34 dead=-0.04
