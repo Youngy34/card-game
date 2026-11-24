@@ -1,0 +1,6 @@
+# Against the rebuilt sound bot (two-sided equilibrium), seed 3 (greedy row seed 11), both seats.
+# Transcribed from the run output (24 Nov 2026).
+random v sound: random wins 36.6% (±3.3), draws 0.1%, rounds 17.5, 800 games
+thumb v sound: thumb wins 41.7% (±3.4), draws 0.4%, rounds 17.0, 800 games
+greedy (was brrandom) v sound: greedy wins 49.6% (±2.8), draws 0.3%, rounds 16.5, 1200 games
+sound v sound1: sound wins 55.4% (±4.9), 400 games

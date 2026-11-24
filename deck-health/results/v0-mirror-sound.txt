@@ -1,0 +1,12 @@
+sound mirror, 300 games, deck v0, heal on, seed 1
+  rounds: mean 17.8, median 18, p10 13, p90 23, min 8, max 30
+  seat 1 wins 50.7% (±5.7), draws 1.0%
+  ties 7.3% of clashes; heals 4.88 a game; longest win streak 4.3 on average
+  plays by weight: +0 38.2%, +1 45.8%, +2 16.0%
+  plays by type: P 39.2%, B 29.8%, G 31.0%
+  P played while holding 2+ weights of it (2450): lightest 56.5%, heaviest 43.5%
+  B played while holding 2+ weights of it (1414): lightest 81.5%, heaviest 18.5%
+  G played while holding 2+ weights of it (1778): lightest 60.7%, heaviest 39.3%
+  hands missing a type at reveal 28.1%; opponent's known cards 1.26 a round on average
+  damage per decided clash 1.66; per decided game the loser lost 18.3 cards, the winner 11.6 (and healed 3.1)
+  comebacks (winner was 4+ cards behind at some point) 30.6%
