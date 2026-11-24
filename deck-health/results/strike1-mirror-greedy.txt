@@ -1,0 +1,22 @@
+greedy mirror, 1000 games, deck strike1, heal on, EX off, guard1 off, strike on, seed 1
+  rounds: mean 8.5, median 8, p10 7, p90 10, min 6, max 12
+  seat 1 wins 45.8% (±3.1), draws 7.8%
+  cards lost per clash (both players) 4.24; both lose cards in 62.8% of clashes; equal losses 29.0%
+    Counter       34.2% of plays; loses fewer  42.0%, equal  37.8%, broken  20.2%
+    Straight      30.6% of plays; loses fewer  24.7%, equal  34.7%, broken  80.4%
+    Haymaker      17.3% of plays; loses fewer  41.5%, equal  17.7%, broken  59.7%
+    Jab            5.8% of plays; loses fewer  60.6%, equal   7.9%, broken  39.4%
+    Check          5.7% of plays; loses fewer  30.2%, equal  17.6%, broken  52.2%
+    Sweep          4.9% of plays; loses fewer  18.4%, equal   9.2%, broken  81.6%
+    Fortress       0.9% of plays; loses fewer   4.5%, equal  55.5%, broken   0.0%
+    Armour Slam    0.5% of plays; loses fewer  26.9%, equal   2.2%, broken  73.1%
+    Parry          0.0% of plays; loses fewer 100.0%, equal   0.0%, broken   0.0%
+  ties 29.0% of clashes; heals 0.00 a game; longest win streak 2.6 on average
+  plays by weight: +0 12.4%, +1 70.3%, +2 17.3%
+  plays by type: P 42.1%, B 22.7%, G 35.2%
+  P played while holding 2+ weights of it (3752): lightest 3.5%, heaviest 96.5%
+  B played while holding 2+ weights of it (2493): lightest 17.5%, heaviest 82.5%
+  G played while holding 2+ weights of it (3259): lightest 1.1%, heaviest 98.9%
+  hands missing a type at reveal 19.1%; opponent's known cards 0.78 a round on average
+  damage per decided clash 3.04; per decided game the loser lost 20.8 cards, the winner 15.0 (and healed 0.0)
+  comebacks (winner was 4+ cards behind at some point) 13.4%

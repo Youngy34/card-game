@@ -22,6 +22,14 @@ export function bandX(rank, bands = [4, 9]) {
 export const DECKS = {
   // v0: Pressure = clubs A–8, Break = spades 8–K, Guard = hearts A–3 and 5–7.
   v0: { P: [1, 2, 3, 4, 5, 6, 7, 8], B: [8, 9, 10, 11, 12, 13], G: [1, 2, 3, 5, 6, 7] },
+  // Strike v1: every card an attack (Speed, Power, Guard). Families: P = Strike, B = Break, G = Guard.
+  strike1: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 3], ['Straight', 'P', 5, 2, 0, 3], ['Check', 'P', 5, 1, 1, 3],
+      ['Sweep', 'B', 4, 2, 0, 3], ['Haymaker', 'B', 3, 3, 0, 2], ['Armour Slam', 'B', 2, 2, 1, 2],
+      ['Parry', 'G', 2, 1, 1, 3], ['Counter', 'G', 1, 2, 2, 3], ['Fortress', 'G', 1, 1, 3, 2],
+    ],
+  },
   // Quick-check variants (not adopted): 18 cards (one light Pressure and one light Guard out).
   v0_18: { P: [1, 2, 3, 5, 6, 7, 8], B: [8, 9, 10, 11, 12, 13], G: [1, 2, 5, 6, 7] },
 };
@@ -29,6 +37,12 @@ export const DECKS = {
 export function makeDecklist(spec, cfg = {}) {
   const out = [];
   let id = 0;
+  if (spec.cards) {
+    // Strike cards: rank = 7 - speed (lower is faster, as elsewhere), x = power - 1 (for the weight stats).
+    for (const [name, type, spd, pow, grd, n] of spec.cards)
+      for (let k = 0; k < n; k++) out.push({ id: id++, name, type, spd, pow, grd, rank: 7 - spd, x: pow - 1 });
+    return out;
+  }
   for (const t of TYPES)
     for (const r of spec[t] || []) {
       // guard1: every Guard is the same card — no speed, no +x.
@@ -77,7 +91,22 @@ const asMove = (m) => (m.cards ? m : single(m));
 
 // Pure clash resolution. a, b: moves (or cards). discA/discB: discard-pile sizes (for the Guard heal).
 // Returns { w: 0 | 1 | -1 (tie), dmg: [d0, d1], heal: [h0, h1] }. dmg counts every card each side loses.
+// Strike resolution: higher Speed hits first (equal: both at once). A hit costs the defender Power cards
+// from hand; Power more than the card's Guard breaks it (discarded; it doesn't hit if it hadn't yet).
+export function strikeClash(a, b) {
+  const A = a.cards ? a.cards[0] : a, B = b.cards ? b.cards[0] : b;
+  const took = [0, 0], broken = [false, false];
+  const hit = (att, i) => { took[i] += att.pow; if (att.pow > (i === 0 ? A : B).grd) broken[i] = true; };
+  if (A.spd > B.spd) { hit(A, 1); if (!broken[1]) hit(B, 0); }
+  else if (B.spd > A.spd) { hit(B, 0); if (!broken[0]) hit(A, 1); }
+  else { hit(A, 1); hit(B, 0); }
+  const dmg = [took[0] + (broken[0] ? 1 : 0), took[1] + (broken[1] ? 1 : 0)];
+  const w = dmg[0] < dmg[1] ? 0 : dmg[1] < dmg[0] ? 1 : -1;
+  return { w, dmg, took, broken, heal: [0, 0], strike: true };
+}
+
 export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
+  if (cfg.strike) return strikeClash(a, b);
   a = asMove(a); b = asMove(b);
   const heal = cfg.heal !== false;
   const nA = a.cards.length, nB = b.cards.length;
@@ -162,6 +191,31 @@ export function playGame(spec, bots, R, cfg = {}) {
       missing,
       opKnownCount: views.map((v) => v.opKnown.length),
     };
+    if (res.strike) {
+      g.players.forEach((p, i) => {
+        const c = picks[i].cards[0];
+        p.hand = p.hand.filter((h) => h.id !== c.id);
+        p.known.delete(c.id);
+      });
+      g.players.forEach((p, i) => {
+        const n = Math.min(res.took[i], p.hand.length);
+        if (n > 0) {
+          const ds = bots[i].discard(view(g, i), n, R);
+          for (const d of ds) {
+            const idx = p.hand.findIndex((c) => c.id === d.id);
+            if (idx < 0) throw new Error('discard not in hand');
+            p.hand.splice(idx, 1); p.known.delete(d.id); p.discard.push(d);
+          }
+        }
+      });
+      g.players.forEach((p, i) => {
+        const c = picks[i].cards[0];
+        if (res.broken[i]) p.discard.push(c);
+        else { p.hand.push(c); p.known.add(c.id); }
+      });
+      log.push(entry);
+      continue;
+    }
     // Remove played cards from hands.
     g.players.forEach((p, i) => {
       const ids = new Set(picks[i].cards.map((c) => c.id));

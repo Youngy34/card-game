@@ -103,3 +103,27 @@ Predictions: `PREDICTIONS-guard.md`.
 | Seat | 51.5% | 51.5% |
 
 EX pairs by type: v0 + EX had Guard pairs (26% of pairs, winning 57%) and Break pairs winning 65%. Under fatigue, Break pairs win 53%.
+
+## Strike v1 (24 Nov 2026, ~23:45) — `--strike` (deck `strike1`)
+
+**Rule:** every card is an attack with Speed, Power and Guard. The higher Speed hits first (equal: both at once). A hit costs the defender Power cards from hand. Power more than Guard breaks the card (discarded, and it doesn't hit if it hadn't yet). A surviving card returns to hand. Predictions: `PREDICTIONS-strike.md`.
+
+**Results** (Greedy mirror 1,000 games; ladder 400 a seat):
+
+| Measure | Bar | Result |
+|---|---|---|
+| Length | 10–15 | **8.5** (p10 7, p90 10): fail |
+| Cards lost per clash | ~3.3 predicted | 4.24; both lose cards in 63% |
+| Draws | ≤5% | **7.8%**: fail |
+| Every card ≥4% of plays, 35–65% results | | **fail:** Counter 34%, Straight 31%, Haymaker 17%; Parry 0%, Armour Slam 0.5%, Fortress 0.9% |
+| Random / Thumb v Greedy | ≤20 / ≤30% | 6.5% / 19.5% (mostly from knowing which cards are bad) |
+| Seat | 47–53% | 45.8% with 7.8% draws (seat 2 46.4%): no seat edge |
+| Comebacks from 4+ behind | | 13% (v0 29%) |
+
+**Head to head** (cards lost by the row card minus the column card; negative = row card better). Average net: Straight −1.11, Counter −0.67, Haymaker −0.33, Sweep −0.11, Check 0.00, Jab 0.11, Fortress 0.22, Armour Slam 0.44, Parry 1.44.
+
+**Cause:**
+- Power is both damage and breaking.
+- Guard only saves the 1 card that would break. You still take the full Power, so a high Guard doesn't protect.
+- Low-Power cards just lose.
+- Exceed separates Armor (cuts damage) from Guard (stun resistance); v1 dropped Armor.
