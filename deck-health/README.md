@@ -75,3 +75,31 @@ Predictions: `PREDICTIONS-ex.md`. Bots: `noex` (Greedy, never pairs), `alwaysex`
 | Face-up cards worth | — | 16 points | 9 points (greedyblind 41.1%) |
 | Seat | 47–53% | 47.2% | 51.5% |
 | Sound v Greedy | 45–55% | 49.6% | 46.3% ±6.9 (200 games) |
+
+## Guard rework (24 Nov 2026, ~22:40) — `--guard1 [--gmirror fatigue]`
+
+**Rule (on top of EX):**
+- Guards do no damage. All Guards are the same card: no speed, no +x, heal 1 on a win.
+- EX pairs are for attacks only.
+- Guard against Guard: nothing happens (`bounce`, the default) or both discard their Guard (`fatigue`).
+
+Predictions: `PREDICTIONS-guard.md`.
+
+**Bounce stalls:**
+- Greedy mirror: 22% of games hit the 200-round cap; Guard mirrors are 80% of clashes.
+- Sound mirror (80 games): Guards 53% of plays, Guard mirrors 35% of clashes, mean 21 rounds, 2 games capped, 45% of hands missing a type.
+- Guards only leave the hand by losing to a Break, so they clog hands.
+
+**Fatigue** (Greedy, 600-game mirror; ladder 400 a seat):
+
+| Measure | v0 + EX | Fatigue |
+|---|---|---|
+| Length | 11.4 | 13.2 |
+| Plays by type | P 26 / B 42 / G 33% | P 40 / B 32 / G 28% |
+| Random / Thumb v Greedy | 18.2 / 26.8% | 20.6 / 31.2% |
+| Never EX v Greedy | 44.2% | 49.9%: EX worth about 0 |
+| Always EX v Greedy | 34.1% | 25.1% |
+| Face-up cards (greedyblind) | 41.1% | 44.0% |
+| Seat | 51.5% | 51.5% |
+
+EX pairs by type: v0 + EX had Guard pairs (26% of pairs, winning 57%) and Break pairs winning 65%. Under fatigue, Break pairs win 53%.

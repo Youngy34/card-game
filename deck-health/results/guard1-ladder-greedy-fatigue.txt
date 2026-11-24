@@ -1,0 +1,7 @@
+random      v greedy: 20.6% (±2.8), draws 0.6%, rounds 14.5, 800 games
+thumb       v greedy: 31.2% (±3.2), draws 1.4%, rounds 14.8, 800 games
+noex        v greedy: 49.9% (±3.5), draws 0.1%, rounds 15.4, 800 games
+alwaysex    v greedy: 25.1% (±3.0), draws 0.9%, rounds 10.1, 800 games
+heavy       v greedy: 14.9% (±2.5), draws 0.5%, rounds 12.9, 800 games
+light       v greedy: 17.9% (±2.7), draws 0.9%, rounds 15.9, 800 games
+greedyblind v greedy: 44.0% (±3.4), draws 0.8%, rounds 13.5, 800 games

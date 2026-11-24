@@ -1,0 +1,13 @@
+greedy mirror, 600 games, deck v0, heal on, EX on, guard1 on, seed 1
+  rounds: mean 13.2, median 13, p10 10, p90 16, min 7, max 21
+  seat 1 wins 51.5% (±4.0), draws 1.2%
+  Guard mirrors (nothing happens) 0.0% of clashes
+  ties 12.8% of clashes; heals 2.67 a game; longest win streak 3.5 on average
+  plays by weight: +0 37.4%, +1 39.0%, +2 23.6%
+  EX pairs: 19.5% of moves (5.13 a game); they win 55.8%, lose 39.5%, tie 4.7%
+  plays by type: P 40.1%, B 32.0%, G 27.8%
+  P played while holding 2+ weights of it (3782): lightest 12.2%, heaviest 87.8%
+  B played while holding 2+ weights of it (1957): lightest 30.1%, heaviest 69.9%
+  hands missing a type at reveal 23.0%; opponent's known cards 1.05 a round on average
+  damage per decided clash 2.02; per decided game the loser lost 17.5 cards, the winner 12.1 (and healed 1.6)
+  comebacks (winner was 4+ cards behind at some point) 27.5%

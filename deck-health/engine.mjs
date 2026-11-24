@@ -29,7 +29,12 @@ export const DECKS = {
 export function makeDecklist(spec, cfg = {}) {
   const out = [];
   let id = 0;
-  for (const t of TYPES) for (const r of spec[t] || []) out.push({ id: id++, type: t, rank: r, x: bandX(r, cfg.bands) });
+  for (const t of TYPES)
+    for (const r of spec[t] || []) {
+      // guard1: every Guard is the same card — no speed, no +x.
+      if (cfg.guard1 && t === 'G') out.push({ id: id++, type: t, rank: 0, x: 0 });
+      else out.push({ id: id++, type: t, rank: r, x: bandX(r, cfg.bands) });
+    }
   return out;
 }
 
@@ -62,7 +67,10 @@ export function pair(c1, c2) {
 }
 export function movesOf(hand, cfg = {}) {
   const out = hand.map(single);
-  if (cfg.ex) for (let i = 0; i < hand.length; i++) for (let j = i + 1; j < hand.length; j++) if (hand[i].type === hand[j].type) out.push(pair(hand[i], hand[j]));
+  if (cfg.ex)
+    for (let i = 0; i < hand.length; i++)
+      for (let j = i + 1; j < hand.length; j++)
+        if (hand[i].type === hand[j].type && !(cfg.guard1 && hand[i].type === 'G')) out.push(pair(hand[i], hand[j]));
   return out;
 }
 const asMove = (m) => (m.cards ? m : single(m));
@@ -73,6 +81,12 @@ export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
   a = asMove(a); b = asMove(b);
   const heal = cfg.heal !== false;
   const nA = a.cards.length, nB = b.cards.length;
+  // guard1: two Guards meeting — nothing happens (w = -2), both cards go back.
+  if (cfg.guard1 && a.type === 'G' && b.type === 'G') {
+    // 'fatigue' variant: both discard their Guard (a tie). Default: nothing happens.
+    if (cfg.guardMirror === 'fatigue') return { w: -1, dmg: [1, 1], heal: [0, 0] };
+    return { w: -2, dmg: [0, 0], heal: [0, 0] };
+  }
   let w;
   if (a.type !== b.type) w = BEATS[a.type] === b.type ? 0 : 1;
   else if (a.ex !== b.ex) w = a.ex ? 0 : 1;
@@ -156,6 +170,8 @@ export function playGame(spec, bots, R, cfg = {}) {
     });
     if (res.w === -1) {
       g.players.forEach((p, i) => p.discard.push(...picks[i].cards));
+    } else if (res.w === -2) {
+      g.players.forEach((p, i) => { for (const c of picks[i].cards) { p.hand.push(c); p.known.add(c.id); } });
     } else {
       const w = res.w, l = 1 - w;
       const W = g.players[w], L = g.players[l];
