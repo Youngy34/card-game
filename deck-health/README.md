@@ -53,3 +53,25 @@ Predictions and bars were written first: see `PREDICTIONS.md`. Raw output is in 
 | Double-out draws | ≤3% | 0–0.8% | pass |
 
 Quick checks (not adopted): an 18-card deck (`v0_18`) brings length to 12.7 with the ladder unchanged (random 18.7%, thumb 29.2%). Turning the heal off barely shortens games (15.0) and makes random a little stronger (22.2%).
+
+## EX pairs (24 Nov 2026, late evening) — `--ex`
+
+**Rule:**
+- Instead of one card, play two of the same type as one move, with the faster card's speed and the heavier card's +x.
+- An EX beats any single card of the same type. EX against EX: the faster wins.
+- The extra card is always lost. Win: take back one of the two, your choice, and discard the other. Lose: discard both, plus the winner's +x.
+
+Predictions: `PREDICTIONS-ex.md`. Bots: `noex` (Greedy, never pairs), `alwaysex` (Greedy, pairs whenever it can), `randomex` (uniform over every move).
+
+| Measure | Bar | v0 | EX |
+|---|---|---|---|
+| EX share of moves | 10–25% | — | **20.4%** (4.7 a game; wins 60%, 43% of them meet the same type) |
+| Never EX v Greedy | costs 3–10 | — | **44.2%: costs 6** |
+| Always EX v Greedy | costs ≥3 | — | **34.1%: costs 16** |
+| Length (Greedy mirror) | ≤ v0 | 15.3 | **11.4** (median 11, p10 9, p90 14) |
+| +2 share of plays | — | 24% | **30%**; heavy Break chosen 63% (v0 25%) |
+| +0 share | ≥20% | 28% | 17% of moves as singles; 23% of cards played (light cards go into pairs) |
+| Random / Thumb v Greedy | ≤20% / ≤30% | 18.6% / 25.9% | **18.2% / 26.8%** |
+| Face-up cards worth | — | 16 points | 9 points (greedyblind 41.1%) |
+| Seat | 47–53% | 47.2% | 51.5% |
+| Sound v Greedy | 45–55% | 49.6% | 46.3% ±6.9 (200 games) |

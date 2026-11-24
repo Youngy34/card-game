@@ -52,17 +52,35 @@ export function shuffle(arr, R) {
   return arr;
 }
 
-// Pure clash resolution. a, b: cards. discA/discB: discard-pile sizes (for the Guard heal).
-// Returns { w: 0 | 1 | -1 (tie), dmg: [d0, d1], heal: [h0, h1] }.
+// A move: one card, or (with cfg.ex) an EX pair of two cards of one type.
+// { cards, type, rank (speed: the fastest card's), x (the heaviest card's), ex }
+export function single(c) {
+  return { cards: [c], type: c.type, rank: c.rank, x: c.x, ex: false, id: c.id };
+}
+export function pair(c1, c2) {
+  return { cards: [c1, c2], type: c1.type, rank: Math.min(c1.rank, c2.rank), x: Math.max(c1.x, c2.x), ex: true, id: c1.id * 100 + c2.id + 10000 };
+}
+export function movesOf(hand, cfg = {}) {
+  const out = hand.map(single);
+  if (cfg.ex) for (let i = 0; i < hand.length; i++) for (let j = i + 1; j < hand.length; j++) if (hand[i].type === hand[j].type) out.push(pair(hand[i], hand[j]));
+  return out;
+}
+const asMove = (m) => (m.cards ? m : single(m));
+
+// Pure clash resolution. a, b: moves (or cards). discA/discB: discard-pile sizes (for the Guard heal).
+// Returns { w: 0 | 1 | -1 (tie), dmg: [d0, d1], heal: [h0, h1] }. dmg counts every card each side loses.
 export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
+  a = asMove(a); b = asMove(b);
   const heal = cfg.heal !== false;
+  const nA = a.cards.length, nB = b.cards.length;
   let w;
   if (a.type !== b.type) w = BEATS[a.type] === b.type ? 0 : 1;
+  else if (a.ex !== b.ex) w = a.ex ? 0 : 1;
   else if (a.rank !== b.rank) w = a.rank < b.rank ? 0 : 1;
   else w = -1;
-  if (w === -1) return { w, dmg: [1, 1], heal: [0, 0] };
+  if (w === -1) return { w, dmg: [nA, nB], heal: [0, 0] };
   const win = w === 0 ? a : b;
-  const dmg = w === 0 ? [0, 1 + win.x] : [1 + win.x, 0];
+  const dmg = w === 0 ? [nA - 1, nB + win.x] : [nA + win.x, nB - 1];
   const h = [0, 0];
   if (heal && win.type === 'G' && (w === 0 ? discA : discB) > 0) h[w] = 1;
   return { w, dmg, heal: h };
@@ -119,7 +137,7 @@ export function playGame(spec, bots, R, cfg = {}) {
     g.round++;
     const views = [view(g, 0), view(g, 1)];
     const missing = views.map((v) => TYPES.filter((t) => !v.hand.some((c) => c.type === t)).length);
-    const picks = [bots[0].choose(views[0], R), bots[1].choose(views[1], R)];
+    const picks = [asMove(bots[0].choose(views[0], R)), asMove(bots[1].choose(views[1], R))];
     const res = clash(picks[0], picks[1], g.players[0].discard.length, g.players[1].discard.length, cfg);
     const entry = {
       round: g.round,
@@ -132,19 +150,25 @@ export function playGame(spec, bots, R, cfg = {}) {
     };
     // Remove played cards from hands.
     g.players.forEach((p, i) => {
-      p.hand = p.hand.filter((c) => c.id !== picks[i].id);
-      p.known.delete(picks[i].id);
+      const ids = new Set(picks[i].cards.map((c) => c.id));
+      p.hand = p.hand.filter((c) => !ids.has(c.id));
+      for (const id of ids) p.known.delete(id);
     });
     if (res.w === -1) {
-      g.players.forEach((p, i) => p.discard.push(picks[i]));
+      g.players.forEach((p, i) => p.discard.push(...picks[i].cards));
     } else {
       const w = res.w, l = 1 - w;
       const W = g.players[w], L = g.players[l];
-      // Winner's card back, face up.
-      W.hand.push(picks[w]);
-      W.known.add(picks[w].id);
-      // Loser: card + x from hand.
-      L.discard.push(picks[l]);
+      // Winner's card back, face up (an EX winner keeps one of the two, their choice; the other is discarded).
+      let back = picks[w].cards[0];
+      if (picks[w].ex) {
+        back = bots[w].keep ? bots[w].keep(view(g, w), picks[w], R) : picks[w].cards[0];
+        W.discard.push(...picks[w].cards.filter((c) => c.id !== back.id));
+      }
+      W.hand.push(back);
+      W.known.add(back.id);
+      // Loser: card(s) + x from hand.
+      L.discard.push(...picks[l].cards);
       const n = Math.min(picks[w].x, L.hand.length);
       if (n > 0) {
         const lv = view(g, l);

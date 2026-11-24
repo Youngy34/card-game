@@ -12,7 +12,7 @@
 //           Break its heaviest, Guard any. Sound discards. No reading.
 //  heavy / light — always the heaviest / lightest card (lazy). Sound discards.
 //  random — random card, random discards, random heal.
-import { TYPES, clash } from './engine.mjs';
+import { TYPES, clash, movesOf, single } from './engine.mjs';
 
 // ---- win-chance table over deck counts (health) -------------------------------------------
 const DIST = [
@@ -154,15 +154,16 @@ function sampleMine(v, R, S) {
 }
 export function sound2Strategy(v, R, opts = {}) {
   const S = opts.samples || 30, T = opts.iters || 300;
-  const mine = sampleMine(v, R, S);
-  const theirs = sampleHands(v, R, S, opts.blind).hands;
+  const cfg = v.cfg;
+  const mine = sampleMine(v, R, S).map((h) => movesOf(h, cfg));
+  const theirs = sampleHands(v, R, S, opts.blind).hands.map((h) => movesOf(h, cfg));
   const idx = (hs) => {
-    const m = new Map(), cards = [];
-    for (const h of hs) for (const c of h) if (!m.has(c.id)) { m.set(c.id, cards.length); cards.push(c); }
-    return { m, cards, H: hs.map((h) => h.map((c) => m.get(c.id))) };
+    const m = new Map(), mv = [];
+    for (const h of hs) for (const x of h) if (!m.has(x.id)) { m.set(x.id, mv.length); mv.push(x); }
+    return { mv, H: hs.map((h) => h.map((x) => m.get(x.id))) };
   };
   const A = idx(mine), B = idx(theirs);
-  const pay = A.cards.map((a) => B.cards.map((b) => outcomeValue(v, a, b, v.cfg)));
+  const pay = A.mv.map((a) => B.mv.map((b) => outcomeValue(v, a, b, cfg)));
   const rA = A.H.map((h) => new Float64Array(h.length));
   const rB = B.H.map((h) => new Float64Array(h.length));
   const avg0 = new Float64Array(A.H[0].length);
@@ -172,17 +173,40 @@ export function sound2Strategy(v, R, opts = {}) {
     return Array.from(r, (x) => (z > 0 ? x / z : 1 / r.length));
   };
   for (let t = 1; t <= T; t++) {
-    const P = new Float64Array(A.cards.length), Q = new Float64Array(B.cards.length);
+    const P = new Float64Array(A.mv.length), Q = new Float64Array(B.mv.length);
     const sA = A.H.map((h, s) => { const g = rm(rA[s]); h.forEach((c, i) => (P[c] += g[i] / S)); return g; });
     const sB = B.H.map((h, s) => { const g = rm(rB[s]); h.forEach((c, j) => (Q[c] += g[j] / S)); return g; });
-    const uA = A.cards.map((_, a) => { let u = 0; for (let b = 0; b < Q.length; b++) u += Q[b] * pay[a][b]; return u; });
-    const uB = B.cards.map((_, b) => { let u = 0; for (let a = 0; a < P.length; a++) u -= P[a] * pay[a][b]; return u; });
+    const uA = A.mv.map((_, a) => { let u = 0; for (let b = 0; b < Q.length; b++) if (Q[b]) u += Q[b] * pay[a][b]; return u; });
+    const uB = B.mv.map((_, b) => { let u = 0; for (let a = 0; a < P.length; a++) if (P[a]) u -= P[a] * pay[a][b]; return u; });
     A.H.forEach((h, s) => { let base = 0; h.forEach((c, i) => (base += sA[s][i] * uA[c])); h.forEach((c, i) => (rA[s][i] = Math.max(0, rA[s][i] + uA[c] - base))); });
     B.H.forEach((h, s) => { let base = 0; h.forEach((c, j) => (base += sB[s][j] * uB[c])); h.forEach((c, j) => (rB[s][j] = Math.max(0, rB[s][j] + uB[c] - base))); });
     for (let i = 0; i < avg0.length; i++) avg0[i] += t * sA[0][i];
   }
   const z = avg0.reduce((s, x) => s + x, 0);
-  return Array.from(avg0, (x) => x / z);
+  return { moves: mine[0], probs: Array.from(avg0, (x) => x / z) };
+}
+
+// Greedy over moves: the move with the best average value, assuming the opponent plays a single card
+// evenly, or (with EX on) an EX pair a share e of the time.
+export function greedyMove(v, R, { blind = false, allow = 'all', e = 0.15 } = {}) {
+  const cfg = v.cfg;
+  const { hands } = sampleHands(v, R, 40, blind);
+  let mine = movesOf(v.hand, cfg);
+  if (allow === 'single') mine = mine.filter((m) => !m.ex);
+  if (allow === 'pairfirst' && mine.some((m) => m.ex)) mine = mine.filter((m) => m.ex);
+  const theirMoves = hands.map((h) => {
+    const ms = movesOf(h, cfg);
+    const singles = ms.filter((m) => !m.ex), pairs = ms.filter((m) => m.ex);
+    const ep = pairs.length ? e : 0;
+    return ms.map((m) => [m, m.ex ? ep / pairs.length : (1 - ep) / singles.length]);
+  });
+  let best = null, bv = -Infinity;
+  for (const a of mine) {
+    let u = 0;
+    for (const tm of theirMoves) for (const [b, w] of tm) u += w * outcomeValue(v, a, b, cfg);
+    if (u > bv) { bv = u; best = a; }
+  }
+  return best;
 }
 
 // ---- discards and heals ---------------------------------------------------------------------
@@ -209,6 +233,14 @@ export function soundDiscard(v, n) {
   }
   return best;
 }
+export function soundKeep(v, move) {
+  let best = move.cards[0], bs = -Infinity;
+  for (const c of move.cards) {
+    const sc = handScore([...v.hand.filter((h) => !move.cards.some((m) => m.id === h.id)), c]);
+    if (sc > bs) { bs = sc; best = c; }
+  }
+  return best;
+}
 export function soundHeal(v) {
   return v.myDiscard.slice().sort((a, b) => b.x - a.x || a.rank - b.rank)[0];
 }
@@ -222,7 +254,7 @@ const rnd = (arr, R) => arr[Math.floor(R() * arr.length)];
 
 // ---- bots ----------------------------------------------------------------------------------
 export function makeBot(kind, opts = {}) {
-  const sensible = { discard: (v, n) => soundDiscard(v, n), heal: (v) => soundHeal(v) };
+  const sensible = { discard: (v, n) => soundDiscard(v, n), heal: (v) => soundHeal(v), keep: (v, m) => soundKeep(v, m) };
   switch (kind) {
     case 'sound1': {
       return {
@@ -240,8 +272,8 @@ export function makeBot(kind, opts = {}) {
         kind, ...sensible,
         choose(v, R) {
           if (v.hand.length === 1) return v.hand[0];
-          const sig = sound2Strategy(v, R, { ...opts, blind });
-          return pickWeighted(v.hand, sig, R);
+          const st = sound2Strategy(v, R, { ...opts, blind });
+          return pickWeighted(st.moves, st.probs, R);
         },
       };
     }
@@ -252,35 +284,32 @@ export function makeBot(kind, opts = {}) {
     case 'rdisc':
       return {
         kind,
-        choose: (v, R) => (v.hand.length === 1 ? v.hand[0] : pickWeighted(v.hand, sound2Strategy(v, R, opts), R)),
+        choose: (v, R) => { const st = sound2Strategy(v, R, opts); return pickWeighted(st.moves, st.probs, R); },
         discard: (v, n, R) => randomDiscard(v, n, R),
         heal: (v, R) => rnd(v.myDiscard, R),
       };
     case 'greedy':
-    case 'greedyblind': {
-      // Greedy: the card with the best average value, assuming the opponent plays any card in their
-      // (sampled) hand evenly. 'greedyblind' ignores the opponent's face-up returned cards.
-      const blind = kind === 'greedyblind';
+    case 'greedyblind':
+      return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { blind: kind === 'greedyblind' }) };
+    case 'noex': // Greedy that never plays an EX pair
+      return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { allow: 'single' }) };
+    case 'alwaysex': // Greedy that always plays an EX pair when it holds one
+      return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { allow: 'pairfirst' }) };
+    case 'randomex': // uniform over every legal move, pairs included
       return {
-        kind, ...sensible,
-        choose(v, R) {
-          const { hands } = sampleHands(v, R, 40, blind);
-          let best = null, bv = -Infinity;
-          for (const a of v.hand) {
-            let u = 0;
-            for (const h of hands) for (const b of h) u += outcomeValue(v, a, b, v.cfg) / h.length;
-            if (u > bv) { bv = u; best = a; }
-          }
-          return best;
-        },
+        kind,
+        choose: (v, R) => rnd(movesOf(v.hand, v.cfg), R),
+        discard: (v, n, R) => randomDiscard(v, n, R),
+        heal: (v, R) => rnd(v.myDiscard, R),
+        keep: (v, m, R) => rnd(m.cards, R),
       };
-    }
     case 'half':
       return {
         kind, ...sensible,
         choose(v, R) {
           if (R() < (opts.noise ?? 0.5)) return rnd(v.hand, R);
-          return pickWeighted(v.hand, sound2Strategy(v, R, opts), R);
+          const st = sound2Strategy(v, R, opts);
+          return pickWeighted(st.moves, st.probs, R);
         },
       };
     case 'thumb':
@@ -305,6 +334,7 @@ export function makeBot(kind, opts = {}) {
         choose: (v, R) => rnd(v.hand, R),
         discard: (v, n, R) => randomDiscard(v, n, R),
         heal: (v, R) => rnd(v.myDiscard, R),
+        keep: (v, m, R) => rnd(m.cards, R),
       };
     default:
       throw new Error('unknown bot ' + kind);

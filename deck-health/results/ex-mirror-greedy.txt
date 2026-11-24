@@ -1,0 +1,13 @@
+greedy mirror, 1000 games, deck v0, heal on, EX on, seed 1
+  rounds: mean 11.4, median 11, p10 9, p90 14, min 6, max 19
+  seat 1 wins 51.5% (±3.1), draws 0.4%
+  ties 5.9% of clashes; heals 2.80 a game; longest win streak 3.7 on average
+  plays by weight: +0 16.7%, +1 53.3%, +2 30.0%
+  EX pairs: 20.4% of moves (4.67 a game); they win 60.5%, lose 35.3%, tie 4.2%
+  plays by type: P 25.5%, B 41.8%, G 32.8%
+  P played while holding 2+ weights of it (3989): lightest 13.0%, heaviest 87.0%
+  B played while holding 2+ weights of it (3369): lightest 36.8%, heaviest 63.2%
+  G played while holding 2+ weights of it (2728): lightest 18.1%, heaviest 81.9%
+  hands missing a type at reveal 25.2%; opponent's known cards 1.00 a round on average
+  damage per decided clash 2.27; per decided game the loser lost 17.7 cards, the winner 11.1 (and healed 1.6)
+  comebacks (winner was 4+ cards behind at some point) 27.8%

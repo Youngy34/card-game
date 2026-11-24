@@ -16,7 +16,7 @@ const N = +opt('-n', 400);
 const SEED = +opt('--seed', 1);
 const deckName = opt('--deck', 'v0');
 const spec = DECKS[deckName];
-const cfg = { heal: !args.includes('--noheal') };
+const cfg = { heal: !args.includes('--noheal'), ex: args.includes('--ex') };
 if (opt('--bands')) cfg.bands = opt('--bands').split(',').map(Number);
 const pos = args.filter((a, i) => !a.startsWith('-') && !(i > 0 && args[i - 1].startsWith('-')));
 const cmd = pos[0] || 'mirror';
@@ -52,6 +52,7 @@ function mirrorStats(kind, n, seed) {
   const xPlays = [0, 0, 0], typePlays = { P: 0, B: 0, G: 0 };
   const within = {}; // type -> {light, heavy, other, n}
   let missingHands = 0, hands = 0, comebacks = 0, decided = 0, streakSum = 0;
+  let exMoves = 0, exWins = 0, exLosses = 0, exTies = 0;
   let knownSum = 0, dmgSum = 0, decidedClashes = 0, loserLost = 0, winnerLost = 0, healsW = 0;
   for (const g of games) {
     if (g.capped) capped++;
@@ -67,6 +68,7 @@ function mirrorStats(kind, n, seed) {
       for (let i = 0; i < 2; i++) {
         const c = e.picks[i];
         xPlays[c.x]++;
+        if (c.ex) { exMoves++; if (e.res.w === i) exWins++; else if (e.res.w === -1) exTies++; else exLosses++; }
         typePlays[c.type]++;
         hands++;
         if (e.missing[i] > 0) missingHands++;
@@ -98,11 +100,12 @@ function mirrorStats(kind, n, seed) {
   const plays = xPlays.reduce((s, x) => s + x, 0);
   const mean = rounds.reduce((s, x) => s + x, 0) / n;
   const out = [];
-  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, seed ${seed}`);
+  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, EX ${cfg.ex ? 'on' : 'off'}, seed ${seed}`);
   out.push(`  rounds: mean ${mean.toFixed(1)}, median ${q(0.5)}, p10 ${q(0.1)}, p90 ${q(0.9)}, min ${rounds[0]}, max ${rounds[n - 1]}${capped ? `, capped ${capped}` : ''}`);
   out.push(`  seat 1 wins ${pct(seat0 / n)} (±${ci(seat0 / n, n)}), draws ${pct(draws / n)}`);
   out.push(`  ties ${pct(ties / clashes)} of clashes; heals ${(heals / n).toFixed(2)} a game; longest win streak ${(streakSum / n).toFixed(1)} on average`);
   out.push(`  plays by weight: +0 ${pct(xPlays[0] / plays)}, +1 ${pct(xPlays[1] / plays)}, +2 ${pct(xPlays[2] / plays)}`);
+  if (cfg.ex) out.push(`  EX pairs: ${pct(exMoves / plays)} of moves (${(exMoves / n).toFixed(2)} a game); they win ${pct(exWins / Math.max(1, exMoves))}, lose ${pct(exLosses / Math.max(1, exMoves))}, tie ${pct(exTies / Math.max(1, exMoves))}`);
   out.push(`  plays by type: ${TYPES.map((t) => `${t} ${pct(typePlays[t] / plays)}`).join(', ')}`);
   for (const t of TYPES) if (within[t]) {
     const w = within[t];

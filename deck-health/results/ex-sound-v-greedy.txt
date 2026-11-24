@@ -1,0 +1,1 @@
+sound v greedy: sound wins 46.3% (±6.9), draws 1.5%, rounds 12.3, 200 games
