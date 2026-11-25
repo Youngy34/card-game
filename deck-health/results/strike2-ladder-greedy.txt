@@ -1,0 +1,5 @@
+random      v greedy: 17.0% (±2.6), draws 4.0%, rounds 12.5, 800 games
+thumb       v greedy: 9.4% (±2.0), draws 3.9%, rounds 12.1, 800 games
+heavy       v greedy: 0.7% (±0.6), draws 0.4%, rounds 10.2, 800 games
+light       v greedy: 40.9% (±3.4), draws 7.9%, rounds 13.0, 800 games
+greedyblind v greedy: 41.4% (±3.4), draws 6.9%, rounds 12.1, 800 games

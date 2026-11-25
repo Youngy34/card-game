@@ -127,3 +127,35 @@ EX pairs by type: v0 + EX had Guard pairs (26% of pairs, winning 57%) and Break 
 - Guard only saves the 1 card that would break. You still take the full Power, so a high Guard doesn't protect.
 - Low-Power cards just lose.
 - Exceed separates Armor (cuts damage) from Guard (stun resistance); v1 dropped Armor.
+
+## Strike v2 (25 Nov 2026, ~07:30) — `--strike2` (deck `strike2`)
+
+**Rule (Mark):**
+- Any hit costs your played card.
+- Damage on top is Power minus Guard (min 0) from hand.
+- Power more than Guard stuns (no hit back).
+- A card that was never hit returns to hand.
+- Both out in the same clash: the faster hit wins.
+
+Predictions: `PREDICTIONS-strike2.md`. Balance tools: `balance.mjs` (solves the card-against-card game) and `search.mjs` (stat search).
+
+**Deck:** Jab 6/1/0 ×4, Straight 5/2/0 ×4, Sweep 4/2/1 ×4, Haymaker 3/3/0 ×4, Counter 1/1/2 ×8 (Speed/Power/Guard).
+
+| Measure | Bar | Result |
+|---|---|---|
+| Length | 10–15 | **12.3** (p10 10, p90 14): pass |
+| Draws | ≤3% | **10.7%**: fail. Every draw is the same card meeting itself at equal Speed in the last clash. |
+| Both lose cards | ≤45% | **64%**: fail |
+| Card use ≥5% | | Straight 28%, Sweep 26%, Jab 25%, Counter 18%, **Haymaker 3%**: fail |
+| Random / Thumb v Greedy | ≤20 / ≤30% | 17.0% / 9.4%: pass |
+| Lazy v Greedy | ≤40% | heaviest 0.7%; **lightest 40.9%** (always Jab, then Counter): fail. Greedy doesn't punish a predictable player. |
+| Seat | 47–53% | 42.6% (seat 2 46.7%, draws 10.7%): probably noise; recheck |
+| Comebacks from 4+ behind | | 9.5% |
+
+**Static mix, by variant (J / St / Sw / H / C):**
+
+| Variant | Mix |
+|---|---|
+| As simmed | 3 / 22 / 10 / 13 / 51% |
+| Counter 1/2/2 | 3 / 21 / 6 / 27 / 44% |
+| Haymaker 3/3/1 | 0 / 40 / 0 / 20 / 40% |

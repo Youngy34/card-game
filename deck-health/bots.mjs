@@ -43,7 +43,7 @@ function outcomeValue(v, a, b, cfg) {
   const r = clash(a, b, v.myDiscard.length, v.opDiscard.length, cfg);
   const meDead = r.dmg[0] > v.myDeck;
   const opDead = r.dmg[1] > v.opDeck;
-  if (meDead && opDead) return 0;
+  if (meDead && opDead) return cfg && cfg.fasterWins && r.first >= 0 ? (r.first === 0 ? 1 : -1) : 0;
   if (meDead) return -1;
   if (opDead) return 1;
   return 2 * winChance(v.myDeck - r.dmg[0] + r.heal[0], v.opDeck - r.dmg[1] + r.heal[1]) - 1;

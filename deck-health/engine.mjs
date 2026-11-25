@@ -30,6 +30,44 @@ export const DECKS = {
       ['Parry', 'G', 2, 1, 1, 3], ['Counter', 'G', 1, 2, 2, 3], ['Fortress', 'G', 1, 1, 3, 2],
     ],
   },
+  // Strike v2 as simmed (25 Nov): five cards, the Guard family one card.
+  strike2: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 4], ['Straight', 'P', 5, 2, 0, 4],
+      ['Sweep', 'B', 4, 2, 1, 4], ['Haymaker', 'B', 3, 3, 0, 4],
+      ['Counter', 'G', 1, 1, 2, 8],
+    ],
+  },
+  // First strike v2 candidate (nine cards; lopsided in the balance check).
+  strike2nine: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 3], ['Straight', 'P', 5, 2, 0, 3], ['Check', 'P', 5, 1, 1, 2],
+      ['Sweep', 'B', 4, 2, 0, 3], ['Haymaker', 'B', 3, 3, 0, 3], ['Armour Slam', 'B', 3, 2, 1, 2],
+      ['Parry', 'G', 2, 1, 1, 3], ['Counter', 'G', 1, 2, 2, 3], ['Block', 'G', 2, 1, 2, 2],
+    ],
+  },
+  // Strike v2, six cards: a light card (wins its family's mirror) and a heavy one per family.
+  strike2a: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 4], ['Straight', 'P', 5, 2, 0, 4],
+      ['Sweep', 'B', 4, 2, 0, 4], ['Haymaker', 'B', 3, 3, 0, 4],
+      ['Parry', 'G', 2, 2, 1, 4], ['Counter', 'G', 1, 2, 2, 4],
+    ],
+  },
+  strike2b: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 4], ['Straight', 'P', 5, 2, 0, 4],
+      ['Sweep', 'B', 4, 2, 0, 4], ['Haymaker', 'B', 3, 3, 0, 4],
+      ['Parry', 'G', 2, 1, 1, 4], ['Counter', 'G', 1, 2, 2, 4],
+    ],
+  },
+  strike2c: {
+    cards: [
+      ['Jab', 'P', 6, 1, 0, 4], ['Straight', 'P', 5, 2, 0, 4],
+      ['Sweep', 'B', 4, 2, 1, 4], ['Haymaker', 'B', 3, 3, 0, 4],
+      ['Parry', 'G', 2, 2, 1, 4], ['Counter', 'G', 1, 1, 2, 4],
+    ],
+  },
   // Quick-check variants (not adopted): 18 cards (one light Pressure and one light Guard out).
   v0_18: { P: [1, 2, 3, 5, 6, 7, 8], B: [8, 9, 10, 11, 12, 13], G: [1, 2, 5, 6, 7] },
 };
@@ -105,7 +143,29 @@ export function strikeClash(a, b) {
   return { w, dmg, took, broken, heal: [0, 0], strike: true };
 }
 
+// Strike v2 (Mark, 25 Nov): any hit costs your played card; damage on top is Power minus Guard (min 0)
+// from hand; Power more than Guard stuns (no hit back). A card never hit returns to hand.
+// first: who hit first (0, 1, or -1 for both at once) — decides a double knock-out.
+export function strike2Clash(a, b) {
+  const A = a.cards ? a.cards[0] : a, B = b.cards ? b.cards[0] : b;
+  const took = [0, 0], hitBy = [false, false], stunned = [false, false];
+  const card = [A, B];
+  const hit = (att, i) => {
+    hitBy[i] = true;
+    took[i] += Math.max(0, att.pow - card[i].grd);
+    if (att.pow > card[i].grd) stunned[i] = true;
+  };
+  let first = -1;
+  if (A.spd > B.spd) { first = 0; hit(A, 1); if (!stunned[1]) hit(B, 0); }
+  else if (B.spd > A.spd) { first = 1; hit(B, 0); if (!stunned[0]) hit(A, 1); }
+  else { hit(A, 1); hit(B, 0); }
+  const dmg = [took[0] + (hitBy[0] ? 1 : 0), took[1] + (hitBy[1] ? 1 : 0)];
+  const w = dmg[0] < dmg[1] ? 0 : dmg[1] < dmg[0] ? 1 : -1;
+  return { w, dmg, took, broken: hitBy, stunned, first, heal: [0, 0], strike: true };
+}
+
 export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
+  if (cfg.strike2) return strike2Clash(a, b);
   if (cfg.strike) return strikeClash(a, b);
   a = asMove(a); b = asMove(b);
   const heal = cfg.heal !== false;
@@ -171,7 +231,11 @@ export function playGame(spec, bots, R, cfg = {}) {
     const need = g.players.map((p) => g.handSize - p.hand.length);
     const out = g.players.map((p, i) => need[i] > p.deck.length);
     if (out[0] || out[1]) {
-      const winner = out[0] && out[1] ? -1 : out[0] ? 1 : 0;
+      let winner = out[0] && out[1] ? -1 : out[0] ? 1 : 0;
+      if (winner === -1 && cfg.fasterWins && log.length) {
+        const f = log[log.length - 1].res.first;
+        if (f === 0 || f === 1) winner = f;
+      }
       return { winner, rounds: g.round, log, g };
     }
     g.players.forEach((p, i) => {

@@ -16,7 +16,8 @@ const N = +opt('-n', 400);
 const SEED = +opt('--seed', 1);
 let deckName = opt('--deck', 'v0');
 let spec = DECKS[deckName];
-const cfg = { heal: !args.includes('--noheal'), ex: args.includes('--ex'), guard1: args.includes('--guard1'), guardMirror: opt('--gmirror', 'bounce'), strike: args.includes('--strike') };
+const cfg = { heal: !args.includes('--noheal'), ex: args.includes('--ex'), guard1: args.includes('--guard1'), guardMirror: opt('--gmirror', 'bounce'), strike: args.includes('--strike'), strike2: args.includes('--strike2') };
+if (cfg.strike2) { cfg.fasterWins = true; if (deckName === 'v0') { deckName = opt('--sdeck', 'strike2'); spec = DECKS[deckName]; } }
 if (cfg.strike && deckName === 'v0') { deckName = 'strike1'; spec = DECKS.strike1; }
 if (opt('--bands')) cfg.bands = opt('--bands').split(',').map(Number);
 const pos = args.filter((a, i) => !a.startsWith('-') && !(i > 0 && args[i - 1].startsWith('-')));
@@ -115,10 +116,10 @@ function mirrorStats(kind, n, seed) {
   const plays = xPlays.reduce((s, x) => s + x, 0);
   const mean = rounds.reduce((s, x) => s + x, 0) / n;
   const out = [];
-  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, EX ${cfg.ex ? 'on' : 'off'}, guard1 ${cfg.guard1 ? 'on' : 'off'}, strike ${cfg.strike ? 'on' : 'off'}, seed ${seed}`);
+  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, EX ${cfg.ex ? 'on' : 'off'}, guard1 ${cfg.guard1 ? 'on' : 'off'}, strike ${cfg.strike2 ? 'v2' : cfg.strike ? 'v1' : 'off'}, seed ${seed}`);
   out.push(`  rounds: mean ${mean.toFixed(1)}, median ${q(0.5)}, p10 ${q(0.1)}, p90 ${q(0.9)}, min ${rounds[0]}, max ${rounds[n - 1]}${capped ? `, capped ${capped}` : ''}`);
   out.push(`  seat 1 wins ${pct(seat0 / n)} (±${ci(seat0 / n, n)}), draws ${pct(draws / n)}`);
-  if (cfg.strike) {
+  if (cfg.strike || cfg.strike2) {
     out.push(`  cards lost per clash (both players) ${(lostSum / clashes).toFixed(2)}; both lose cards in ${pct(bothLose / clashes)} of clashes; equal losses ${pct(ties / clashes)}`);
     const tot = Object.values(perCard).reduce((s, c) => s + c.n, 0);
     for (const [nm, c] of Object.entries(perCard).sort((a, b) => b[1].n - a[1].n))
