@@ -1,0 +1,4 @@
+  rounds: mean 12.7, median 13, p10 10, p90 15, min 7, max 20
+  plays by type: P 31.5%, B 47.5%, G 21.0%
+  hands missing a type at reveal 22.0%; opponent's known cards 1.09 a round on average
+onlyB (sta_grappler) v greedy (sta_grappler): onlyB wins 20.7% (±3.2), draws 0.0%, rounds 11.4, 600 games; plays Strike/Throw/Armour — A 17% / 69% / 14%, B 26% / 52% / 22%

@@ -64,7 +64,7 @@ function sampleHands(v, R, S, blind) {
   if (blind === 'cheat') return { hands: Array.from({ length: S }, () => v._opHand), pool: v._opHand };
   const known = blind ? [] : v.opKnown;
   for (const c of known) gone.add(c.id);
-  const pool = v.decklist.filter((c) => !gone.has(c.id));
+  const pool = (v.opDecklist || v.decklist).filter((c) => !gone.has(c.id));
   const slots = v.opHandSize - known.length;
   const hands = [];
   for (let s = 0; s < S; s++) {
@@ -140,7 +140,7 @@ function sampleMine(v, R, S) {
   const known = v.hand.filter((c) => v.myKnown.has(c.id));
   const gone = new Set(v.myDiscard.map((c) => c.id));
   for (const c of known) gone.add(c.id);
-  const pool = v.decklist.filter((c) => !gone.has(c.id));
+  const pool = (v.myDecklist || v.decklist).filter((c) => !gone.has(c.id));
   const out = [v.hand];
   for (let s = 1; s < S; s++) {
     const p = pool.slice(), h = known.slice();
@@ -188,7 +188,7 @@ export function sound2Strategy(v, R, opts = {}) {
 
 // Greedy over moves: the move with the best average value, assuming the opponent plays a single card
 // evenly, or (with EX on) an EX pair a share e of the time.
-export function greedyMove(v, R, { blind = false, allow = 'all', e = 0.15 } = {}) {
+export function greedyMove(v, R, { blind = false, allow = 'all', e = 0.15, reader = false } = {}) {
   const cfg = v.cfg;
   const { hands } = sampleHands(v, R, 40, blind);
   let mine = movesOf(v.hand, cfg);
@@ -198,7 +198,16 @@ export function greedyMove(v, R, { blind = false, allow = 'all', e = 0.15 } = {}
     const ms = movesOf(h, cfg);
     const singles = ms.filter((m) => !m.ex), pairs = ms.filter((m) => m.ex);
     const ep = pairs.length ? e : 0;
-    return ms.map((m) => [m, m.ex ? ep / pairs.length : (1 - ep) / singles.length]);
+    let ws = ms.map((m) => [m, m.ex ? ep / pairs.length : (1 - ep) / singles.length]);
+    if (reader) {
+      // Reader: weight the opponent's cards by how often they've revealed each type this game (smoothed).
+      const cnt = { P: 1, B: 1, G: 1 };
+      for (const t of v.opPlayed || []) cnt[t]++;
+      ws = ws.map(([m, w]) => [m, w * cnt[m.type]]);
+      const z = ws.reduce((a, [, w]) => a + w, 0);
+      ws = ws.map(([m, w]) => [m, w / z]);
+    }
+    return ws;
   });
   let best = null, bv = -Infinity;
   for (const a of mine) {
@@ -291,6 +300,8 @@ export function makeBot(kind, opts = {}) {
     case 'greedy':
     case 'greedyblind':
       return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { blind: kind === 'greedyblind' }) };
+    case 'reader': // Greedy that reads the opponent's habits (type frequencies revealed this game)
+      return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { reader: true }) };
     case 'noex': // Greedy that never plays an EX pair
       return { kind, ...sensible, choose: (v, R) => greedyMove(v, R, { allow: 'single' }) };
     case 'alwaysex': // Greedy that always plays an EX pair when it holds one

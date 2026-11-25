@@ -1,0 +1,3 @@
+random (sta_striker) v greedy (sta_grappler): random wins 22.0% (±2.9), draws 0.0%, rounds 12.3, 800 games; plays Strike/Throw/Armour — A 34% / 35% / 32%, B 26% / 41% / 33%
+thumb (sta_striker) v greedy (sta_grappler): thumb wins 31.0% (±3.2), draws 0.0%, rounds 12.4, 800 games; plays Strike/Throw/Armour — A 35% / 33% / 32%, B 25% / 40% / 35%
+onlyP (sta_striker) v greedy (sta_grappler): onlyP wins 51.9% (±3.5), draws 0.0%, rounds 12.0, 800 games; plays Strike/Throw/Armour — A 73% / 14% / 13%, B 26% / 42% / 32%

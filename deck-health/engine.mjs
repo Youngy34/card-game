@@ -73,6 +73,15 @@ export const DECKS = {
   sta_even18: { tri: ['P', 'B', 'G'].flatMap((t) => [[t, 1, 0], [t, 2, 0], [t, 3, 0], [t, 5, 1], [t, 6, 1], [t, 7, 1]]) },
   // Even, 15 cards (quick check for length): speed 1, 2, 3 at +0 and 5, 6 at +1 per type.
   sta_even15: { tri: ['P', 'B', 'G'].flatMap((t) => [[t, 1, 0], [t, 2, 0], [t, 3, 0], [t, 5, 1], [t, 6, 1]]) },
+  // Fighters on the even base (25 Nov): the Grappler's Throws and the Striker's Strikes hit +1/+2.
+  sta_grappler: { tri: [
+    ['P', 1, 0], ['P', 2, 0], ['P', 3, 0], ['P', 5, 1], ['P', 6, 1], ['P', 7, 1],
+    ['B', 1, 1], ['B', 2, 1], ['B', 3, 1], ['B', 5, 2], ['B', 6, 2], ['B', 7, 2],
+    ['G', 1, 0], ['G', 2, 0], ['G', 3, 0], ['G', 5, 1], ['G', 6, 1], ['G', 7, 1]] },
+  sta_striker: { tri: [
+    ['P', 1, 1], ['P', 2, 1], ['P', 3, 1], ['P', 5, 2], ['P', 6, 2], ['P', 7, 2],
+    ['B', 1, 0], ['B', 2, 0], ['B', 3, 0], ['B', 5, 1], ['B', 6, 1], ['B', 7, 1],
+    ['G', 1, 0], ['G', 2, 0], ['G', 3, 0], ['G', 5, 1], ['G', 6, 1], ['G', 7, 1]] },
   // Quick-check variants (not adopted): 18 cards (one light Pressure and one light Guard out).
   v0_18: { P: [1, 2, 3, 5, 6, 7, 8], B: [8, 9, 10, 11, 12, 13], G: [1, 2, 5, 6, 7] },
 };
@@ -203,13 +212,15 @@ export function clash(a, b, discA = 1, discB = 1, cfg = {}, tok) {
 
 export function newGame(spec, R, cfg = {}) {
   const hand = cfg.hand || 5;
-  const players = [0, 1].map(() => {
-    const deck = shuffle(makeDecklist(spec, cfg), R);
-    const p = { deck, hand: [], known: new Set(), discard: [], healedBottom: [] };
+  const specs = cfg.specs || [spec, spec];
+  const players = [0, 1].map((i) => {
+    const deck = shuffle(makeDecklist(specs[i], cfg), R);
+    const p = { deck, hand: [], known: new Set(), discard: [], healedBottom: [], played: [] };
     for (let i = 0; i < hand; i++) p.hand.push(p.deck.pop());
     return p;
   });
-  return { players, spec, cfg, handSize: hand, round: 0, decklist: makeDecklist(spec, cfg), token: R() < 0.5 ? 0 : 1 };
+  return { players, spec, cfg, handSize: hand, round: 0, decklist: makeDecklist(specs[0], cfg),
+    decklists: specs.map((sp) => makeDecklist(sp, cfg)), token: R() < 0.5 ? 0 : 1 };
 }
 
 // What player i can see.
@@ -225,9 +236,12 @@ export function view(g, i) {
     opKnown: op.hand.filter((c) => op.known.has(c.id)),
     opHandSize: op.hand.length,
     opDiscard: op.discard.slice(),
-    decklist: g.decklist,
+    decklist: g.decklists[i],
+    myDecklist: g.decklists[i],
+    opDecklist: g.decklists[1 - i],
     round: g.round,
     myToken: g.token === i,
+    opPlayed: op.played.slice(), // types the opponent has revealed this game (public)
     _opHand: op.hand.slice(), // hidden: only the 'cheat' diagnostic bot reads this
     cfg: g.cfg,
   };
@@ -258,6 +272,7 @@ export function playGame(spec, bots, R, cfg = {}) {
     const views = [view(g, 0), view(g, 1)];
     const missing = views.map((v) => TYPES.filter((t) => !v.hand.some((c) => c.type === t)).length);
     const picks = [asMove(bots[0].choose(views[0], R)), asMove(bots[1].choose(views[1], R))];
+    g.players.forEach((p, i) => p.played.push(picks[i].type));
     const res = clash(picks[0], picks[1], g.players[0].discard.length, g.players[1].discard.length, cfg, g.token);
     if (res.tokenUsed) g.token = 1 - g.token;
     const entry = {

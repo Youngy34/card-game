@@ -27,12 +27,19 @@ const REF = opt('--ref', 'greedy');
 const pct = (x) => (100 * x).toFixed(1) + '%';
 const ci = (p, n) => (196 * Math.sqrt((p * (1 - p)) / n)).toFixed(1);
 
+// --fa / --fb: decks for side A and side B (fighters). Side A's deck follows side A's bot across seats.
+const FA = opt('--fa'), FB = opt('--fb');
 function run(kindA, kindB, n, seed, seat = 0) {
   const R = rng(seed);
   const games = [];
+  const c = { ...cfg };
+  if (FA || FB) {
+    const sa = DECKS[FA || deckName], sb = DECKS[FB || deckName];
+    c.specs = seat === 0 ? [sa, sb] : [sb, sa];
+  }
   for (let k = 0; k < n; k++) {
     const bots = seat === 0 ? [makeBot(kindA), makeBot(kindB)] : [makeBot(kindB), makeBot(kindA)];
-    games.push(playGame(spec, bots, R, cfg));
+    games.push(playGame(spec, bots, R, c));
   }
   return games;
 }
@@ -43,7 +50,14 @@ function vs(a, b, n, seed) {
   for (const g of g0) { if (g.winner === 0) w++; else if (g.winner === -1) d++; rounds += g.rounds; }
   for (const g of g1) { if (g.winner === 1) w++; else if (g.winner === -1) d++; rounds += g.rounds; }
   const tot = 2 * n;
-  return { a, b, win: (w + d / 2) / tot, draws: d / tot, rounds: rounds / tot, n: tot };
+  const tp = [{ P: 0, B: 0, G: 0, n: 0 }, { P: 0, B: 0, G: 0, n: 0 }]; // [side A, side B]
+  for (const [gs, sideOfSeat0] of [[g0, 0], [g1, 1]])
+    for (const g of gs) for (const e of g.log) for (let i = 0; i < 2; i++) {
+      const side = i === 0 ? sideOfSeat0 : 1 - sideOfSeat0;
+      tp[side][e.picks[i].type]++; tp[side].n++;
+    }
+  const mix = (t) => ['P', 'B', 'G'].map((k) => (100 * t[k] / t.n).toFixed(0) + '%').join(' / ');
+  return { a, b, win: (w + d / 2) / tot, draws: d / tot, rounds: rounds / tot, n: tot, mixA: mix(tp[0]), mixB: mix(tp[1]) };
 }
 
 function mirrorStats(kind, n, seed) {
@@ -147,7 +161,7 @@ if (cmd === 'mirror') {
   console.log(mirrorStats(opt('--bot', 'sound'), N, SEED));
 } else if (cmd === 'vs') {
   const r = vs(pos[1], pos[2], N, SEED);
-  console.log(`${r.a} v ${r.b}: ${r.a} wins ${pct(r.win)} (±${ci(r.win, r.n)}), draws ${pct(r.draws)}, rounds ${r.rounds.toFixed(1)}, ${r.n} games`);
+  console.log(`${r.a}${FA ? ' (' + FA + ')' : ''} v ${r.b}${FB ? ' (' + FB + ')' : ''}: ${r.a} wins ${pct(r.win)} (±${ci(r.win, r.n)}), draws ${pct(r.draws)}, rounds ${r.rounds.toFixed(1)}, ${r.n} games; plays Strike/Throw/Armour — A ${r.mixA}, B ${r.mixB}`);
 } else if (cmd === 'ladder') {
   const bots = (opt('--bots', 'random,thumb,half,blind,heavy,light')).split(',');
   for (const b of bots) {

@@ -1,0 +1,1 @@
+onlyP (sta_striker) v sound (sta_grappler): onlyP wins 42.5% (±6.3), draws 0.0%, rounds 13.4, 240 games; plays Strike/Throw/Armour — A 57% / 22% / 21%, B 32% / 29% / 39%

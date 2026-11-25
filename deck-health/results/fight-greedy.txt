@@ -1,0 +1,1 @@
+greedy (sta_grappler) v greedy (sta_striker): greedy wins 42.7% (±2.4), draws 0.0%, rounds 12.3, 1600 games; plays Strike/Throw/Armour — A 25% / 42% / 33%, B 54% / 27% / 19%

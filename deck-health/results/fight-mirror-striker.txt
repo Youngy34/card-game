@@ -1,0 +1,4 @@
+  rounds: mean 12.7, median 13, p10 10, p90 15, min 7, max 20
+  plays by type: P 47.3%, B 20.4%, G 32.2%
+  hands missing a type at reveal 21.9%; opponent's known cards 1.11 a round on average
+onlyP (sta_striker) v greedy (sta_striker): onlyP wins 20.0% (±3.2), draws 0.0%, rounds 11.4, 600 games; plays Strike/Throw/Armour — A 71% / 14% / 15%, B 54% / 21% / 25%

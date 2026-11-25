@@ -1,0 +1,1 @@
+sound (sta_grappler) v sound (sta_striker): sound wins 54.2% (±6.3), draws 0.0%, rounds 14.0, 240 games; plays Strike/Throw/Armour — A 31% / 29% / 40%, B 36% / 35% / 29%

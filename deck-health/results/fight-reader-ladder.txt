@@ -1,0 +1,6 @@
+onlyP (sta_striker) v reader (sta_grappler): onlyP wins 6.9% (±1.8), draws 0.0%, rounds 11.7, 800 games; plays Strike/Throw/Armour — A 60% / 20% / 20%, B 24% / 28% / 48%
+onlyB (sta_grappler) v reader (sta_striker): onlyB wins 1.3% (±0.8), draws 0.0%, rounds 8.3, 800 games; plays Strike/Throw/Armour — A 17% / 65% / 18%, B 68% / 19% / 13%
+random (sta_grappler) v reader (sta_striker): random wins 19.8% (±2.8), draws 0.0%, rounds 12.6, 800 games; plays Strike/Throw/Armour — A 34% / 31% / 35%, B 47% / 29% / 24%
+random (sta_striker) v reader (sta_grappler): random wins 23.5% (±2.9), draws 0.0%, rounds 12.5, 800 games; plays Strike/Throw/Armour — A 33% / 34% / 33%, B 27% / 41% / 32%
+thumb (sta_grappler) v reader (sta_striker): thumb wins 29.9% (±3.2), draws 0.0%, rounds 12.7, 800 games; plays Strike/Throw/Armour — A 34% / 33% / 34%, B 48% / 28% / 24%
+thumb (sta_striker) v reader (sta_grappler): thumb wins 32.1% (±3.2), draws 0.0%, rounds 12.3, 800 games; plays Strike/Throw/Armour — A 35% / 33% / 32%, B 26% / 40% / 34%

@@ -183,3 +183,30 @@ Predictions: `PREDICTIONS-sta.md`. Lazy bots `onlyP`, `onlyB`, `onlyG`: always a
 | Token decides | 6.6% of clashes | 6.5% | — |
 | Draws | 0 | 0 | 0 |
 | Seat | 50.7% | 46.7%; recheck runs 47.1 / 48.4 / 50.3%; random bots 51.1%: noise | 47.8% |
+
+## Grappler v Striker (25 Nov 2026, ~08:50) — `--fa sta_grappler --fb sta_striker --noheal --token`
+
+**Fighters:** even base (18 cards, 6 per type). The Grappler's Throws and the Striker's Strikes hit +1/+2 instead of +0/+1. Predictions: `PREDICTIONS-fighters.md`. New bot `reader`: Greedy that weights the opponent's cards by the types they've revealed this game, so it punishes habits. Engine: per-player decks (`cfg.specs`), `opPlayed` in the view.
+
+| Measure | Greedy | Sound (equilibrium) | Reader |
+|---|---|---|---|
+| Grappler's win rate | 42.7% ±2.4 (biased, see below) | **48.8% ±4.4** (500 games, two runs: 54.2, 43.8) | **49.3% ±2.8** |
+| Grappler plays Strike / Throw / Armour | 25 / 42 / 33% | 31 / 29–30 / 38–40% | 33 / 28 / 39% |
+| Striker plays Strike / Throw / Armour | 54 / 27 / 19% | 36 / 35–36 / 28–29% | 48 / 31 / 21% |
+| Length | 12.3 | 13.5–14.0 | 13.1 |
+
+**Against each reference:**
+
+| Player | v Greedy | v Sound | v Reader |
+|---|---|---|---|
+| Always Strike (as the Striker) | **51.9%** | 42.5% | **6.9%** |
+| Always Throw (as the Grappler) | 3.5% | — | 1.3% |
+| Random as the Grappler / as the Striker | 19.6 / 22.0% | — | 19.8 / 23.5% |
+| Thumb as the Grappler / as the Striker | 28.1 / 31.0% | — | 29.9 / 32.1% |
+
+- **Mirrors (Greedy):**
+    - Grappler mirror: 12.7 rounds, Throws 47.5% of plays; always Throw 20.7%.
+    - Striker mirror: 12.7 rounds, Strikes 47%; always Strike 20.0%.
+- **Bots:** Reader v Greedy (even base) 44.5%; Reader v Sound 59.2% ±8.8 (120 games).
+
+**Greedy is biased in uneven matchups.** It assumes the opponent plays every card in hand evenly, so it never expects a lean. The Greedy Grappler keeps throwing into the Striker's Strikes. Use Sound or Reader for matchups.
