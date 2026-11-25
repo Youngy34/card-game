@@ -1,0 +1,13 @@
+greedy mirror, 1000 games, deck sta_even18, heal off, EX off, guard1 off, strike off, token on, seed 1
+  rounds: mean 16.8, median 17, p10 13, p90 20, min 8, max 24
+  seat 1 wins 46.7% (±3.1), draws 0.0%
+  token decides 6.5% of clashes (1.10 a game)
+  ties 0.0% of clashes; heals 0.00 a game; longest win streak 4.1 on average
+  plays by weight: +0 48.2%, +1 51.8%, +2 0.0%
+  plays by type: P 33.5%, B 33.1%, G 33.5%
+  P played while holding 2+ weights of it (5843): lightest 41.8%, heaviest 58.2%
+  B played while holding 2+ weights of it (5709): lightest 42.2%, heaviest 57.8%
+  G played while holding 2+ weights of it (5695): lightest 41.4%, heaviest 58.6%
+  hands missing a type at reveal 17.6%; opponent's known cards 1.36 a round on average
+  damage per decided clash 1.41; per decided game the loser lost 14.1 cards, the winner 9.6 (and healed 0.0)
+  comebacks (winner was 4+ cards behind at some point) 18.6%

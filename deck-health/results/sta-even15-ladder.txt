@@ -1,0 +1,3 @@
+random      v greedy: 26.3% (±3.5), draws 0.0%, rounds 13.6, 600 games
+thumb       v greedy: 33.3% (±3.8), draws 0.0%, rounds 13.6, 600 games
+onlyP       v greedy: 18.5% (±3.1), draws 0.0%, rounds 13.4, 600 games

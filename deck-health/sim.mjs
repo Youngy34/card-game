@@ -16,7 +16,7 @@ const N = +opt('-n', 400);
 const SEED = +opt('--seed', 1);
 let deckName = opt('--deck', 'v0');
 let spec = DECKS[deckName];
-const cfg = { heal: !args.includes('--noheal'), ex: args.includes('--ex'), guard1: args.includes('--guard1'), guardMirror: opt('--gmirror', 'bounce'), strike: args.includes('--strike'), strike2: args.includes('--strike2') };
+const cfg = { heal: !args.includes('--noheal'), ex: args.includes('--ex'), guard1: args.includes('--guard1'), guardMirror: opt('--gmirror', 'bounce'), strike: args.includes('--strike'), strike2: args.includes('--strike2'), token: args.includes('--token') };
 if (cfg.strike2) { cfg.fasterWins = true; if (deckName === 'v0') { deckName = opt('--sdeck', 'strike2'); spec = DECKS[deckName]; } }
 if (cfg.strike && deckName === 'v0') { deckName = 'strike1'; spec = DECKS.strike1; }
 if (opt('--bands')) cfg.bands = opt('--bands').split(',').map(Number);
@@ -50,6 +50,7 @@ function mirrorStats(kind, n, seed) {
   const games = run(kind, kind, n, seed);
   const rounds = games.map((g) => g.rounds).sort((a, b) => a - b);
   const q = (p) => rounds[Math.floor(p * (rounds.length - 1))];
+  let tokenUses = 0;
   let bounces = 0, bothLose = 0, lostSum = 0;
   const perCard = {};
   let seat0 = 0, draws = 0, ties = 0, clashes = 0, heals = 0, capped = 0;
@@ -67,6 +68,7 @@ function mirrorStats(kind, n, seed) {
       clashes++;
       if (e.res.w === -1) ties++;
       if (e.res.w === -2) bounces++;
+      if (e.res.tokenUsed) tokenUses++;
       if (e.res.strike) {
         if (e.res.dmg[0] > 0 && e.res.dmg[1] > 0) bothLose++;
         lostSum += e.res.dmg[0] + e.res.dmg[1];
@@ -116,7 +118,7 @@ function mirrorStats(kind, n, seed) {
   const plays = xPlays.reduce((s, x) => s + x, 0);
   const mean = rounds.reduce((s, x) => s + x, 0) / n;
   const out = [];
-  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, EX ${cfg.ex ? 'on' : 'off'}, guard1 ${cfg.guard1 ? 'on' : 'off'}, strike ${cfg.strike2 ? 'v2' : cfg.strike ? 'v1' : 'off'}, seed ${seed}`);
+  out.push(`${kind} mirror, ${n} games, deck ${deckName}, heal ${cfg.heal ? 'on' : 'off'}, EX ${cfg.ex ? 'on' : 'off'}, guard1 ${cfg.guard1 ? 'on' : 'off'}, strike ${cfg.strike2 ? 'v2' : cfg.strike ? 'v1' : 'off'}, token ${cfg.token ? 'on' : 'off'}, seed ${seed}`);
   out.push(`  rounds: mean ${mean.toFixed(1)}, median ${q(0.5)}, p10 ${q(0.1)}, p90 ${q(0.9)}, min ${rounds[0]}, max ${rounds[n - 1]}${capped ? `, capped ${capped}` : ''}`);
   out.push(`  seat 1 wins ${pct(seat0 / n)} (±${ci(seat0 / n, n)}), draws ${pct(draws / n)}`);
   if (cfg.strike || cfg.strike2) {
@@ -125,6 +127,7 @@ function mirrorStats(kind, n, seed) {
     for (const [nm, c] of Object.entries(perCard).sort((a, b) => b[1].n - a[1].n))
       out.push(`    ${nm.padEnd(12)} ${pct(c.n / tot).padStart(6)} of plays; loses fewer ${pct(c.win / c.n).padStart(6)}, equal ${pct(c.tie / c.n).padStart(6)}, broken ${pct(c.broken / c.n).padStart(6)}`);
   }
+  if (cfg.token) out.push(`  token decides ${pct(tokenUses / clashes)} of clashes (${(tokenUses / n).toFixed(2)} a game)`);
   if (cfg.guard1) out.push(`  Guard mirrors (nothing happens) ${pct(bounces / clashes)} of clashes`);
   out.push(`  ties ${pct(ties / clashes)} of clashes; heals ${(heals / n).toFixed(2)} a game; longest win streak ${(streakSum / n).toFixed(1)} on average`);
   out.push(`  plays by weight: +0 ${pct(xPlays[0] / plays)}, +1 ${pct(xPlays[1] / plays)}, +2 ${pct(xPlays[2] / plays)}`);

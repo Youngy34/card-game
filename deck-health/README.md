@@ -159,3 +159,27 @@ Predictions: `PREDICTIONS-strike2.md`. Balance tools: `balance.mjs` (solves the 
 | As simmed | 3 / 22 / 10 / 13 / 51% |
 | Counter 1/2/2 | 3 / 21 / 6 / 27 / 44% |
 | Haymaker 3/3/1 | 0 / 40 / 0 / 20 / 40% |
+
+## Strike / Throw / Armour (25 Nov 2026, ~08:30) — `--noheal --token` (decks `v0`, `sta_even18`, `sta_even15`)
+
+**Rule:**
+- Strike beats Throw, Throw beats Armour, Armour beats Strike (v0's P, B and G slots).
+- The faster card wins every mirror.
+- An exact speed tie goes to the advantage token's holder, who then passes it.
+- No heal, no EX. Every clash has one loser.
+
+Predictions: `PREDICTIONS-sta.md`. Lazy bots `onlyP`, `onlyB`, `onlyG`: always a card of that type when held.
+
+| Measure (Greedy) | A: uneven, 20 | B: even, 18 | Even, 15 (quick) |
+|---|---|---|---|
+| Length | **14.7** | **16.8** (fail) | 13.9 |
+| Plays Strike / Throw / Armour | 35 / 40 / 24% | 33 / 33 / 33% | 33 / 33 / 33% |
+| Random v Greedy | 21.1% | 23.8% | 26.3% |
+| Thumb v Greedy | 25.6% | 31.0% | 33.3% |
+| Worst "always one type" | 23.3% (Strike) | 18.8% | 18.5% |
+| Always heaviest / lightest | 7.6 / 13.4% | 8.4 / 15.6% | — |
+| Face-up cards worth | 19 points | 14 points | — |
+| Comebacks from 4+ behind | 24.7% | 18.6% | 13.0% |
+| Token decides | 6.6% of clashes | 6.5% | — |
+| Draws | 0 | 0 | 0 |
+| Seat | 50.7% | 46.7%; recheck runs 47.1 / 48.4 / 50.3%; random bots 51.1%: noise | 47.8% |

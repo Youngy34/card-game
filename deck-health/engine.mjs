@@ -68,6 +68,11 @@ export const DECKS = {
       ['Parry', 'G', 2, 2, 1, 4], ['Counter', 'G', 1, 1, 2, 4],
     ],
   },
+  // Strike / Throw / Armour (25 Nov): P = Strike, B = Throw, G = Armour. Explicit [type, speed rank, +x].
+  // Even: every type the same — speed 1, 2, 3 at +0 and 5, 6, 7 at +1 (6 cards a type, 18 cards).
+  sta_even18: { tri: ['P', 'B', 'G'].flatMap((t) => [[t, 1, 0], [t, 2, 0], [t, 3, 0], [t, 5, 1], [t, 6, 1], [t, 7, 1]]) },
+  // Even, 15 cards (quick check for length): speed 1, 2, 3 at +0 and 5, 6 at +1 per type.
+  sta_even15: { tri: ['P', 'B', 'G'].flatMap((t) => [[t, 1, 0], [t, 2, 0], [t, 3, 0], [t, 5, 1], [t, 6, 1]]) },
   // Quick-check variants (not adopted): 18 cards (one light Pressure and one light Guard out).
   v0_18: { P: [1, 2, 3, 5, 6, 7, 8], B: [8, 9, 10, 11, 12, 13], G: [1, 2, 5, 6, 7] },
 };
@@ -75,6 +80,10 @@ export const DECKS = {
 export function makeDecklist(spec, cfg = {}) {
   const out = [];
   let id = 0;
+  if (spec.tri) {
+    for (const [type, rank, x] of spec.tri) out.push({ id: id++, type, rank, x });
+    return out;
+  }
   if (spec.cards) {
     // Strike cards: rank = 7 - speed (lower is faster, as elsewhere), x = power - 1 (for the weight stats).
     for (const [name, type, spd, pow, grd, n] of spec.cards)
@@ -164,7 +173,7 @@ export function strike2Clash(a, b) {
   return { w, dmg, took, broken: hitBy, stunned, first, heal: [0, 0], strike: true };
 }
 
-export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
+export function clash(a, b, discA = 1, discB = 1, cfg = {}, tok) {
   if (cfg.strike2) return strike2Clash(a, b);
   if (cfg.strike) return strikeClash(a, b);
   a = asMove(a); b = asMove(b);
@@ -181,12 +190,15 @@ export function clash(a, b, discA = 1, discB = 1, cfg = {}) {
   else if (a.ex !== b.ex) w = a.ex ? 0 : 1;
   else if (a.rank !== b.rank) w = a.rank < b.rank ? 0 : 1;
   else w = -1;
+  // Advantage token: an exact speed tie goes to the holder (tok: 0 or 1, relative to a and b).
+  let tokenUsed = false;
+  if (w === -1 && cfg.token && (tok === 0 || tok === 1)) { w = tok; tokenUsed = true; }
   if (w === -1) return { w, dmg: [nA, nB], heal: [0, 0] };
   const win = w === 0 ? a : b;
   const dmg = w === 0 ? [nA - 1, nB + win.x] : [nA + win.x, nB - 1];
   const h = [0, 0];
   if (heal && win.type === 'G' && (w === 0 ? discA : discB) > 0) h[w] = 1;
-  return { w, dmg, heal: h };
+  return { w, dmg, heal: h, tokenUsed };
 }
 
 export function newGame(spec, R, cfg = {}) {
@@ -197,7 +209,7 @@ export function newGame(spec, R, cfg = {}) {
     for (let i = 0; i < hand; i++) p.hand.push(p.deck.pop());
     return p;
   });
-  return { players, spec, cfg, handSize: hand, round: 0, decklist: makeDecklist(spec, cfg) };
+  return { players, spec, cfg, handSize: hand, round: 0, decklist: makeDecklist(spec, cfg), token: R() < 0.5 ? 0 : 1 };
 }
 
 // What player i can see.
@@ -215,6 +227,7 @@ export function view(g, i) {
     opDiscard: op.discard.slice(),
     decklist: g.decklist,
     round: g.round,
+    myToken: g.token === i,
     _opHand: op.hand.slice(), // hidden: only the 'cheat' diagnostic bot reads this
     cfg: g.cfg,
   };
@@ -245,7 +258,8 @@ export function playGame(spec, bots, R, cfg = {}) {
     const views = [view(g, 0), view(g, 1)];
     const missing = views.map((v) => TYPES.filter((t) => !v.hand.some((c) => c.type === t)).length);
     const picks = [asMove(bots[0].choose(views[0], R)), asMove(bots[1].choose(views[1], R))];
-    const res = clash(picks[0], picks[1], g.players[0].discard.length, g.players[1].discard.length, cfg);
+    const res = clash(picks[0], picks[1], g.players[0].discard.length, g.players[1].discard.length, cfg, g.token);
+    if (res.tokenUsed) g.token = 1 - g.token;
     const entry = {
       round: g.round,
       picks,

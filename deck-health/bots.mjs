@@ -40,7 +40,7 @@ export function winChance(me, op) {
 
 // Value (−1..1) for me of a clash between my card a and their card b.
 function outcomeValue(v, a, b, cfg) {
-  const r = clash(a, b, v.myDiscard.length, v.opDiscard.length, cfg);
+  const r = clash(a, b, v.myDiscard.length, v.opDiscard.length, cfg, v.myToken ? 0 : 1);
   const meDead = r.dmg[0] > v.myDeck;
   const opDead = r.dmg[1] > v.opDeck;
   if (meDead && opDead) return cfg && cfg.fasterWins && r.first >= 0 ? (r.first === 0 ? 1 : -1) : 0;
@@ -303,6 +303,19 @@ export function makeBot(kind, opts = {}) {
         heal: (v, R) => rnd(v.myDiscard, R),
         keep: (v, m, R) => rnd(m.cards, R),
       };
+    case 'onlyP':
+    case 'onlyB':
+    case 'onlyG': {
+      // Lazy: always a card of one type when held (its fastest), otherwise a random card.
+      const t = kind.slice(4);
+      return {
+        kind, ...sensible,
+        choose: (v, R) => {
+          const cs = v.hand.filter((c) => c.type === t).sort((a, b) => a.rank - b.rank);
+          return cs.length ? cs[0] : rnd(v.hand, R);
+        },
+      };
+    }
     case 'half':
       return {
         kind, ...sensible,
